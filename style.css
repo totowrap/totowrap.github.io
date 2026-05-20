@@ -254,6 +254,7 @@ body::before {
 .inp-wrap { margin-bottom: 12px; }
 .inp-lbl { display: block; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
 input[type=text], input[type=password], input[type=date], input[type=time], textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .9rem; outline: none; transition: border-color .2s; }
+input[type=number] { background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .9rem; outline: none; transition: border-color .2s; }
 textarea { resize: vertical; min-height: 140px; font-size: .85rem; line-height: 1.6; }
 input:focus, textarea:focus { border-color: var(--accent); }
 input::placeholder, textarea::placeholder { color: var(--dim); }
@@ -266,6 +267,17 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .btn-s:hover { background: var(--bg4); }
 .btn-d { background: rgba(217,85,85,.12); color: var(--red); border: 1px solid rgba(217,85,85,.25); }
 .btn-sm { width: auto; padding: 8px 14px; font-size: .65rem; }
+.settings-row { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-name-input { flex: 1 1 auto; min-width: 0; height: 32px; padding: 6px 9px; font-size: .84rem; background: var(--bg4); }
+.settings-points-input { flex: 0 0 52px; width: 52px; height: 32px; padding: 6px 6px; font-size: .84rem; text-align: right; background: var(--bg4); font-variant-numeric: tabular-nums; }
+.settings-actions { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+.settings-save, .settings-delete { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-family: 'Alte Haas Grotesk', sans-serif; line-height: 1; cursor: pointer; flex: 0 0 auto; transition: background .15s, transform .08s, border-color .15s; }
+.settings-save { border: 1px solid rgba(143,223,106,.38); background: rgba(143,223,106,.12); color: var(--green); font-size: .82rem; font-weight: 700; }
+.settings-delete { border: 1px solid rgba(214,86,86,.36); background: rgba(214,86,86,.12); color: var(--red); font-size: 1rem; }
+.settings-save:hover { background: rgba(143,223,106,.2); border-color: rgba(143,223,106,.55); }
+.settings-delete:hover { background: rgba(214,86,86,.2); border-color: rgba(214,86,86,.55); }
+.settings-save:active, .settings-delete:active { transform: scale(.96); }
 .big-clock { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 3.8rem; letter-spacing: .04em; color: var(--accent); text-align: center; line-height: 1; }
 .big-clock-lbl { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); text-align: center; margin-top: 4px; }
 .countdown-txt {

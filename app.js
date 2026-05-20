@@ -1842,17 +1842,13 @@ function renderSettings() {
 ${pl.map((p, idx)=> {
   const realIdx = S.playerRoster.findIndex(orig => orig.name === p.name);
   return `
-  <div class="row" style="flex-wrap:wrap;align-items:flex-start;padding:12px 0;">
-    <div style="flex:1;min-width:120px;">
-	      <input type="text" value="${esc(p.name)}" id="name-${realIdx}"
-        style="width:100%;padding:6px 10px;font-size:.9rem;background:var(--bg4);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Alte Haas Grotesk',sans-serif;">
+  <div class="settings-row">
+    <input class="settings-name-input" type="text" value="${esc(p.name)}" id="name-${realIdx}" aria-label="Player name">
+    <input class="settings-points-input" type="number" value="${S.scores[p.name]||0}" id="pts-${realIdx}" aria-label="Player points">
+    <div class="settings-actions">
+      <button class="settings-delete" type="button" title="Delete player" aria-label="Delete player" data-delete-player="${realIdx}">×</button>
+      <button class="settings-save" type="button" title="Save player" aria-label="Save player" data-save-player="${realIdx}">✓</button>
     </div>
-    <div style="width:100px;margin-left:8px;">
-      <input type="number" value="${S.scores[p.name]||0}" id="pts-${realIdx}"
-        style="width:100%;padding:6px 10px;font-size:.9rem;background:var(--bg4);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Alte Haas Grotesk',sans-serif;text-align:right;">
-    </div>
-    <button class="btn btn-s btn-sm" style="margin-left:8px;margin-top:0;" type="button" data-save-player="${realIdx}">Save</button>
-    <button class="btn btn-d btn-sm" style="margin-left:4px;margin-top:0;" type="button" data-delete-player="${realIdx}">×</button>
   </div>`}).join('')}
 </div>
 <div class="card"><div class="card-lbl">Admin Account</div>
