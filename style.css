@@ -312,7 +312,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 }
 @keyframes marquee {
   0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  100% { transform: translateX(-25%); }
 }
 .winner-banner { background: linear-gradient(135deg, rgba(106,191,106,.16), rgba(106,191,106,.07)), linear-gradient(135deg, rgba(62, 79, 112, 0.84), rgba(38, 55, 89, 0.88)), rgba(38, 55, 89, 0.88); border: 1px solid rgba(106,191,106,.5); border-radius: var(--radius); padding: 20px 16px; text-align: center; margin-bottom: 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 8px 32px 0 rgba(0, 0, 0, 0.22); }
 .winner-banner.no-winner-banner { background: linear-gradient(135deg, rgba(217,85,85,.16), rgba(217,85,85,.07)), linear-gradient(135deg, rgba(62, 79, 112, 0.84), rgba(38, 55, 89, 0.88)), rgba(38, 55, 89, 0.88); border-color: rgba(217,85,85,.5); }

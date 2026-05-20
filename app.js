@@ -421,10 +421,12 @@ function renderPreviousWinnerTag(day) {
 
   const plainLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatNames(validNames)} 🦈`;
   const htmlLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatSafeNames(validNames)} 🦈`;
+  const marqueeItems = Array.from({ length: 4 }, (_, idx) =>
+    `<span class="prev-winner-item"${idx ? ' aria-hidden="true"' : ''}>${htmlLabel}</span>`
+  ).join('');
   return `<div class="prev-winner-tag" aria-label="${esc(plainLabel)}">
     <div class="prev-winner-track">
-      <span class="prev-winner-item">${htmlLabel}</span>
-      <span class="prev-winner-item" aria-hidden="true">${htmlLabel}</span>
+      ${marqueeItems}
     </div>
   </div>`;
 }
