@@ -1,0 +1,22 @@
+{
+  "name": "TotoWrap",
+  "short_name": "TotoWrap",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#263759",
+  "theme_color": "#263759",
+  "icons": [
+    {
+      "src": "imgs/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "imgs/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

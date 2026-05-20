@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" data-app-mode="player">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#263759">
+<meta name="color-scheme" content="dark">
+<title>TotoWrap</title>
+<link rel="apple-touch-icon" sizes="180x180" href="imgs/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="imgs/icon-192.png">
+<script>
+if (/(?:^|[?&])admin(?:=|&|$)/.test(location.search)) {
+  location.replace('admin/' + location.hash);
+}
+</script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" as="image" href="imgs/tunacan.png">
+<link rel="stylesheet" href="style.css">
+<meta name="apple-mobile-web-app-title" content="TotoWrap">
+</head>
+<body>
+<div id="boot-loader" aria-label="Loading TotoWrap">
+  <img src="imgs/tunacan.png" alt="" class="boot-can">
+</div>
+<div id="app"></div>
+<div id="toast"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

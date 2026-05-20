@@ -1,0 +1,2051 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDChGuB5CtWRD0u8j-GFzDOvqsGXdkDNFI",
+  authDomain: "totowrapp.firebaseapp.com",
+  databaseURL: "https://totowrapp-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "totowrapp",
+  storageBucket: "totowrapp.firebasestorage.app",
+  messagingSenderId: "392119675244",
+  appId: "1:392119675244:web:0d2082153198648360eb49"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
+const auth  = getAuth(fbApp);
+const STATE_REF = doc(db, "totowrap", "state");
+
+let S = {
+  playerRoster: [],
+  scores: {},
+  days: [],
+  today: null
+};
+
+const APP_MODE = document.documentElement.dataset.appMode || 'player';
+const URL_ADMIN_MODE = /(?:^|[?&])admin(?:=|&|$)/.test(location.search);
+const IS_ADMIN = APP_MODE === 'admin' || URL_ADMIN_MODE;
+
+function openPlayerVersion() {
+  location.href = './';
+}
+let _tab = 'today';
+let _clockInterval = null;
+let _toastTO = null;
+let _writing = false;
+let currentUser = null;
+let authReady = false;
+const LOGO_STEP_SEC = 12.5;
+const _logoStartedAt = performance.now();
+let _lastConfettiWinner = null;
+let _boardView = 'list';
+let _swipeStart = null;
+let _suppressNextClick = false;
+let _dragState = null;
+let _inactiveAt = document.hidden ? Date.now() : null;
+let _stateReady = false;
+let _stateLoadFailed = false;
+const INACTIVITY_REFRESH_MS = 5 * 60 * 1000;
+const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
+const BOOT_TOTAL_MS = 1500;
+const BOOT_FADE_MS = 350;
+const BOOT_STARTED_AT = Date.now();
+let _bootHideQueued = false;
+
+function waitMs(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function nextFrame() {
+  return new Promise(resolve => requestAnimationFrame(resolve));
+}
+
+function isBootContentReady() {
+  if (_stateLoadFailed) return true;
+  if (IS_ADMIN) return authReady && (!currentUser || _stateReady);
+  return _stateReady;
+}
+
+function waitForImage(img) {
+  if (!img || img.complete) return Promise.resolve();
+  return new Promise(resolve => {
+    img.addEventListener('load', resolve, { once: true });
+    img.addEventListener('error', resolve, { once: true });
+  }).then(() => img.decode?.().catch(() => {}) || undefined);
+}
+
+async function waitForRenderedApp() {
+  if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
+  const appImages = [...document.querySelectorAll('#app img')];
+  await Promise.all(appImages.map(waitForImage));
+  await nextFrame();
+  await nextFrame();
+}
+
+async function scheduleBootLoaderHide() {
+  if (!isBootContentReady()) return;
+  if (_bootHideQueued) return;
+  _bootHideQueued = true;
+  const fadeStartAt = Math.max(0, BOOT_TOTAL_MS - BOOT_FADE_MS);
+  const remaining = Math.max(0, fadeStartAt - (Date.now() - BOOT_STARTED_AT));
+  await Promise.all([waitMs(remaining), waitForRenderedApp()]);
+  const loader = document.getElementById('boot-loader');
+  if (!loader) return;
+  loader.classList.add('done');
+  setTimeout(() => loader.remove(), BOOT_FADE_MS + 100);
+}
+
+function setStoredInactiveAt(value) {
+  try {
+    if (value) localStorage.setItem(INACTIVITY_STORAGE_KEY, String(value));
+    else localStorage.removeItem(INACTIVITY_STORAGE_KEY);
+  } catch (_) {}
+}
+
+function getStoredInactiveAt() {
+  try {
+    return Number(localStorage.getItem(INACTIVITY_STORAGE_KEY)) || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function markInactive() {
+  _inactiveAt = Date.now();
+  setStoredInactiveAt(_inactiveAt);
+}
+
+function refreshAfterInactivity() {
+  const inactiveAt = getStoredInactiveAt() || _inactiveAt;
+  if (!inactiveAt) return;
+  if (Date.now() - inactiveAt >= INACTIVITY_REFRESH_MS) {
+    location.reload();
+    return;
+  }
+  _inactiveAt = null;
+  setStoredInactiveAt(null);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) markInactive();
+  else refreshAfterInactivity();
+}, { passive: true });
+window.addEventListener('pagehide', markInactive);
+window.addEventListener('pageshow', refreshAfterInactivity);
+window.addEventListener('focus', refreshAfterInactivity);
+document.addEventListener('resume', refreshAfterInactivity, false);
+
+function getMainTabs() {
+  if (IS_ADMIN && currentUser) return ['today', 'board', 'history', 'settings'];
+  return ['today', 'board', 'history'];
+}
+
+function getSwipeSequence() {
+  return getMainTabs();
+}
+
+function getCurrentSwipeIndex() {
+  return getSwipeSequence().indexOf(_tab);
+}
+
+function normalizeActiveTab() {
+  const tabs = getMainTabs();
+  if (!tabs.includes(_tab)) _tab = 'today';
+  if (_tab === 'board' && !['list', 'pie'].includes(_boardView)) _boardView = 'list';
+}
+
+function setMainTab(tab) {
+  if (!getMainTabs().includes(tab)) return;
+  snapToView(tab);
+}
+
+function snapToView(tab) {
+  const idx = getSwipeSequence().indexOf(tab);
+  if (idx === -1) return;
+  _tab = getSwipeSequence()[idx];
+  syncTabUI(true);
+}
+
+function snapToIndex(idx, animate=true) {
+  const seq = getSwipeSequence();
+  const boundedIdx = Math.max(0, Math.min(seq.length - 1, idx));
+  _tab = seq[boundedIdx];
+  syncTabUI(animate);
+}
+
+function currentStripWidth() {
+  return document.querySelector('.tab-viewport')?.clientWidth || window.innerWidth || 1;
+}
+
+function rubberBand(distance, width) {
+  const sign = Math.sign(distance);
+  const abs = Math.abs(distance);
+  return sign * width * (1 - (1 / ((abs * 0.55 / width) + 1)));
+}
+
+function setStripX(x, animate=true) {
+  const strip = document.querySelector('.tab-strip');
+  if (!strip) return;
+  const dpr = window.devicePixelRatio || 1;
+  const alignedX = Math.round(x * dpr) / dpr;
+  strip.classList.toggle('dragging', !animate);
+  strip.style.transform = `translate3d(${alignedX}px,0,0)`;
+}
+
+function updateActiveClasses() {
+  const currentIdx = getCurrentSwipeIndex();
+  document.querySelectorAll('.sec').forEach((sec, idx) => {
+    sec.classList.toggle('on', idx === currentIdx);
+    sec.setAttribute('aria-current', idx === currentIdx ? 'page' : 'false');
+  });
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('on', btn.dataset.tab === _tab);
+  });
+}
+
+function syncTabUI(animate=false) {
+  normalizeActiveTab();
+  updateActiveClasses();
+  injectNavIndicator(animate);
+
+  const idx = getCurrentSwipeIndex();
+  if (idx === -1) return;
+  setStripX(-idx * currentStripWidth(), animate);
+}
+
+function injectNavIndicator(animate=false) {
+  const nav = document.querySelector('.nav');
+  if (!nav) return;
+  const tabs = getMainTabs();
+  const activeIdx = tabs.indexOf(_tab);
+  if (activeIdx === -1) return;
+
+  let indicator = nav.querySelector('.nav-indicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.className = 'nav-indicator';
+    nav.appendChild(indicator);
+  }
+
+  const width = 100 / tabs.length;
+  indicator.style.width = width + '%';
+  indicator.style.transition = animate ? 'transform .32s cubic-bezier(.2,.9,.2,1)' : 'none';
+  indicator.style.transform = `translateX(${activeIdx * 100}%)`;
+}
+
+function isSwipeIgnoredTarget(target) {
+  return Boolean(target?.closest?.('input, textarea, select, button, a, [contenteditable="true"]'));
+}
+
+function isMobileSwipeSurface() {
+  return matchMedia('(pointer: coarse), (max-width: 700px)').matches;
+}
+
+document.addEventListener('touchstart', e => {
+  if (!isMobileSwipeSurface() || e.touches.length !== 1 || isSwipeIgnoredTarget(e.target)) {
+    _swipeStart = null;
+    _dragState = null;
+    return;
+  }
+  const idx = getCurrentSwipeIndex();
+  if (idx === -1 || !document.querySelector('.tab-strip')) return;
+
+  _swipeStart = {
+    x: e.touches[0].clientX,
+    y: e.touches[0].clientY
+  };
+  _dragState = {
+    idx,
+    dragging: false,
+    cancelled: false,
+    startX: e.touches[0].clientX,
+    startY: e.touches[0].clientY,
+    lastX: e.touches[0].clientX,
+    lastT: performance.now(),
+    velocity: 0
+  };
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!_dragState || _dragState.cancelled || e.touches.length !== 1) return;
+
+  const x = e.touches[0].clientX;
+  const y = e.touches[0].clientY;
+  const dx = x - _dragState.startX;
+  const dy = y - _dragState.startY;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+
+  if (!_dragState.dragging) {
+    if (absY > 10 && absY > absX * 1.2) {
+      _dragState.cancelled = true;
+      return;
+    }
+    if (absX < 8 || absX < absY * 1.15) return;
+    _dragState.dragging = true;
+    document.querySelector('.tab-strip')?.classList.add('dragging');
+  }
+
+  e.preventDefault();
+  const now = performance.now();
+  const dt = Math.max(1, now - _dragState.lastT);
+  _dragState.velocity = (x - _dragState.lastX) / dt;
+  _dragState.lastX = x;
+  _dragState.lastT = now;
+
+  const seq = getSwipeSequence();
+  const width = currentStripWidth();
+  const atFirst = _dragState.idx === 0 && dx > 0;
+  const atLast = _dragState.idx === seq.length - 1 && dx < 0;
+  const offset = (atFirst || atLast) ? rubberBand(dx, width) : dx;
+  setStripX(-_dragState.idx * width + offset, false);
+}, { passive: false });
+
+document.addEventListener('touchend', e => {
+  if (!_swipeStart || !_dragState || e.changedTouches.length !== 1) return;
+  const dx = e.changedTouches[0].clientX - _swipeStart.x;
+  const dy = e.changedTouches[0].clientY - _swipeStart.y;
+  const wasDragging = _dragState.dragging;
+  const velocity = _dragState.velocity;
+  const startIdx = _dragState.idx;
+  _swipeStart = null;
+  _dragState = null;
+
+  if (!wasDragging || Math.abs(dx) < Math.abs(dy) * 1.15) {
+    syncTabUI(true);
+    return;
+  }
+
+  _suppressNextClick = true;
+  const width = currentStripWidth();
+  const seq = getSwipeSequence();
+  const shouldAdvance = Math.abs(dx) > width * 0.3 || Math.abs(velocity) > 0.45;
+  const dir = dx < 0 ? 1 : -1;
+  const targetIdx = shouldAdvance ? startIdx + dir : startIdx;
+  snapToIndex(Math.max(0, Math.min(seq.length - 1, targetIdx)), true);
+  setTimeout(() => { _suppressNextClick = false; }, 450);
+}, { passive: true });
+
+document.addEventListener('touchcancel', () => {
+  _swipeStart = null;
+  _dragState = null;
+  syncTabUI(true);
+}, { passive: true });
+
+window.addEventListener('resize', () => syncTabUI(false));
+
+document.addEventListener('click', e => {
+  if (!_suppressNextClick) return;
+  e.preventDefault();
+  e.stopPropagation();
+  _suppressNextClick = false;
+}, true);
+
+// Helper function for the 3D Logo HTML
+function get3DLogoHTML() {
+  const elapsed = (performance.now() - _logoStartedAt) / 1000;
+  const mode = elapsed < LOGO_STEP_SEC ? 'logo-step0' : 'logo-loop';
+  return `
+  <div class="logo-3d-container ${mode}" style="--logo-delay:-${elapsed.toFixed(3)}s">
+    <div class="logo-3d-inner">
+      <img src="imgs/tonnowrap.png" class="face face-1">
+      <img src="imgs/tuna.png"      class="face face-2">
+      <img src="imgs/totowrap.png"  class="face face-3">
+      <img src="imgs/tuna.png"      class="face face-4">
+    </div>
+  </div>`;
+}
+
+// Helper to beautifully format an array of names using commas and "and"
+function formatNames(names) {
+  if (!names || names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return names[0] + ' and ' + names[1];
+  return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+}
+
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function formatSafeNames(names) {
+  return formatNames((names || []).map(esc));
+}
+
+function renderPreviousWinnerTag(day) {
+  if (!day || day.noWinner) return '';
+  const names = day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : []);
+  const validNames = names.filter(Boolean);
+  if (!validNames.length) return '';
+
+  const plainLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatNames(validNames)} 🦈`;
+  const htmlLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatSafeNames(validNames)} 🦈`;
+  return `<div class="prev-winner-tag" aria-label="${esc(plainLabel)}">
+    <div class="prev-winner-track">
+      <span class="prev-winner-item">${htmlLabel}</span>
+      <span class="prev-winner-item" aria-hidden="true">${htmlLabel}</span>
+    </div>
+  </div>`;
+}
+
+function playerDomId(idx) {
+  return `player-${idx}`;
+}
+
+function cloneState() {
+  return JSON.parse(JSON.stringify(S));
+}
+
+function getSortedPlayerRoster() {
+  return [...S.playerRoster].sort((a, b) => {
+    const scoreA = S.scores[a.name] || 0;
+    const scoreB = S.scores[b.name] || 0;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+async function saveS() {
+  if (IS_ADMIN && !currentUser) {
+    toast("Sign in as admin to save changes", "err");
+    render();
+    return false;
+  }
+  _writing = true;
+  try {
+    await setDoc(STATE_REF, S);
+    return true;
+  } catch(e) {
+    console.error("Save error:", e);
+    toast(e.code === "permission-denied" ? "Admin account is not allowed to write" : "Sync error — check connection", "err");
+    return false;
+  } finally {
+    setTimeout(() => { _writing = false; }, 500);
+  }
+}
+
+const DAY_SEC = 86400;
+
+function isValidHM(t) {
+  const m = String(t || '').match(/^(\d{2}):(\d{2})$/);
+  if (!m) return false;
+  const h = Number(m[1]), min = Number(m[2]);
+  return h >= 0 && h < 24 && min >= 0 && min < 60;
+}
+function isValidHMS(t) {
+  const m = String(t || '').match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return false;
+  const h = Number(m[1]), min = Number(m[2]), sec = Number(m[3] || 0);
+  return h >= 0 && h < 24 && min >= 0 && min < 60 && sec >= 0 && sec < 60;
+}
+function toSec(t) { const p = String(t || '00:00').split(':').map(Number); return p[0]*3600 + p[1]*60 + (p[2]||0); }
+function secToHMS(s) { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return `${pad(h)}:${pad(m)}:${pad(sec)}`; }
+function secToClock(s) { return secToHMS(((s % DAY_SEC) + DAY_SEC) % DAY_SEC); }
+function pad(n) { return String(n).padStart(2,'0'); }
+function nowSec() { const d=new Date(); return d.getHours()*3600+d.getMinutes()*60+d.getSeconds(); }
+function nowHMS() { const d=new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+function localDateISO(d=new Date()) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function dateFromISO(iso) {
+  if (!iso) return null;
+  const value = String(iso);
+  const displayMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const normalized = displayMatch ? `${displayMatch[3]}-${pad(displayMatch[2])}-${pad(displayMatch[1])}` : value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null;
+  const [y,m,d] = normalized.split('-').map(Number);
+  const parsed = new Date(y, m - 1, d);
+  if (parsed.getFullYear() !== y || parsed.getMonth() !== m - 1 || parsed.getDate() !== d) return null;
+  return parsed;
+}
+function addDaysISO(iso, days) {
+  const d = dateFromISO(iso);
+  if (!d) return iso;
+  d.setDate(d.getDate() + days);
+  return localDateISO(d);
+}
+function dateDiffDays(fromISO, toISO) {
+  const from = dateFromISO(fromISO);
+  const to = dateFromISO(toISO);
+  if (!from || !to) return 0;
+  return Math.round((to - from) / (DAY_SEC * 1000));
+}
+function displayDate(iso) {
+  const d = dateFromISO(iso);
+  return d ? d.toLocaleDateString('en-GB') : '';
+}
+function displayToISO(dateStr) {
+  const value = String(dateStr || '');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  return m ? `${m[3]}-${pad(m[2])}-${pad(m[1])}` : localDateISO();
+}
+function normalizeDateInput(value) {
+  const raw = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw) && !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(raw)) return null;
+  const iso = displayToISO(raw);
+  const parsed = dateFromISO(iso);
+  return parsed ? localDateISO(parsed) : null;
+}
+function approvalSec(day=S.today) { return day?.approvedAt ? toSec(day.approvedAt) : null; }
+function approvalDateISO(day=S.today) { return day?.approvedDate || displayToISO(day?.date); }
+function inferBetDate(time, day=S.today) {
+  const baseDate = approvalDateISO(day);
+  const start = approvalSec(day);
+  if (!time || start === null) return baseDate;
+  return toSec(time) <= start ? addDaysISO(baseDate, 1) : baseDate;
+}
+function normalizeGameSec(time, day=S.today, explicitDate=null) {
+  const sec = typeof time === 'number' ? time : toSec(time);
+  const start = approvalSec(day);
+  if (start === null) return sec;
+  if (explicitDate) return dateDiffDays(approvalDateISO(day), explicitDate) * DAY_SEC + sec;
+  return sec <= start ? sec + DAY_SEC : sec;
+}
+function guessGameSec(g, day=S.today) { return normalizeGameSec(g.time, day, g.date || null); }
+function gameNowSec(day=S.today) {
+  const sec = nowSec();
+  const start = approvalSec(day);
+  if (start === null) return sec;
+  return normalizeGameSec(sec, day, localDateISO());
+}
+
+function parsePaste(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  const guesses = [];
+  const formatErrors = []; // Track invalid formats here
+  let wrapTime = null;
+  
+  for (const line of lines) {
+    // Check for "Wrap - HH:MM" line
+    const wrapMatch = line.match(/^wrap\s*[-\s:]\s*(\d{2}:\d{2})$/i);
+    if (wrapMatch) {
+      if (isValidHM(wrapMatch[1])) {
+        wrapTime = wrapMatch[1];
+      } else {
+        formatErrors.push({ name: 'Wrap', rawTime: wrapMatch[1] });
+      }
+      continue;
+    }
+    
+    // Check for correct format: Name - HH:MM
+    const match = line.match(/^(.+?)(?:\s*[-\s:]\s*)(\d{2}:\d{2})$/);
+    if (match) {
+      if (isValidHM(match[2])) {
+        guesses.push({ name: match[1].trim(), time: match[2] });
+      } else {
+        formatErrors.push({ name: match[1].trim(), rawTime: match[2] });
+      }
+    } else {
+      // Check if it's a "broken" bet (e.g., 1O:22)
+      // This looks for Name - [something that isn't quite a 4-digit time]
+      const errorMatch = line.match(/^(.+?)(?:\s*[-\s:]\s*)(.+)$/);
+      if (errorMatch && !line.toLowerCase().includes('wrap')) {
+        formatErrors.push({ name: errorMatch[1].trim(), rawTime: errorMatch[2] });
+      }
+    }
+  }
+  return { guesses, wrapTime, formatErrors };
+}
+
+function buildFullGuessList(parsed) {
+  const result = [];
+  const rosterNames = new Map(S.playerRoster.map(p => [p.name.toLowerCase(), p.name]));
+  const submitted = new Set(parsed.map(g => g.name.toLowerCase()));
+  parsed.forEach(g => {
+    const rosterName = rosterNames.get(g.name.toLowerCase());
+    result.push({ ...g, name: rosterName || g.name });
+  });
+  S.playerRoster.forEach(p => {
+    if (!submitted.has(p.name.toLowerCase())) {
+      result.push({ name: p.name, time: null });
+    }
+  });
+  return result;
+}
+
+function midSec(a,b) { return Math.floor((a+b)/2); }
+function sortedGuesses(guesses, day=S.today) {
+  // 1. Filter and sort players who DID bet
+  const withTime = guesses.filter(g => g.time).sort((a, b) => {
+    const secA = guessGameSec(a, day);
+    const secB = guessGameSec(b, day);
+    
+    // If times are different, sort by time (ascending)
+    if (secA !== secB) return secA - secB;
+    
+    // If times are the same, sort alphabetically
+    return a.name.localeCompare(b.name);
+  });
+
+  // 2. Filter and sort players who forgot to bet alphabetically
+  const missing = guesses.filter(g => !g.time).sort((a, b) => {
+    return a.name.localeCompare(b.name);
+  });
+
+  // Combine them: those with bets on top, missing at the bottom
+  return [...withTime, ...missing];
+}
+    
+function getWinProbability(playerName, allGuesses, day=S.today) {
+  const slices = boundaries(allGuesses, day);
+  if (slices.length === 0) return { text: '0.0%', color: 'var(--red)' };
+
+  const sliceDuration = s => Math.max(0, s.end - s.start + 1);
+  const totalRange = slices.reduce((sum, s) => sum + sliceDuration(s), 0);
+  if (!totalRange) return { text: '0.0%', color: 'var(--red)' };
+  
+  // Find the specific slice for this player
+  const mySlice = slices.find(s => s.names.includes(playerName));
+  if (!mySlice) return { text: '0.0%', color: 'var(--red)' };
+
+  const myRange = sliceDuration(mySlice);
+  const percent = (myRange / totalRange) * 100;
+  
+  // Color Logic
+  let color = 'var(--red)'; // < 25%
+  if (percent >= 25 && percent < 75) color = 'var(--accent)';
+  if (percent >= 75) color = 'var(--green)';
+
+  return {
+    text: percent.toFixed(1) + '%', // Decimal number
+    color: color
+  };
+}
+
+function boundaries(guesses, day=S.today) {
+  const start = approvalSec(day);
+  const baseDate = approvalDateISO(day);
+  const valid = guesses.filter(g => g.time).sort((a,b) => guessGameSec(a, day) - guessGameSec(b, day));
+  if (valid.length === 0) return [];
+
+  const groups = [];
+  valid.forEach(g => {
+    const sec = guessGameSec(g, day);
+    const existing = groups.find(grp => grp.sec === sec);
+    if (existing) {
+      existing.names.push(g.name);
+    } else {
+      groups.push({ names: [g.name], sec: sec });
+    }
+  });
+
+  const slices = [];
+  for (let i = 0; i < groups.length; i++) {
+    let startSec = start === null ? 0 : start + 1;
+    let endSec = start === null ? DAY_SEC - 1 : start + DAY_SEC;
+
+    if (i > 0) {
+        const prevMid = midSec(groups[i-1].sec, groups[i].sec);
+        startSec = prevMid;
+    } else {
+        startSec = groups[0].sec - 1800;
+    }
+    
+    if (i < groups.length - 1) {
+        const nextMid = midSec(groups[i].sec, groups[i+1].sec);
+        endSec = nextMid - 1;
+    } else {
+        endSec = groups[groups.length - 1].sec + 1800;
+    }
+
+    slices.push({
+      names: groups[i].names,
+      start: startSec,
+      end: endSec,
+      startStr: secToClock(startSec),
+      endStr: secToClock(endSec),
+      startDate: addDaysISO(baseDate, Math.floor(startSec / DAY_SEC)),
+      endDate: addDaysISO(baseDate, Math.floor(endSec / DAY_SEC)),
+      startsDifferentDay: Math.floor(startSec / DAY_SEC) !== 0,
+      startsNextDay: startSec >= DAY_SEC
+    });
+  }
+  return slices;
+}
+
+function eliminated(guesses, curSec, day=S.today) {
+  const slices = boundaries(guesses, day);
+  const out = new Set();
+  slices.forEach(slice => {
+    if (curSec > slice.end) {
+      slice.names.forEach(name => out.add(name));
+    }
+  });
+  return out;
+}
+
+function calcWinner(guesses, wrapHMSInput, day=S.today) {
+  const wrapSec = normalizeGameSec(wrapHMSInput, day);
+  const slices = boundaries(guesses, day);
+  
+  const winningSlice = slices.find(s => wrapSec >= s.start && wrapSec <= s.end);
+  
+  if (!winningSlice) {
+    return { winner: "Nobody wins, everytuna's happy!", winners: [], points: 0, noWinner: true };
+  }
+
+  const winnerName = winningSlice.names[0];
+  const winners = winningSlice.names.map(name => ({ name }));
+  
+  const firstWinnerGuess = guesses.find(g => g.name === winnerName).time;
+  const points = (wrapHMSInput.slice(0,5) === firstWinnerGuess) ? 3 : 1;
+
+  return { winner: winnerName, winners, points, noWinner: false };
+}
+
+function boundaryRange(s) {
+  return `${s.startStr} → ${s.endStr}`;
+}
+
+function boundaryDuration(s) {
+  const total = Math.max(0, s.end - s.start + 1);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  const parts = [];
+  if (h) parts.push(`${h}h`);
+  if (m) parts.push(`${m}m`);
+  if (sec) parts.push(`${pad(sec)}s`);
+  return parts.length ? parts.join(' ') : '0s';
+}
+
+function boundaryRangeWithDuration(s) {
+  return `${boundaryRange(s)} <span class="bnd-duration">${boundaryDuration(s)}</span>`;
+}
+    
+function getPreviousStreak(playerName) {
+  const allDays = [...(S.days || [])];
+
+  // Include today if it's completed but not yet pushed to S.days
+  if (S.today && S.today.wrapTime && !S.today.noWinner) {
+    allDays.push(S.today);
+  }
+
+  if (allDays.length === 0) return { count: 0, pill: "" };
+
+  let count = 0;
+  for (let i = allDays.length - 1; i >= 0; i--) {
+    const dayWinners = allDays[i].winners ? allDays[i].winners.map(w => w.name) : [allDays[i].winner];
+    if (dayWinners.includes(playerName)) {
+      count++;
+    } else {
+      break;
+    }
+  }
+  if (count >= 2) {
+    return {
+      count: count,
+      pill: `<div class="badge b-streak">${count} Days</div>`
+    };
+  }
+  return { count: 0, pill: "" };
+}
+
+function startClock() {
+  if(_clockInterval) clearInterval(_clockInterval);
+  _clockInterval = setInterval(tickClock, 1000);
+  tickClock();
+}
+
+function tickClock() {
+  const t = nowHMS();
+  const cur = gameNowSec();
+  
+  // Update all clocks on the page
+  document.querySelectorAll('.js-clock').forEach(el => el.textContent = t);
+  
+  const countdownEl = document.getElementById('next-out-countdown');
+  if (!countdownEl || !S.today || !S.today.guesses || S.today.wrapTime) {
+    if (countdownEl) countdownEl.style.display = 'none';
+    return;
+  }
+
+  const slices = boundaries(S.today.guesses, S.today);
+  if (slices.length === 0) return;
+
+  // Find the current/upcoming boundary
+  const nextBoundary = slices.find(s => s.end >= cur);
+  
+  // THE FIX: Check if this boundary is actually the final territory
+  const isFinalTerritory = (nextBoundary === slices[slices.length - 1]);
+
+  // PHASE 1: Someone is still at risk (and it's not the final winners)
+  if (nextBoundary && cur <= nextBoundary.end && !isFinalTerritory) {
+    const diff = (nextBoundary.end + 1) - cur;
+    
+    // Wrap ONLY the individual names in the uppercase span
+    const styledNames = nextBoundary.names.map(name => `<span class="countdown-name">${esc(name)}</span>`);
+    
+    countdownEl.innerHTML = `Next elimination ${formatNames(styledNames)} in: ${secToHMS(diff)}`;
+    countdownEl.style.display = 'block';
+  } else if (isFinalTerritory) {
+  // PHASE 2: Everyone else is out - The "Lucky Day"
+    const winnersToday = slices[slices.length - 1].names;
+    const styledWinners = winnersToday.map(name => `<span class="countdown-name">${esc(name)}</span>`);
+    const diff = Math.max(0, (nextBoundary.end + 1) - cur);
+    
+    countdownEl.innerHTML = `
+      <div style="line-height: 1;">
+        C'mon ${formatNames(styledWinners)}!<br>
+        <span style="font-size: 0.75rem; opacity: 1;">It's not over until it's over, just keep swimming little tuna you have ${secToHMS(diff)} left!</span>
+      </div>
+    `;
+    countdownEl.style.display = 'block';
+  } else {
+    countdownEl.style.display = 'none';
+    countdownEl.innerHTML = '';
+  }
+  
+  refreshStatusBadges();
+}
+
+function refreshStatusBadges() {
+  if(!S.today||!S.today.guesses.length||S.today.wrapTime) return;
+  const cur=gameNowSec(), out=eliminated(S.today.guesses,cur,S.today);
+  S.today.guesses.forEach((g, idx)=>{
+    const id = playerDomId(idx);
+    const el=document.getElementById('st-'+id);
+    const nameEl = document.getElementById('name-span-'+id);
+    if(!el || !nameEl) return;
+    if(out.has(g.name)){
+      el.className='badge b-out';el.textContent='OUT';
+      nameEl.textContent = g.name + ' 🍣';
+    }
+    else{
+      el.className='badge b-in';el.textContent='IN';
+      nameEl.textContent = g.name + ' 🐟';
+    }
+  });
+}
+
+function toast(msg,type='') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`show ${type}`;
+  clearTimeout(_toastTO);
+  _toastTO=setTimeout(()=>el.className='',3000);
+}
+
+function confetti() {
+  const colors = ['#f0b428', '#ffd04d', '#eec763', '#8fdf6a', '#d65656'];
+  const count = 150;
+  
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const confettiEl = document.createElement('div');
+      confettiEl.className = 'confetti';
+      
+      // Random starting position across the top
+      confettiEl.style.left = Math.random() * 100 + 'vw';
+      confettiEl.style.top = '-10px';
+      
+      // Random color
+      confettiEl.style.background = colors[Math.floor(Math.random() * colors.length)];
+      
+      // Random size
+      const size = Math.random() * 8 + 5;
+      confettiEl.style.width = size + 'px';
+      confettiEl.style.height = size + 'px';
+      
+      // Random duration for fall speed
+      const duration = Math.random() * 2 + 2;
+      confettiEl.style.animationDuration = duration + 's';
+      
+      // Random delay for staggered effect
+      confettiEl.style.animationDelay = (Math.random() * 0.5) + 's';
+      
+      document.body.appendChild(confettiEl);
+      
+      // Remove element after animation
+      setTimeout(() => confettiEl.remove(), (duration + 0.5) * 1000);
+    }, i * 8); // Stagger creation
+  }
+}
+
+function render() {
+  const app=document.getElementById('app');
+  if(IS_ADMIN) {
+    if (!authReady) {
+      app.innerHTML=renderAdminLoading();
+      return;
+    }
+    if (!currentUser) {
+      app.innerHTML=renderAdminLogin();
+      bindAdminLogin();
+      scheduleBootLoaderHide();
+      return;
+    }
+    normalizeActiveTab();
+    app.innerHTML=renderMain();
+    startClock();
+    bindMain();
+  } else {
+    normalizeActiveTab();
+    renderPlayer(app);
+  }
+  syncTabUI(false);
+  scheduleBootLoaderHide();
+  
+  // Trigger confetti for 3-point wins (only once per winner)
+  setTimeout(() => {
+    if (S.today && S.today.wrapTime && S.today.points === 3) {
+      const winnerKey = S.today.date + '_' + (S.today.winners ? S.today.winners.map(w => w.name).join(',') : S.today.winner);
+      if (_lastConfettiWinner !== winnerKey) {
+        _lastConfettiWinner = winnerKey;
+        confetti();
+      }
+    }
+  }, 300);
+}
+
+function renderAdminLoading() {
+  return `<div class="empty">Checking admin session…</div>`;
+}
+
+function renderConnectionError() {
+  return `
+<div class="hdr">
+  <div class="hdr-day">${IS_ADMIN ? 'Admin' : 'TotoWrap'}</div>
+  ${get3DLogoHTML()}
+  <div class="hdr-right">
+    <span class="sync-dot js-sync-dot off"></span>
+  </div>
+</div>
+<div class="standalone-scroll">
+  <div class="card">
+    <div class="card-lbl">Connection Problem</div>
+    <p class="mono dim center" style="font-size:.72rem;margin:8px 0 14px">Could not load the game data. Check your connection and try again.</p>
+    <button class="btn btn-p" id="reload-btn">Retry</button>
+  </div>
+</div>`;
+}
+
+function showConnectionError() {
+  _stateLoadFailed = true;
+  const app = document.getElementById('app');
+  if (!app) return;
+  app.innerHTML = renderConnectionError();
+  document.getElementById('reload-btn')?.addEventListener('click', () => location.reload());
+  scheduleBootLoaderHide();
+}
+
+function renderAdminLogin() {
+  return `
+<div class="hdr">
+  <div class="hdr-day">Admin</div>
+  ${get3DLogoHTML()}
+  <div class="hdr-right">
+    <span class="sync-dot js-sync-dot live"></span>
+  </div>
+</div>
+<div class="standalone-scroll">
+  <div class="card">
+    <div class="card-lbl">Admin Sign In</div>
+    <p class="mono dim center" style="font-size:.72rem;margin:8px 0 14px">Sign in with an authorized admin account to edit the game.</p>
+    <div class="inp-wrap">
+      <label class="inp-lbl">Email</label>
+      <input type="text" id="admin-email" autocomplete="email" placeholder="admin@example.com">
+    </div>
+    <div class="inp-wrap">
+      <label class="inp-lbl">Password</label>
+      <input type="password" id="admin-password" autocomplete="current-password" placeholder="Password">
+    </div>
+    <button class="btn btn-p" id="admin-login-btn">Sign in</button>
+    <button class="btn btn-s mt8" id="player-version-btn">Open player version</button>
+  </div>
+</div>`;
+}
+
+function bindAdminLogin() {
+  document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
+    const email = document.getElementById('admin-email')?.value.trim();
+    const password = document.getElementById('admin-password')?.value;
+    if (!email || !password) {
+      toast('Enter email and password', 'err');
+      return;
+    }
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast('Signed in', 'ok');
+    } catch(e) {
+      console.error("Sign-in error:", e);
+      toast(e.code || 'Sign-in failed', 'err');
+    }
+  });
+  document.getElementById('admin-password')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('admin-login-btn')?.click();
+  });
+  document.getElementById('player-version-btn')?.addEventListener('click', openPlayerVersion);
+}
+
+function renderPlayer(app) {
+  app.innerHTML=renderPlayerMain();
+  startClock();
+  bindPlayerNav();
+}
+
+function renderPlayerMain() {
+  const dayNum = S.days.length + (S.today ? 1 : 0);
+  const dotClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
+  const estWrap = S.today?.estWrap || '--:--';
+  return `
+<div class="hdr">
+  <div class="hdr-day">Day ${dayNum || '—'}/51</div>
+  ${get3DLogoHTML()}
+  <div class="hdr-right">
+    <div class="hdr-wrap">Wrap ${esc(estWrap)}</div>
+    <span class="sync-dot js-sync-dot ${dotClass}"></span>
+  </div>
+</div>
+<nav class="nav">
+  <button class="nav-btn ${_tab==='today'?'on':''}" data-tab="today">Today</button>
+  <button class="nav-btn ${_tab==='board'?'on':''}" data-tab="board">Board</button>
+  <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
+</nav>
+
+<div class="tab-viewport">
+  <div class="tab-strip" style="--view-count:3">
+    <section class="sec ${_tab==='today'?'on':''}" data-view="today">${renderPlayerToday()}</section>
+    <section class="sec ${_tab==='board'?'on':''}" data-view="board">${renderBoard(_boardView)}</section>
+    <section class="sec ${_tab==='history'?'on':''}" data-view="history">${renderHistory()}</section>
+  </div>
+</div>
+`;
+}
+
+function renderPlayerToday() {
+  const t = S.today;
+  const lastDay = S.days && S.days.length > 0 ? S.days[S.days.length - 1] : null;
+  const winnerHtml = renderPreviousWinnerTag(lastDay);
+
+  const statusHeader = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+    <span>Player Status</span>
+    ${winnerHtml}
+  </div>`;
+  
+  if (!t) {
+    return `
+      <div class="card"><div class="card-lbl">${statusHeader}</div>
+        <div class="empty" style="padding:20px 0;">No active game today</div>
+      </div>
+      ${lastDay ? `<p class="mono dim center">Last wrap: <span class="accent">${esc(lastDay.wrapTime)}</span></p>` : ''}
+    `;
+  }
+  
+  
+  
+  if (t.wrapTime) {
+    const sg = sortedGuesses(t.guesses, t);
+    
+    if (t.noWinner) {
+        return `
+          <div class="winner-banner no-winner-banner">
+            <div class="winner-sub">🎬 Day Complete</div>
+            <div class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</div>
+	            <div class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</div>
+          </div>
+          <div class="card"><div class="card-lbl">Results</div>
+            ${sg.map(g => {
+              const st = getPreviousStreak(g.name);
+              return `
+              <div class="row">
+                <div class="row-name">
+	                  <span>${esc(g.name)} ${g.time ? '🍣' : '🎣'}</span>
+                  ${g.time ? st.pill : ''}
+                </div>
+                ${g.time ? `
+	                  <div class="row-time">${esc(g.time)}</div>
+                  <div class="badge b-out">OUT</div>
+                ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+              </div>`;
+            }).join('')}
+          </div>`;
+      }
+    
+    const todayWinnersList = t.winners ? t.winners.map(w => w.name) : [t.winner];
+    const todayWinnerStr = formatSafeNames(todayWinnersList);
+    return `
+  <div class="winner-banner">
+    <div class="winner-sub">🎬 Today's Winner${todayWinnersList.length > 1 ? 's' : ''}</div>
+    <div class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</div>
+	    <div class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</div>
+  </div>
+  <div class="card"><div class="card-lbl">Results</div>
+    ${sg.map(g => {
+      const st = getPreviousStreak(g.name);
+      const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
+      const isWinner = todayWinnerNames.includes(g.name);
+      const displayName = esc(g.name) + (isWinner ? ' 🦈' : (!g.time ? ' 🎣' : ' 🍣'));
+      const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
+
+      return `
+      <div class="row">
+        <div class="row-name">
+	          <span>${displayName}</span>
+          ${g.time ? st.pill : ''}
+        </div>
+        
+        ${g.time ? `
+          <div class="badge b-prob" style="color: ${prob.color};">
+            ${prob.text}
+          </div>
+          
+	          <div class="row-time">${esc(g.time)}</div>
+          
+          <div class="badge ${isWinner ? 'b-win' : 'b-out'}">
+            ${isWinner ? 'WIN' : 'OUT'}
+          </div>
+        ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+      </div>`;
+    }).join('')}
+  </div>`;
+  }
+
+  const sg = sortedGuesses(t.guesses || [], t);
+  const hasValidGuesses = sg.some(g => g.time);
+  if (!hasValidGuesses) {
+    return `
+  <div class="card">
+    <div class="card-lbl">Collecting Guesses</div>
+    <p class="mono dim center">Waiting for admin to submit today's guesses…</p>
+  </div>`;
+  }
+
+  const cur = gameNowSec(t);
+  const out = eliminated(t.guesses, cur, t);
+  const dotClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
+  const slices = boundaries(t.guesses, t);
+
+  return `
+  <div class="card">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-left: 20px;">
+      <div class="big-clock js-clock">--:--:--</div>
+      <span class="sync-dot js-sync-dot ${dotClass}" style="width: 12px; height: 12px;"></span>
+    </div>
+    <div class="big-clock-lbl">Live Time</div>
+    <div id="next-out-countdown" class="countdown-txt"></div>
+  </div>
+  <div class="card"><div class="card-lbl">${statusHeader}</div>
+    ${sg.map(g => {
+      const st = getPreviousStreak(g.name);
+      const isOut = out.has(g.name);
+      const displayName = esc(g.name) + (!g.time ? ' 🎣' : (isOut ? ' 🍣' : ' 🐟'));
+      const playerIdx = t.guesses.indexOf(g);
+      const playerId = playerDomId(playerIdx);
+      const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
+      const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
+      const boundaryInfo = slice ? boundaryRangeWithDuration(slice) : '';
+
+      return `
+      <div class="row${boundaryInfo ? ' row-with-boundary' : ''}">
+        <div class="row-name row-name-stack">
+          <div class="row-name-main">
+            <span id="name-span-${playerId}">${displayName}</span>
+            ${g.time ? st.pill : ''}
+          </div>
+          ${boundaryInfo ? `<div class="row-boundary">${boundaryInfo}</div>` : ''}
+        </div>
+        
+        ${g.time ? `
+         <div class="badge b-prob" style="color: ${prob.color};">
+            ${prob.text}
+          </div>
+          
+	          <div class="row-time">${esc(g.time)}</div>
+          
+	          <div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">
+            ${isOut ? 'OUT' : 'IN'}
+          </div>
+        ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function bindPlayerNav() {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setMainTab(btn.dataset.tab);
+    });
+  });
+}
+
+function renderMain() {
+  const totalDays=S.days.length+(S.today?1:0);
+  const estWrap = S.today?.estWrap || '--:--';
+  return `
+<div class="hdr">
+  <div class="hdr-day">Day ${totalDays||'—'}/51</div>
+  ${get3DLogoHTML()}
+  <div class="hdr-right">
+    <div class="hdr-wrap">Wrap ${esc(estWrap)}</div>
+    <span class="sync-dot js-sync-dot ${S.today&&S.today.wrapTime?'off':'live'}" title="Live sync"></span>
+  </div>
+</div>
+<nav class="nav">
+  <button class="nav-btn ${_tab==='today'?'on':''}" data-tab="today">Today</button>
+  <button class="nav-btn ${_tab==='board'?'on':''}" data-tab="board">Board</button>
+  <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
+  <button class="nav-btn ${_tab==='settings'?'on':''}" data-tab="settings">⚙</button>
+</nav>
+
+<div class="tab-viewport">
+  <div class="tab-strip" style="--view-count:4">
+    <section class="sec ${_tab==='today'?'on':''}" id="tab-today" data-view="today">${renderToday()}</section>
+    <section class="sec ${_tab==='board'?'on':''}" id="tab-board" data-view="board">${renderBoard(_boardView)}</section>
+    <section class="sec ${_tab==='history'?'on':''}" id="tab-history" data-view="history">${renderHistory()}</section>
+    <section class="sec ${_tab==='settings'?'on':''}" id="tab-settings" data-view="settings">${renderSettings()}</section>
+  </div>
+</div>`;
+}
+
+function renderToday() {
+  const t = S.today;
+  const lastDay = S.days && S.days.length > 0 ? S.days[S.days.length - 1] : null;
+  const winnerHtml = renderPreviousWinnerTag(lastDay);
+
+  const statusHeader = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+    <span>Player Status</span>
+    ${winnerHtml}
+  </div>`;
+  
+  if (!t) {
+    return `<div class="card">
+      <div class="card-lbl">Start New Day</div>
+      <button class="btn btn-p" id="new-day-btn">🎬 Start Today's Game</button>
+    </div>`;
+  }
+
+  const dotClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
+  const clockCard = `
+    <div class="card">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-left: 20px;">
+        <div class="big-clock js-clock" id="admin-clock" style="cursor:pointer; user-select:none;" title="Tap to set wrap time">--:--:--</div>
+        <span class="sync-dot js-sync-dot ${dotClass}" style="width: 12px; height: 12px;"></span>
+      </div>
+      <div class="big-clock-lbl">Live Time · Tap to Wrap</div>
+      <div id="next-out-countdown" class="countdown-txt"></div>
+    </div>`;
+
+  if (t.wrapTime) {
+    const sg = sortedGuesses(t.guesses, t);
+    
+    if (t.noWinner) {
+        return `
+          <div class="winner-banner no-winner-banner">
+            <div class="winner-sub">🎬 Day Complete</div>
+            <div class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</div>
+	            <div class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</div>
+          </div>
+          <div class="card"><div class="card-lbl">Results</div>
+            ${sg.map(g => {
+              const st = getPreviousStreak(g.name);
+              return `
+              <div class="row">
+                <div class="row-name">
+	                  <span>${esc(g.name)} ${g.time ? '🍣' : '🎣'}</span>
+                  ${g.time ? st.pill : ''}
+                </div>
+                ${g.time ? `
+	                  <div class="row-time">${esc(g.time)}</div>
+                  <div class="badge b-out">OUT</div>
+                ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+              </div>`;
+            }).join('')}
+          </div>
+          <button class="btn btn-p" id="new-day-btn">Start Next Day →</button>
+        `;
+      }
+    
+    const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
+    const todayWinnerStr = formatSafeNames(todayWinnerNames);
+    return `
+      <div class="winner-banner">
+        <div class="winner-sub">🎬 Today's Winner${todayWinnerNames.length > 1 ? 's' : ''}</div>
+        <div class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</div>
+	        <div class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</div>
+      </div>
+        <div class="card"><div class="card-lbl">Results</div>
+          ${sg.map(g => {
+            const st = getPreviousStreak(g.name);
+            const isWinner = todayWinnerNames.includes(g.name);
+            const displayName = esc(g.name) + (isWinner ? ' 🦈' : (!g.time ? ' 🎣' : ' 🍣'));
+            const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
+
+            return `
+            <div class="row">
+              <div class="row-name">
+                <span>${displayName}</span>
+                ${g.time ? st.pill : ''}
+              </div>
+              
+              ${g.time ? `
+                <div class="badge b-prob" style="color: ${prob.color};">
+                  ${prob.text}
+                </div>
+                
+	                <div class="row-time">${esc(g.time)}</div>
+                <div class="badge ${isWinner ? 'b-win' : 'b-out'}">
+                  ${isWinner ? 'WIN' : 'OUT'}
+                </div>
+              ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+            </div>`;
+          }).join('')}
+        </div>
+      <button class="btn btn-p" id="new-day-btn">Start Next Day →</button>
+    `;
+  }
+  
+  if (t.guesses && t.guesses.length > 0) {
+    const cur = gameNowSec(t);
+    const out = eliminated(t.guesses, cur, t);
+    const sg = sortedGuesses(t.guesses, t);
+    const slices = boundaries(t.guesses, t);
+    return `
+      ${clockCard}
+      <div class="card"><div class="card-lbl">${statusHeader}</div>
+        ${sg.map(g => {
+          const st = getPreviousStreak(g.name);
+          const isOut = out.has(g.name);
+          const displayName = esc(g.name) + (!g.time ? ' 🎣' : (isOut ? ' 🍣' : ' 🐟'));
+          const playerIdx = t.guesses.indexOf(g);
+          const playerId = playerDomId(playerIdx);
+          const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
+          const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
+          const boundaryInfo = slice ? boundaryRangeWithDuration(slice) : '';
+          
+          return `
+          <div class="row${boundaryInfo ? ' row-with-boundary' : ''}">
+            <div class="row-name row-name-stack">
+              <div class="row-name-main"><span id="name-span-${playerId}">${displayName}</span>${g.time ? st.pill : ''}</div>
+              ${boundaryInfo ? `<div class="row-boundary">${boundaryInfo}</div>` : ''}
+            </div>
+            ${g.time ? `
+              <div class="badge b-prob" style="color: ${prob.color};">
+                ${prob.text}
+              </div>
+	              <div class="row-time">${esc(g.time)}</div>
+              <div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">
+                ${isOut ? 'OUT' : 'IN'}
+              </div>
+            ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="card">
+        <div class="card-lbl">Enter Official Wrap Time</div>
+        <div class="inp-wrap">
+          <label class="inp-lbl">Wrap Time (HH:MM:SS)</label>
+          <input type="text" id="wrap-inp" placeholder="18:30:45" maxlength="8" 
+            pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}" 
+            style="font-family:'Alte Haas Grotesk',monospace;">
+        </div>
+        <button class="btn btn-p" id="wrap-btn">Confirm Wrap ✓</button>
+      </div>
+    `;
+  }
+  return `
+    <div class="card">
+      <div class="card-lbl">Paste Today's Guesses</div>
+      <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Format: Name - HH:MM (one per line). Include "Wrap - HH:MM"</p>
+      <textarea id="paste-inp" placeholder="ES:
+Luigi - 18:30
+Daniela - 19:15
+Marco - 17:45
+Wrap - 18:30"></textarea>
+      <button class="btn btn-p mt12" id="parse-btn">Preview Guesses →</button>
+    </div>
+  `;
+}
+
+window.setBoardView = (v) => {
+  if (!['list', 'pie'].includes(v)) return;
+  _boardView = v;
+  const board = document.querySelector('.sec[data-view="board"]');
+  if (board) board.innerHTML = renderBoard(_boardView);
+};
+
+function renderBoardPie(pl) {
+  const COLORS = [
+    '#e3b74f', '#6dd87a', '#e06c6c', '#5bc8f5', '#f07dba',
+    '#a374f7', '#fb8c5f', '#40e4e4', '#f9a8a8', '#7ede8a',
+    '#8faeff', '#ffd166', '#d98ef5', '#6fecb5', '#ffb347',
+  ];
+
+  // Assign color by position in full roster so colors stay stable
+  const allNames = S.playerRoster.map(p => p.name);
+  const colorOf = name => COLORS[allNames.indexOf(name) % COLORS.length];
+
+  // Only players with >0 points
+  const active = pl.filter(p => (S.scores[p.name] || 0) > 0);
+  if (!active.length) {
+    return '<div class="empty" style="padding:20px 0;">No points scored yet</div>';
+  }
+
+  const total = active.reduce((sum, p) => sum + (S.scores[p.name] || 0), 0);
+  const cx = 150, cy = 150, r = 146;
+
+  let sliceSVG = '';
+  let labelSVG = '';
+  let angle = -Math.PI / 2; // 12 o'clock
+
+  active.forEach(p => {
+    const pts = S.scores[p.name] || 0;
+    const frac = pts / total;
+    const sweep = frac * 2 * Math.PI;
+    const end = angle + sweep;
+    const color = colorOf(p.name);
+
+    let pathD;
+    if (active.length === 1) {
+      // Full circle — SVG can't draw a 360° arc, use two halves
+      pathD = [
+        `M ${cx} ${cy}`,
+        `L ${cx} ${cy - r}`,
+        `A ${r} ${r} 0 1 1 ${cx} ${cy + r}`,
+        `A ${r} ${r} 0 1 1 ${cx} ${cy - r}`,
+        'Z'
+      ].join(' ');
+    } else {
+      const x1 = (cx + r * Math.cos(angle)).toFixed(3);
+      const y1 = (cy + r * Math.sin(angle)).toFixed(3);
+      const x2 = (cx + r * Math.cos(end)).toFixed(3);
+      const y2 = (cy + r * Math.sin(end)).toFixed(3);
+      const large = sweep > Math.PI ? 1 : 0;
+      pathD = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+    }
+
+    sliceSVG += `<path d="${pathD}" fill="${color}" stroke="#263759" stroke-width="1.5"/>`;
+
+    // Label — show full name when slice is large enough
+    if (sweep >= 0.38) {
+      const mid = angle + sweep / 2;
+      const lx = (cx + r * 0.62 * Math.cos(mid)).toFixed(1);
+      const ly = (cy + r * 0.62 * Math.sin(mid)).toFixed(1);
+      const fs = sweep >= 0.65 ? 9 : 7.5;
+      labelSVG += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-family="'Alte Haas Grotesk',sans-serif" font-size="${fs}" font-style="italic" fill="#ffffff" style="pointer-events:none;">${esc(p.name)}</text>`;
+    }
+
+    angle = end;
+  });
+
+  const legendHtml = active.map(p => {
+    const pts = S.scores[p.name] || 0;
+    const pct = ((pts / total) * 100).toFixed(1);
+    return `
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:${colorOf(p.name)};"></div>
+      <div class="legend-name">${esc(p.name)}</div>
+      <div class="legend-meta">${pts}pt · ${pct}%</div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="board-pie-wrap">
+    <div class="board-pie-graphic">
+      <svg class="board-pie-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+        ${sliceSVG}
+        ${labelSVG}
+      </svg>
+    </div>
+    <div class="board-legend">${legendHtml}</div>
+  </div>`;
+}
+
+function renderBoard(view=_boardView) {
+  const pl = getSortedPlayerRoster();
+  if (!pl.length) return '<div class="empty">No players yet</div>';
+  const toolbar = `
+    <div class="board-toolbar">
+      <button class="board-toggle${view === 'list' ? ' on' : ''}" onclick="setBoardView('list')">Standings</button>
+      <button class="board-toggle${view === 'pie' ? ' on' : ''}" onclick="setBoardView('pie')">Pie Chart</button>
+    </div>`;
+  if (view === 'pie') {
+    return `<div class="card">${toolbar}${renderBoardPie(pl)}</div>`;
+  }
+  return `<div class="card">${toolbar}<div class="card-lbl" style="margin-top:4px;">Standings</div>
+${pl.map((p,i)=>{
+  const st = getPreviousStreak(p.name);
+  return `<div class="row"><div class="lb-rank ${i===0?'first':''}">${i+1}</div><div class="row-name"><span>${esc(p.name)}</span>${st.pill}</div><div class="row-pts accent">${S.scores[p.name]||0} <span class="mono dim" style="font-size:.65rem">pts</span></div></div>`;
+}).join('')}
+</div>`;
+}
+
+function getHistoryEntries() {
+  const all = [...S.days];
+  if (S.today && S.today.wrapTime) all.push(S.today);
+  return all;
+}
+
+function deleteHistoryDayByDate(date) {
+  const isoDate = displayToISO(date);
+  const idx = S.days.findIndex(day => displayToISO(day.date) === isoDate);
+  if (idx !== -1) {
+    return { kind: 'history', idx };
+  }
+  if (S.today && displayToISO(S.today.date) === isoDate) {
+    return { kind: 'today' };
+  }
+  return null;
+}
+
+function findHistoryEntryByDate(date) {
+  const isoDate = displayToISO(date);
+  const historyIdx = S.days.findIndex(day => displayToISO(day.date) === isoDate);
+  if (historyIdx !== -1) {
+    return { kind: 'history', idx: historyIdx, day: S.days[historyIdx] };
+  }
+  if (S.today && S.today.wrapTime && displayToISO(S.today.date) === isoDate) {
+    return { kind: 'today', idx: -1, day: S.today };
+  }
+  return null;
+}
+
+window.editHistoryDay = async (date) => {
+  if (!IS_ADMIN) return;
+  const action = prompt('History action: type "edit" to edit the date, or "delete" to delete this day.', 'edit');
+  if (!action) return;
+  const normalizedAction = action.trim().toLowerCase();
+  if (normalizedAction === 'delete') {
+    await deleteHistoryDay(date);
+    return;
+  }
+  if (normalizedAction !== 'edit') {
+    toast('Type edit or delete', 'err');
+    return;
+  }
+
+  const target = findHistoryEntryByDate(date);
+  if (!target) {
+    toast('History day not found', 'err');
+    return;
+  }
+
+  const currentDate = target.day.date || '';
+  const nextDate = prompt('Edit game date', currentDate);
+
+  if (!nextDate || nextDate === currentDate) return;
+  const normalizedDate = normalizeDateInput(nextDate);
+  if (!normalizedDate) {
+    toast('Use date format YYYY-MM-DD or DD/MM/YYYY', 'err');
+    return;
+  }
+
+  const duplicate = getHistoryEntries().some(d => displayToISO(d.date) === normalizedDate && displayToISO(d.date) !== displayToISO(currentDate));
+  if (duplicate) {
+    toast('Another game already uses that date', 'err');
+    return;
+  }
+
+  const prevS = cloneState();
+  target.day.date = normalizedDate;
+  target.day.approvedDate = normalizedDate;
+  const saved = await saveS();
+  if (!saved) { S = prevS; render(); return; }
+  toast('History date updated', 'ok');
+  render();
+};
+
+async function deleteHistoryDay(date) {
+  const target = deleteHistoryDayByDate(date);
+  if (!target) {
+    toast('History day not found', 'err');
+    return;
+  }
+  const label = displayDate(date) || date;
+  if (!confirm(`Delete Day ${label}? This cannot be undone.`)) return;
+
+  const prevS = cloneState();
+  const day = target.kind === 'history' ? S.days[target.idx] : S.today;
+
+  // Roll back score changes from the deleted completed day.
+  if (day) {
+    const winners = day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : []);
+    const pts = Number(day.points) || 0;
+    winners.forEach(name => {
+      S.scores[name] = (S.scores[name] || 0) - pts;
+      if (S.scores[name] <= 0) delete S.scores[name];
+    });
+  }
+
+  if (target.kind === 'history') {
+    S.days.splice(target.idx, 1);
+  } else {
+    S.today = null;
+  }
+
+  const saved = await saveS();
+  if (!saved) { S = prevS; render(); return; }
+  toast('History day deleted', 'ok');
+  render();
+}
+
+function renderHistory() {
+  const all = getHistoryEntries();
+  if (!all.length) return '<div class="empty">No completed days yet</div>';
+
+  return [...all].reverse().map((d, i) => {
+    const num = all.length - i;
+    const sg = sortedGuesses(d.guesses, d);
+    const canManage = IS_ADMIN;
+    const estWrapInfo = `<div class="hist-est-wrap">Estimated Wrap - <span>${esc(d.estWrap || '--:--')}</span></div>`;
+    const actionBtns = canManage ? `
+<div class="hist-actions">
+  <button class="hist-edit" type="button" title="Edit or delete" aria-label="Edit or delete" onclick="event.stopPropagation(); editHistoryDay('${esc(d.date)}')">✎</button>
+</div>` : '';
+    
+    if (d.noWinner) {
+        const slices = boundaries(d.guesses, d);
+        return `
+        <div class="card hist-row" onclick="this.classList.toggle('open')">
+          <div class="hist-summary">
+            <div class="hist-main-info">
+              <span class="hist-day-tag">Day ${num}</span>
+              <span class="hist-title red" style="font-weight:bold">No Winner</span>
+            </div>
+            <div class="hist-meta">
+              <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
+              <span class="dim mono hist-points">+0pt</span>
+              ${actionBtns}
+              <span class="hist-arrow">▶</span>
+            </div>
+          </div>
+          <div class="hist-details" onclick="event.stopPropagation()">
+            <div class="hist-details-head">
+              <div class="card-lbl">Day Details</div>
+              ${estWrapInfo}
+            </div>
+            ${sg.map(g => {
+              const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
+              const prob  = g.time ? getWinProbability(g.name, d.guesses, d) : null;
+              return `
+              <div class="row${slice ? ' row-with-boundary' : ''}">
+                <div class="row-name row-name-stack">
+                  <div class="row-name-main"><span>${esc(g.name)}</span></div>
+                  ${slice ? `<div class="row-boundary">${slice.startStr} → ${slice.endStr}</div>` : ''}
+                </div>
+                ${g.time ? `
+                  <div class="badge b-prob" style="color:${prob.color};">${prob.text}</div>
+                  <div class="row-time">${esc(g.time)}</div>
+                  <div class="badge b-out">—</div>
+                ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+              </div>`;
+            }).join('')}
+            <div class="day-footer" style="text-align:right; font-size:0.6rem; opacity:0.5; margin-top:10px;">${esc(displayDate(d.date) || d.date)}</div>
+          </div>
+        </div>`;
+      }
+    
+    const histNames = d.winners ? d.winners.map(w => w.name) : [d.winner];
+    const histWinnerStr = formatSafeNames(histNames);
+    const winnerBet = d.guesses.find(g => histNames.includes(g.name))?.time || '--:--';
+    const slices = boundaries(d.guesses, d);
+    
+    return `
+    <div class="card hist-row" onclick="this.classList.toggle('open')">
+      <div class="hist-summary">
+        <div class="hist-main-info">
+          <span class="hist-day-tag">Day ${num}</span>
+          <span class="hist-title accent" style="font-weight:bold">${histWinnerStr}</span>
+          <span class="hist-bet mono dim" style="font-size:0.75rem">(${esc(winnerBet)})</span>
+        </div>
+        <div class="hist-meta">
+          <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
+          <span class="dim mono hist-points">+${d.points}pt</span>
+          ${actionBtns}
+          <span class="hist-arrow">▶</span>
+        </div>
+      </div>
+      <div class="hist-details" onclick="event.stopPropagation()">
+        <div class="hist-details-head">
+          <div class="card-lbl">Day Details</div>
+          ${estWrapInfo}
+        </div>
+        ${sg.map(g => {
+          const isWinner = histNames.includes(g.name);
+          const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
+          const prob  = g.time ? getWinProbability(g.name, d.guesses, d) : null;
+          return `
+          <div class="row${slice ? ' row-with-boundary' : ''}">
+            <div class="row-name row-name-stack">
+              <div class="row-name-main"><span>${esc(g.name)}</span></div>
+              ${slice ? `<div class="row-boundary">${slice.startStr} → ${slice.endStr}</div>` : ''}
+            </div>
+            ${g.time ? `
+              <div class="badge b-prob" style="color:${prob.color};">${prob.text}</div>
+              <div class="row-time">${esc(g.time)}</div>
+              <div class="badge ${isWinner ? 'b-win' : 'b-out'}">
+                ${isWinner ? `+${d.points}` : '—'}
+              </div>
+            ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+          </div>`;
+        }).join('')}
+        <div class="day-footer" style="text-align:right; font-size:0.6rem; opacity:0.5; margin-top:10px;">${esc(displayDate(d.date) || d.date)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSettings() {
+  const pl = getSortedPlayerRoster();
+  const hasCurrentDay = S.today !== null;
+  return `<div class="card"><div class="card-lbl">Player Roster — Editable</div>
+${pl.map((p, idx)=> {
+  const realIdx = S.playerRoster.findIndex(orig => orig.name === p.name);
+  return `
+  <div class="row" style="flex-wrap:wrap;align-items:flex-start;padding:12px 0;">
+    <div style="flex:1;min-width:120px;">
+	      <input type="text" value="${esc(p.name)}" id="name-${realIdx}"
+        style="width:100%;padding:6px 10px;font-size:.9rem;background:var(--bg4);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Alte Haas Grotesk',sans-serif;">
+    </div>
+    <div style="width:100px;margin-left:8px;">
+      <input type="number" value="${S.scores[p.name]||0}" id="pts-${realIdx}"
+        style="width:100%;padding:6px 10px;font-size:.9rem;background:var(--bg4);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Alte Haas Grotesk',sans-serif;text-align:right;">
+    </div>
+    <button class="btn btn-s btn-sm" style="margin-left:8px;margin-top:0;" onclick="savePlayer(${realIdx})">Save</button>
+    <button class="btn btn-d btn-sm" style="margin-left:4px;margin-top:0;" onclick="deletePlayer(${realIdx})">×</button>
+  </div>`}).join('')}
+</div>
+<div class="card"><div class="card-lbl">Admin Account</div>
+	<p class="mono dim mt8" style="margin-bottom:12px">${esc(currentUser?.email || 'Signed in')}</p>
+<button class="btn btn-s" id="admin-logout-btn">Sign out</button>
+<button class="btn btn-s mt8" id="player-version-btn">Open player version</button>
+</div>
+<div class="card"><div class="card-lbl">Danger Zone</div>
+${hasCurrentDay ? `
+<p class="mono dim" style="font-size:.7rem;margin-bottom:12px">Delete today's game only (keeps history & scores)</p>
+<button class="btn btn-d" id="delete-day-btn" style="margin-bottom:16px;">Delete Current Day</button>
+` : ''}
+<p class="mono dim mt8" style="margin-bottom:12px">This will erase all data permanently for everyone.</p>
+<button class="btn btn-d" id="reset-btn">Reset Entire Game</button>
+</div>`;
+}
+
+function showPreview() {
+  const inp = document.getElementById('paste-inp');
+  const text = inp?.value || '';
+  if (!text.trim()) { toast('Paste guesses first', 'err'); return; }
+  
+  const { guesses: parsed, wrapTime, formatErrors } = parsePaste(text);
+  if (!parsed.length && !wrapTime && (!formatErrors || !formatErrors.length)) {
+      toast('No valid data found', 'err');
+      return;
+  }
+  
+  const errorWarning = formatErrors.length > 0
+    ? `<div class="card" style="border: 1px solid var(--red); background: rgba(214, 86, 86, 0.1); margin-bottom: 12px;">
+         <p class="red" style="font-weight:bold; font-size:0.8rem; text-align:center;">
+           ⚠️ TYPO DETECTED (Invalid Time Format):<br>
+           ${formatErrors.map(e => `${esc(e.name)}: &quot;${esc(e.rawTime)}&quot;`).join('<br>')}
+         </p>
+         <p class="dim" style="font-size:0.6rem; text-align:center; margin-top:4px;">
+           Check for letters like 'O' instead of '0'. Use HH:MM format.
+         </p>
+       </div>`
+    : '';
+  
+  const nameCounts = {};
+  parsed.forEach(g => {
+    const n = g.name.toLowerCase();
+    nameCounts[n] = (nameCounts[n] || 0) + 1;
+  });
+  const duplicates = Object.keys(nameCounts).filter(n => nameCounts[n] > 1);
+  
+  const duplicateWarning = duplicates.length > 0 
+    ? `<div class="card" style="border: 1px solid var(--red); background: rgba(214, 86, 86, 0.1); margin-bottom: 12px;">
+         <p class="red" style="font-weight:bold; font-size:0.8rem; text-align:center;">
+           ⚠️ DUPLICATE NAMES DETECTED:<br>${duplicates.map(esc).join(', ')}
+         </p>
+       </div>`
+    : '';
+
+  const existingNames = new Set(S.playerRoster.map(p => p.name.toLowerCase()));
+  const newPlayers = [];
+  parsed.forEach(g => {
+    if (!existingNames.has(g.name.toLowerCase())) {
+      newPlayers.push(g.name);
+      existingNames.add(g.name.toLowerCase());
+    }
+  });
+  
+  const previewApprovedAt = nowHMS();
+  const previewApprovedDate = localDateISO();
+  const previewDay = { approvedAt: previewApprovedAt, approvedDate: previewApprovedDate };
+  const fullList = buildFullGuessList(parsed).map((g, idx) => ({
+    ...g,
+    date: g.time ? inferBetDate(g.time, previewDay) : null,
+    _previewIdx: idx
+  }));
+  const sorted = sortedGuesses(fullList, previewDay);
+  const totalDays = S.days.length + (S.today ? 1 : 0);
+  const app = document.getElementById('app');
+  
+  app.innerHTML = `
+<div class="hdr">
+  <div class="hdr-day">Day ${totalDays}/51 Preview</div>
+  ${get3DLogoHTML()}
+  <div class="hdr-right">
+    <div class="hdr-wrap">Wrap ${esc(wrapTime || 'Missing')}</div>
+    <span class="sync-dot live js-sync-dot"></span>
+  </div>
+</div>
+<div class="standalone-scroll">
+  ${errorWarning}
+  ${duplicateWarning}
+
+  <div class="card">
+    <div class="card-lbl">Confirmed Wrap Time</div>
+    ${wrapTime 
+      ? `<p class="accent" style="font-weight:bold; font-size:1.4rem; text-align:center;">🎬 ${esc(wrapTime)}</p>` 
+      : `<p class="red" style="font-size:0.8rem; margin-bottom:10px;">⚠️ Wrap time not found in paste. Please set it manually:</p>
+         <input type="time" id="manual-wrap" style="text-align:center; font-size:1.2rem;">`
+    }
+  </div>
+  <div class="card">
+    <div class="card-lbl">Confirm These Guesses</div>
+    <div class="preview-card">
+      <div class="preview-head"><span>Player</span><span>Bet</span><span>Date</span></div>
+      ${sorted.map(g => {
+        const isDup = duplicates.includes(g.name.toLowerCase());
+        return `
+        <div class="row preview-row" style="${isDup ? 'border-left: 3px solid var(--red); padding-left: 8px;' : ''}">
+          <div class="row-name">
+            ${esc(g.name)} ${isDup ? '<span class="red" style="font-size:0.5rem; font-weight:bold;">(DUPLICATE)</span>' : ''}
+          </div>
+          ${g.time ? `
+            <div class="row-time">${esc(g.time)}</div>
+            <input type="date" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${g.date}">
+          ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="mono dim" style="font-size:.7rem;margin-top:10px">
+      ${parsed.length} players submitted · ${fullList.length - parsed.length} missing
+      ${newPlayers.length > 0 ? `<br><span style="color:var(--green)">+ ${newPlayers.length} new player(s) will be added to the roster</span>` : ''}
+    </p>
+  </div>
+  <button class="btn btn-p" id="confirm-btn">✓ Looks Good — Start Day</button>
+  <button class="btn btn-s" id="cancel-btn">← Go Back</button>
+</div>`;
+  
+  startClock();
+  
+	  document.getElementById('confirm-btn')?.addEventListener('click', async () => {
+	    let finalWrap = wrapTime;
+	    if (!finalWrap) {
+	      finalWrap = document.getElementById('manual-wrap')?.value;
+	      if (!finalWrap) { toast('Please set a wrap time', 'err'); return; }
+	    }
+	    if (!isValidHM(finalWrap)) { toast('Use a valid wrap time (HH:MM)', 'err'); return; }
+	    
+	    const prevS = cloneState();
+	    newPlayers.forEach(name => {
+	      S.playerRoster.push({ name: name });
+	      S.scores[name] = 0;
+    });
+    
+    fullList.forEach(g => {
+      if (g.time) g.date = document.getElementById(`bet-date-${g._previewIdx}`)?.value || g.date;
+      delete g._previewIdx;
+    });
+    
+    S.today.approvedAt = previewApprovedAt;
+	    S.today.approvedDate = previewApprovedDate;
+	    S.today.guesses = fullList;
+	    S.today.estWrap = finalWrap;
+	    const saved = await saveS();
+	    if (!saved) { S = prevS; render(); return; }
+	    toast('Day started!', 'ok');
+	    render();
+	  });
+
+  // --- 3. PERSISTENT PASTE ON CANCEL ---
+  document.getElementById('cancel-btn')?.addEventListener('click', () => { 
+    render(); 
+    const textarea = document.getElementById('paste-inp');
+    if (textarea) textarea.value = text; // Restore the saved text
+  });
+}
+
+window.savePlayer = async (idx) => {
+  const nameInput = document.getElementById(`name-${idx}`);
+  const ptsInput = document.getElementById(`pts-${idx}`);
+  if (!nameInput || !ptsInput) return;
+  const prevS = cloneState();
+  const oldName = S.playerRoster[idx].name;
+  const newName = nameInput.value.trim();
+  const newPoints = parseInt(ptsInput.value) || 0;
+  if (!newName) { toast('Name cannot be empty', 'err'); return; }
+  const duplicate = S.playerRoster.find((p, i) => i !== idx && p.name.toLowerCase() === newName.toLowerCase());
+  if (duplicate) { toast('Player name already exists', 'err'); return; }
+  if (oldName !== newName) {
+    S.playerRoster[idx].name = newName;
+    S.scores[newName] = S.scores[oldName] || 0;
+    delete S.scores[oldName];
+    S.days.forEach(day => {
+      day.guesses.forEach(g => { if (g.name === oldName) g.name = newName; });
+      if (day.winner === oldName) day.winner = newName;
+      if (day.winners) {
+        day.winners.forEach(w => { if (w.name === oldName) w.name = newName; });
+      }
+    });
+    if (S.today && S.today.guesses) {
+      S.today.guesses.forEach(g => { if (g.name === oldName) g.name = newName; });
+      if (S.today.winner === oldName) S.today.winner = newName;
+      if (S.today.winners) {
+        S.today.winners.forEach(w => { if (w.name === oldName) w.name = newName; });
+      }
+    }
+  }
+  S.scores[newName] = newPoints;
+  const saved = await saveS();
+  if (!saved) { S = prevS; render(); return; }
+  toast('Player updated!', 'ok');
+  render();
+};
+
+function removePlayerFromDay(day, name) {
+  if (!day) return;
+  if (day.guesses) day.guesses = day.guesses.filter(g => g.name !== name);
+
+  if (Array.isArray(day.winners)) {
+    day.winners = day.winners.filter(w => w.name !== name);
+    if (day.winners.length > 0) {
+      day.winner = day.winners[0].name;
+      return;
+    }
+  } else if (day.winner && day.winner !== name) {
+    return;
+  }
+
+  if (day.winner === name || (Array.isArray(day.winners) && day.winners.length === 0)) {
+    day.winner = "Nobody wins, everytuna's happy!";
+    day.winners = [];
+    day.points = 0;
+    day.noWinner = true;
+  }
+}
+
+window.deletePlayer = async (idx) => {
+  const player = S.playerRoster[idx];
+  if (!confirm(`Delete ${player.name}?`)) return;
+  const prevS = cloneState();
+  const name = player.name;
+  S.playerRoster.splice(idx, 1);
+  delete S.scores[name];
+  S.days.forEach(day => removePlayerFromDay(day, name));
+  removePlayerFromDay(S.today, name);
+  const saved = await saveS();
+  if (!saved) { S = prevS; render(); return; }
+  toast('Player deleted', 'ok');
+  render();
+};
+
+function bindMain() {
+  document.getElementById('admin-logout-btn')?.addEventListener('click', async () => {
+    try {
+      await signOut(auth);
+      toast('Signed out', 'ok');
+    } catch(e) {
+      console.error("Sign-out error:", e);
+      toast('Sign-out failed', 'err');
+    }
+  });
+  document.getElementById('player-version-btn')?.addEventListener('click', openPlayerVersion);
+  document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>setMainTab(btn.dataset.tab)));
+  document.getElementById('new-day-btn')?.addEventListener('click', async () => {
+    const prevS = cloneState();
+    if(S.today&&S.today.wrapTime) S.days.push({...S.today});
+    S.today={date:localDateISO(),guesses:[],wrapTime:null,winner:null,points:null,estWrap:null,approvedAt:null,approvedDate:null};
+    const saved = await saveS();
+    if (!saved) { S = prevS; render(); return; }
+    render();
+  });
+  document.getElementById('wrap-btn')?.addEventListener('click', async () => {
+    const inp = document.getElementById('wrap-inp');
+    if (!inp?.value) { toast('Enter wrap time', 'err'); return; }
+    if (!isValidHMS(inp.value)) { toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err'); return; }
+    const prevS = cloneState();
+    const { winner, winners, points, noWinner } = calcWinner(S.today.guesses, inp.value, S.today);
+    S.today.wrapTime = inp.value;
+    S.today.winner = winner;
+    S.today.winners = winners;
+    S.today.points = points;
+    S.today.noWinner = noWinner;
+    
+    if (!noWinner) {
+    winners.forEach(w => { S.scores[w.name] = (S.scores[w.name] || 0) + points; });
+    const saved = await saveS();
+    if (!saved) { S = prevS; render(); return; }
+    toast(`${formatNames(winners.map(w=>w.name))} win +${points} pt!`, 'ok');
+    } else {
+        const saved = await saveS();
+        if (!saved) { S = prevS; render(); return; }
+        toast('No winner - wrap time outside all territories', 'err');
+          }
+    render();
+  });
+  document.getElementById('parse-btn')?.addEventListener('click', showPreview);
+  document.getElementById('admin-clock')?.addEventListener('click', () => {
+    const currentTime = nowHMS();
+    const choice = confirm(`Use current time as wrap time?\n\n${currentTime}\n\nOK = Use this time\nCancel = Enter manually`);
+    const inp = document.getElementById('wrap-inp');
+    if (!inp) return;
+    if (choice) {
+      inp.value = currentTime;
+      toast('Time set to ' + currentTime, 'ok');
+    } else {
+      inp.focus();
+    }
+  });
+  document.getElementById('delete-day-btn')?.addEventListener('click', () => {
+    if (S.today) deleteHistoryDay(S.today.date);
+  });
+  document.getElementById('reset-btn')?.addEventListener('click',async ()=>{
+    if(confirm('Reset all data?')){
+      const prevS = cloneState();
+      S={playerRoster:[],scores:{},days:[],today:null};
+      const saved = await saveS();
+      if (!saved) { S = prevS; render(); return; }
+      render();
+    }
+  });
+}
+
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+  authReady = true;
+  render();
+});
+
+onSnapshot(STATE_REF, (snap) => {
+  if(_writing) return;
+  _stateLoadFailed = false;
+  if(snap.exists()) {
+    S = snap.data();
+    if (!S.playerRoster) S.playerRoster = S.players || [];
+  } else {
+    S = { playerRoster: [], scores: {}, days: [], today: null };
+  }
+  _stateReady = true;
+  render();
+  
+  // Update all dots
+  document.querySelectorAll('.js-sync-dot').forEach(dot => {
+    dot.classList.add('live');
+    dot.style.background = ''; // Reset manual error color
+  });
+}, (err) => {
+  console.error("Firestore error:", err);
+  document.querySelectorAll('.js-sync-dot').forEach(dot => {
+    dot.classList.remove('live');
+    dot.style.background = 'var(--red)';
+  });
+  if (!_stateReady) showConnectionError();
+});
