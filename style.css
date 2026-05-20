@@ -7,8 +7,14 @@ html, body { background: #263759; height: 100%; overflow: hidden; }
 /* Custom Font Declaration */
 @font-face {
   font-family: 'Alte Haas Grotesk';
+  src: url('fonts/AlteHaasGroteskRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Alte Haas Grotesk';
   src: url('fonts/AlteHaasGroteskBold.ttf') format('truetype');
-  font-weight: normal;
+  font-weight: 700;
   font-style: normal;
 }
 

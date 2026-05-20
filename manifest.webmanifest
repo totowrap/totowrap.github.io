@@ -1,7 +1,7 @@
 {
   "name": "TotoWrap",
   "short_name": "TotoWrap",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#263759",
   "theme_color": "#263759",

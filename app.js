@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -34,7 +34,6 @@ function openPlayerVersion() {
 let _tab = 'today';
 let _clockInterval = null;
 let _toastTO = null;
-let _writing = false;
 let currentUser = null;
 let authReady = false;
 const LOGO_STEP_SEC = 12.5;
@@ -47,6 +46,8 @@ let _dragState = null;
 let _inactiveAt = document.hidden ? Date.now() : null;
 let _stateReady = false;
 let _stateLoadFailed = false;
+let _lastSaveWasConflict = false;
+let _skipNextUIRestore = false;
 const INACTIVITY_REFRESH_MS = 5 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 1500;
@@ -343,6 +344,38 @@ document.addEventListener('click', e => {
   _suppressNextClick = false;
 }, true);
 
+document.addEventListener('click', e => {
+  const boardBtn = e.target.closest?.('[data-board-view]');
+  if (boardBtn) {
+    setBoardView(boardBtn.dataset.boardView);
+    return;
+  }
+
+  const historyEditBtn = e.target.closest?.('[data-history-edit]');
+  if (historyEditBtn) {
+    e.stopPropagation();
+    editHistoryDay(historyEditBtn.dataset.historyEdit);
+    return;
+  }
+
+  const savePlayerBtn = e.target.closest?.('[data-save-player]');
+  if (savePlayerBtn) {
+    savePlayer(Number(savePlayerBtn.dataset.savePlayer));
+    return;
+  }
+
+  const deletePlayerBtn = e.target.closest?.('[data-delete-player]');
+  if (deletePlayerBtn) {
+    deletePlayer(Number(deletePlayerBtn.dataset.deletePlayer));
+    return;
+  }
+
+  const historyRow = e.target.closest?.('[data-history-row]');
+  if (historyRow && !e.target.closest?.('[data-history-details]')) {
+    historyRow.classList.toggle('open');
+  }
+});
+
 // Helper function for the 3D Logo HTML
 function get3DLogoHTML() {
   const elapsed = (performance.now() - _logoStartedAt) / 1000;
@@ -400,8 +433,26 @@ function playerDomId(idx) {
   return `player-${idx}`;
 }
 
+function normalizeState(state) {
+  const base = state && typeof state === 'object' ? { ...state } : {};
+  return {
+    ...base,
+    playerRoster: Array.isArray(state?.playerRoster) ? state.playerRoster : (Array.isArray(state?.players) ? state.players : []),
+    scores: state?.scores && typeof state.scores === 'object' ? state.scores : {},
+    days: Array.isArray(state?.days) ? state.days : [],
+    today: state?.today || null,
+    _version: Number(state?._version) || 0
+  };
+}
+
 function cloneState() {
   return JSON.parse(JSON.stringify(S));
+}
+
+function restoreAfterFailedSave(prevS) {
+  if (_lastSaveWasConflict) return;
+  S = prevS;
+  render();
 }
 
 function getSortedPlayerRoster() {
@@ -414,21 +465,45 @@ function getSortedPlayerRoster() {
 }
 
 async function saveS() {
-  if (IS_ADMIN && !currentUser) {
+  _lastSaveWasConflict = false;
+  if (!IS_ADMIN || !currentUser) {
     toast("Sign in as admin to save changes", "err");
     render();
     return false;
   }
-  _writing = true;
+  const localVersion = Number(S._version) || 0;
+  const nextState = normalizeState(cloneState());
+  nextState._version = localVersion + 1;
   try {
-    await setDoc(STATE_REF, S);
+    await runTransaction(db, async transaction => {
+      const snap = await transaction.get(STATE_REF);
+      const remoteState = snap.exists() ? normalizeState(snap.data()) : null;
+      const remoteVersion = remoteState ? Number(remoteState._version) || 0 : 0;
+
+      if (remoteVersion !== localVersion) {
+        const conflict = new Error('State changed on another device');
+        conflict.code = 'state-conflict';
+        conflict.remoteState = remoteState || normalizeState({});
+        throw conflict;
+      }
+
+      transaction.set(STATE_REF, nextState);
+    });
+    S = nextState;
     return true;
   } catch(e) {
     console.error("Save error:", e);
-    toast(e.code === "permission-denied" ? "Admin account is not allowed to write" : "Sync error — check connection", "err");
+    if (e.code === 'state-conflict') {
+      _lastSaveWasConflict = true;
+      S = e.remoteState;
+      _stateReady = true;
+      _skipNextUIRestore = true;
+      toast("Game changed on another device — review latest data and try again", "err");
+      render();
+    } else {
+      toast(e.code === "permission-denied" ? "Admin account is not allowed to write" : "Sync error — check connection", "err");
+    }
     return false;
-  } finally {
-    setTimeout(() => { _writing = false; }, 500);
   }
 }
 
@@ -868,7 +943,72 @@ function confetti() {
   }
 }
 
+function captureUIState() {
+  const active = document.activeElement;
+  const isField = active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
+  let selectionStart = null;
+  let selectionEnd = null;
+  if (isField) {
+    try {
+      selectionStart = active.selectionStart;
+      selectionEnd = active.selectionEnd;
+    } catch (_) {}
+  }
+  const activeField = isField && active.id ? {
+    id: active.id,
+    value: active.value,
+    selectionStart,
+    selectionEnd
+  } : null;
+
+  const scrollByView = {};
+  document.querySelectorAll('.sec[data-view]').forEach(sec => {
+    scrollByView[sec.dataset.view] = sec.scrollTop;
+  });
+  const standalone = document.querySelector('.standalone-scroll');
+  if (standalone) scrollByView.__standalone = standalone.scrollTop;
+
+  const openHistoryDates = [...document.querySelectorAll('[data-history-row].open')]
+    .map(row => row.dataset.historyDate)
+    .filter(Boolean);
+
+  return { activeField, scrollByView, openHistoryDates };
+}
+
+function restoreUIState(uiState) {
+  if (!uiState) return;
+
+  document.querySelectorAll('.sec[data-view]').forEach(sec => {
+    const scrollTop = uiState.scrollByView?.[sec.dataset.view];
+    if (typeof scrollTop === 'number') sec.scrollTop = scrollTop;
+  });
+
+  const standalone = document.querySelector('.standalone-scroll');
+  if (standalone && typeof uiState.scrollByView?.__standalone === 'number') {
+    standalone.scrollTop = uiState.scrollByView.__standalone;
+  }
+
+  const openDates = new Set(uiState.openHistoryDates || []);
+  document.querySelectorAll('[data-history-row]').forEach(row => {
+    row.classList.toggle('open', openDates.has(row.dataset.historyDate));
+  });
+
+  const field = uiState.activeField;
+  if (!field) return;
+  const nextField = document.getElementById(field.id);
+  if (!nextField) return;
+  nextField.value = field.value;
+  nextField.focus({ preventScroll: true });
+  if (typeof field.selectionStart === 'number' && typeof nextField.setSelectionRange === 'function') {
+    try {
+      nextField.setSelectionRange(field.selectionStart, field.selectionEnd);
+    } catch (_) {}
+  }
+}
+
 function render() {
+  const uiState = _skipNextUIRestore ? null : captureUIState();
+  _skipNextUIRestore = false;
   const app=document.getElementById('app');
   if(IS_ADMIN) {
     if (!authReady) {
@@ -878,6 +1018,7 @@ function render() {
     if (!currentUser) {
       app.innerHTML=renderAdminLogin();
       bindAdminLogin();
+      restoreUIState(uiState);
       scheduleBootLoaderHide();
       return;
     }
@@ -890,6 +1031,7 @@ function render() {
     renderPlayer(app);
   }
   syncTabUI(false);
+  restoreUIState(uiState);
   scheduleBootLoaderHide();
   
   // Trigger confetti for 3-point wins (only once per winner)
@@ -1364,12 +1506,12 @@ Wrap - 18:30"></textarea>
   `;
 }
 
-window.setBoardView = (v) => {
+function setBoardView(v) {
   if (!['list', 'pie'].includes(v)) return;
   _boardView = v;
   const board = document.querySelector('.sec[data-view="board"]');
   if (board) board.innerHTML = renderBoard(_boardView);
-};
+}
 
 function renderBoardPie(pl) {
   const COLORS = [
@@ -1463,8 +1605,8 @@ function renderBoard(view=_boardView) {
   if (!pl.length) return '<div class="empty">No players yet</div>';
   const toolbar = `
     <div class="board-toolbar">
-      <button class="board-toggle${view === 'list' ? ' on' : ''}" onclick="setBoardView('list')">Standings</button>
-      <button class="board-toggle${view === 'pie' ? ' on' : ''}" onclick="setBoardView('pie')">Pie Chart</button>
+      <button class="board-toggle${view === 'list' ? ' on' : ''}" type="button" data-board-view="list">Standings</button>
+      <button class="board-toggle${view === 'pie' ? ' on' : ''}" type="button" data-board-view="pie">Pie Chart</button>
     </div>`;
   if (view === 'pie') {
     return `<div class="card">${toolbar}${renderBoardPie(pl)}</div>`;
@@ -1507,7 +1649,7 @@ function findHistoryEntryByDate(date) {
   return null;
 }
 
-window.editHistoryDay = async (date) => {
+async function editHistoryDay(date) {
   if (!IS_ADMIN) return;
   const action = prompt('History action: type "edit" to edit the date, or "delete" to delete this day.', 'edit');
   if (!action) return;
@@ -1547,10 +1689,10 @@ window.editHistoryDay = async (date) => {
   target.day.date = normalizedDate;
   target.day.approvedDate = normalizedDate;
   const saved = await saveS();
-  if (!saved) { S = prevS; render(); return; }
+  if (!saved) { restoreAfterFailedSave(prevS); return; }
   toast('History date updated', 'ok');
   render();
-};
+}
 
 async function deleteHistoryDay(date) {
   const target = deleteHistoryDayByDate(date);
@@ -1581,7 +1723,7 @@ async function deleteHistoryDay(date) {
   }
 
   const saved = await saveS();
-  if (!saved) { S = prevS; render(); return; }
+  if (!saved) { restoreAfterFailedSave(prevS); return; }
   toast('History day deleted', 'ok');
   render();
 }
@@ -1595,15 +1737,16 @@ function renderHistory() {
     const sg = sortedGuesses(d.guesses, d);
     const canManage = IS_ADMIN;
     const estWrapInfo = `<div class="hist-est-wrap">Estimated Wrap - <span>${esc(d.estWrap || '--:--')}</span></div>`;
+    const historyDate = esc(d.date);
     const actionBtns = canManage ? `
-<div class="hist-actions">
-  <button class="hist-edit" type="button" title="Edit or delete" aria-label="Edit or delete" onclick="event.stopPropagation(); editHistoryDay('${esc(d.date)}')">✎</button>
-</div>` : '';
+	<div class="hist-actions">
+	  <button class="hist-edit" type="button" title="Edit or delete" aria-label="Edit or delete" data-history-edit="${historyDate}">✎</button>
+	</div>` : '';
     
     if (d.noWinner) {
         const slices = boundaries(d.guesses, d);
         return `
-        <div class="card hist-row" onclick="this.classList.toggle('open')">
+        <div class="card hist-row" data-history-row data-history-date="${historyDate}">
           <div class="hist-summary">
             <div class="hist-main-info">
               <span class="hist-day-tag">Day ${num}</span>
@@ -1616,7 +1759,7 @@ function renderHistory() {
               <span class="hist-arrow">▶</span>
             </div>
           </div>
-          <div class="hist-details" onclick="event.stopPropagation()">
+          <div class="hist-details" data-history-details>
             <div class="hist-details-head">
               <div class="card-lbl">Day Details</div>
               ${estWrapInfo}
@@ -1648,7 +1791,7 @@ function renderHistory() {
     const slices = boundaries(d.guesses, d);
     
     return `
-    <div class="card hist-row" onclick="this.classList.toggle('open')">
+    <div class="card hist-row" data-history-row data-history-date="${historyDate}">
       <div class="hist-summary">
         <div class="hist-main-info">
           <span class="hist-day-tag">Day ${num}</span>
@@ -1662,7 +1805,7 @@ function renderHistory() {
           <span class="hist-arrow">▶</span>
         </div>
       </div>
-      <div class="hist-details" onclick="event.stopPropagation()">
+      <div class="hist-details" data-history-details>
         <div class="hist-details-head">
           <div class="card-lbl">Day Details</div>
           ${estWrapInfo}
@@ -1708,8 +1851,8 @@ ${pl.map((p, idx)=> {
       <input type="number" value="${S.scores[p.name]||0}" id="pts-${realIdx}"
         style="width:100%;padding:6px 10px;font-size:.9rem;background:var(--bg4);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Alte Haas Grotesk',sans-serif;text-align:right;">
     </div>
-    <button class="btn btn-s btn-sm" style="margin-left:8px;margin-top:0;" onclick="savePlayer(${realIdx})">Save</button>
-    <button class="btn btn-d btn-sm" style="margin-left:4px;margin-top:0;" onclick="deletePlayer(${realIdx})">×</button>
+    <button class="btn btn-s btn-sm" style="margin-left:8px;margin-top:0;" type="button" data-save-player="${realIdx}">Save</button>
+    <button class="btn btn-d btn-sm" style="margin-left:4px;margin-top:0;" type="button" data-delete-player="${realIdx}">×</button>
   </div>`}).join('')}
 </div>
 <div class="card"><div class="card-lbl">Admin Account</div>
@@ -1837,7 +1980,11 @@ function showPreview() {
   startClock();
   
 	  document.getElementById('confirm-btn')?.addEventListener('click', async () => {
-	    let finalWrap = wrapTime;
+		    if (duplicates.length > 0) {
+		      toast('Fix duplicate player names before starting the day', 'err');
+		      return;
+		    }
+		    let finalWrap = wrapTime;
 	    if (!finalWrap) {
 	      finalWrap = document.getElementById('manual-wrap')?.value;
 	      if (!finalWrap) { toast('Please set a wrap time', 'err'); return; }
@@ -1860,7 +2007,7 @@ function showPreview() {
 	    S.today.guesses = fullList;
 	    S.today.estWrap = finalWrap;
 	    const saved = await saveS();
-	    if (!saved) { S = prevS; render(); return; }
+		    if (!saved) { restoreAfterFailedSave(prevS); return; }
 	    toast('Day started!', 'ok');
 	    render();
 	  });
@@ -1873,7 +2020,7 @@ function showPreview() {
   });
 }
 
-window.savePlayer = async (idx) => {
+async function savePlayer(idx) {
   const nameInput = document.getElementById(`name-${idx}`);
   const ptsInput = document.getElementById(`pts-${idx}`);
   if (!nameInput || !ptsInput) return;
@@ -1905,10 +2052,10 @@ window.savePlayer = async (idx) => {
   }
   S.scores[newName] = newPoints;
   const saved = await saveS();
-  if (!saved) { S = prevS; render(); return; }
+  if (!saved) { restoreAfterFailedSave(prevS); return; }
   toast('Player updated!', 'ok');
   render();
-};
+}
 
 function removePlayerFromDay(day, name) {
   if (!day) return;
@@ -1932,8 +2079,9 @@ function removePlayerFromDay(day, name) {
   }
 }
 
-window.deletePlayer = async (idx) => {
+async function deletePlayer(idx) {
   const player = S.playerRoster[idx];
+  if (!player) return;
   if (!confirm(`Delete ${player.name}?`)) return;
   const prevS = cloneState();
   const name = player.name;
@@ -1942,10 +2090,10 @@ window.deletePlayer = async (idx) => {
   S.days.forEach(day => removePlayerFromDay(day, name));
   removePlayerFromDay(S.today, name);
   const saved = await saveS();
-  if (!saved) { S = prevS; render(); return; }
+  if (!saved) { restoreAfterFailedSave(prevS); return; }
   toast('Player deleted', 'ok');
   render();
-};
+}
 
 function bindMain() {
   document.getElementById('admin-logout-btn')?.addEventListener('click', async () => {
@@ -1964,7 +2112,7 @@ function bindMain() {
     if(S.today&&S.today.wrapTime) S.days.push({...S.today});
     S.today={date:localDateISO(),guesses:[],wrapTime:null,winner:null,points:null,estWrap:null,approvedAt:null,approvedDate:null};
     const saved = await saveS();
-    if (!saved) { S = prevS; render(); return; }
+    if (!saved) { restoreAfterFailedSave(prevS); return; }
     render();
   });
   document.getElementById('wrap-btn')?.addEventListener('click', async () => {
@@ -1982,11 +2130,11 @@ function bindMain() {
     if (!noWinner) {
     winners.forEach(w => { S.scores[w.name] = (S.scores[w.name] || 0) + points; });
     const saved = await saveS();
-    if (!saved) { S = prevS; render(); return; }
+    if (!saved) { restoreAfterFailedSave(prevS); return; }
     toast(`${formatNames(winners.map(w=>w.name))} win +${points} pt!`, 'ok');
     } else {
         const saved = await saveS();
-        if (!saved) { S = prevS; render(); return; }
+	    if (!saved) { restoreAfterFailedSave(prevS); return; }
         toast('No winner - wrap time outside all territories', 'err');
           }
     render();
@@ -2012,7 +2160,7 @@ function bindMain() {
       const prevS = cloneState();
       S={playerRoster:[],scores:{},days:[],today:null};
       const saved = await saveS();
-      if (!saved) { S = prevS; render(); return; }
+      if (!saved) { restoreAfterFailedSave(prevS); return; }
       render();
     }
   });
@@ -2025,13 +2173,11 @@ onAuthStateChanged(auth, user => {
 });
 
 onSnapshot(STATE_REF, (snap) => {
-  if(_writing) return;
   _stateLoadFailed = false;
   if(snap.exists()) {
-    S = snap.data();
-    if (!S.playerRoster) S.playerRoster = S.players || [];
+    S = normalizeState(snap.data());
   } else {
-    S = { playerRoster: [], scores: {}, days: [], today: null };
+    S = normalizeState({});
   }
   _stateReady = true;
   render();
