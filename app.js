@@ -1268,9 +1268,8 @@ function renderPlayerToday() {
 
   return `
   <div class="card">
-    <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-left: 20px;">
+    <div style="display: flex; align-items: center; justify-content: center;">
       <div class="big-clock js-clock">--:--:--</div>
-      <span class="sync-dot js-sync-dot ${dotClass}" style="width: 12px; height: 12px;"></span>
     </div>
     <div class="big-clock-lbl">Live Time</div>
     <div id="next-out-countdown" class="countdown-txt"></div>
@@ -1369,9 +1368,8 @@ function renderToday() {
   const dotClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
   const clockCard = `
     <div class="card">
-      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-left: 20px;">
+      <div style="display: flex; align-items: center; justify-content: center;">
         <div class="big-clock js-clock" id="admin-clock" style="cursor:pointer; user-select:none;" title="Tap to set wrap time">--:--:--</div>
-        <span class="sync-dot js-sync-dot ${dotClass}" style="width: 12px; height: 12px;"></span>
       </div>
       <div class="big-clock-lbl">Live Time · Tap to Wrap</div>
       <div id="next-out-countdown" class="countdown-txt"></div>
