@@ -378,6 +378,12 @@ document.addEventListener('click', e => {
     return;
   }
 
+  const closestWrongBtn = e.target.closest?.('[data-closest-wrong-date]');
+  if (closestWrongBtn) {
+    openHistoryDay(closestWrongBtn.dataset.closestWrongDate);
+    return;
+  }
+
   const historyEditBtn = e.target.closest?.('[data-history-edit]');
   if (historyEditBtn) {
     e.stopPropagation();
@@ -1833,6 +1839,20 @@ function wrongTerritoryGap(name, day) {
   return wrapSec < slice.start ? slice.start - wrapSec : wrapSec - slice.end;
 }
 
+function openHistoryDay(date) {
+  const row = [...document.querySelectorAll('[data-history-row]')].find(el => el.dataset.historyDate === date);
+  if (!row) return;
+  row.classList.add('open');
+  setMainTab('history');
+  requestAnimationFrame(() => {
+    const history = row.closest('.sec[data-view="history"]');
+    if (!history) return;
+    row.classList.add('open');
+    const rowTop = row.offsetTop - history.offsetTop;
+    history.scrollTo({ top: Math.max(0, rowTop - 12), behavior: 'smooth' });
+  });
+}
+
 function getBoardPlayerStats(name) {
   const completed = getHistoryEntries();
   let wins = 0;
@@ -1840,6 +1860,7 @@ function getBoardPlayerStats(name) {
   let forgot = 0;
   let lastGap = null;
   let closestWrongGap = null;
+  let closestWrongDate = null;
 
   [...completed].reverse().forEach(day => {
     const winnerNames = day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : []);
@@ -1857,6 +1878,7 @@ function getBoardPlayerStats(name) {
       const wrongGap = wrongTerritoryGap(name, day);
       if (wrongGap !== null && (closestWrongGap === null || wrongGap < closestWrongGap)) {
         closestWrongGap = wrongGap;
+        closestWrongDate = day.date || null;
       }
     }
   });
@@ -1868,7 +1890,8 @@ function getBoardPlayerStats(name) {
     days: completed.length,
     rate: completed.length ? `${Math.round((wins / completed.length) * 100)}%` : '0%',
     lastGap,
-    closestWrongGap
+    closestWrongGap,
+    closestWrongDate
   };
 }
 
@@ -1876,14 +1899,20 @@ function renderBoardPlayerStats(name) {
   const stats = getBoardPlayerStats(name);
   const wrapGap = stats.lastGap === null
     ? 'No completed bets yet'
-    : `Most recent bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> off the official wrap`;
+    : `Yesterday's bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> off the official wrap`;
+  const closestWrongValue = stats.closestWrongGap === null ? '--' : formatBoardCompactGap(stats.closestWrongGap);
+  const closestWrongStat = stats.closestWrongDate
+    ? `<button class="board-stat board-stat-link" type="button" data-closest-wrong-date="${esc(stats.closestWrongDate)}" title="Open history day" aria-label="Open closest wrong bet history">
+        <strong>${closestWrongValue}</strong><span>Closest Wrong Bet</span>
+      </button>`
+    : `<div class="board-stat"><strong>${closestWrongValue}</strong><span>Closest Wrong Bet</span></div>`;
   return `<div class="board-player-stats">
     <div class="board-player-gap">${wrapGap}</div>
     <div class="board-stat-grid">
       <div class="board-stat"><strong>${stats.wins}</strong><span>Total Wins</span></div>
       <div class="board-stat"><strong>${stats.exact}</strong><span>Exact Bet</span></div>
       <div class="board-stat"><strong>${stats.forgot}</strong><span>Forgot Bets</span></div>
-      <div class="board-stat"><strong>${stats.closestWrongGap === null ? '--' : formatBoardCompactGap(stats.closestWrongGap)}</strong><span>Closest Wrong Bet</span></div>
+      ${closestWrongStat}
     </div>
     <div class="board-win-rate">Win rate <span class="accent">${stats.rate}</span> - Won ${stats.wins} ${countWord(stats.wins, 'day', 'days')} out of ${stats.days}</div>
   </div>`;
