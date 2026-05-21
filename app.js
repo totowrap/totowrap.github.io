@@ -698,7 +698,6 @@ function getWinProbability(playerName, allGuesses, day=S.today) {
 
 function boundaries(guesses, day=S.today) {
   const start = approvalSec(day);
-  const baseDate = approvalDateISO(day);
   const valid = guesses.filter(g => g.time).sort((a,b) => guessGameSec(a, day) - guessGameSec(b, day));
   if (valid.length === 0) return [];
 
@@ -737,11 +736,7 @@ function boundaries(guesses, day=S.today) {
       start: startSec,
       end: endSec,
       startStr: secToClock(startSec),
-      endStr: secToClock(endSec),
-      startDate: addDaysISO(baseDate, Math.floor(startSec / DAY_SEC)),
-      endDate: addDaysISO(baseDate, Math.floor(endSec / DAY_SEC)),
-      startsDifferentDay: Math.floor(startSec / DAY_SEC) !== 0,
-      startsNextDay: startSec >= DAY_SEC
+      endStr: secToClock(endSec)
     });
   }
   return slices;
@@ -1163,67 +1158,54 @@ function renderPlayerMain() {
 `;
 }
 
-function renderPlayerToday() {
-  const t = S.today;
-  const lastDay = S.days && S.days.length > 0 ? S.days[S.days.length - 1] : null;
-  const winnerHtml = renderPreviousWinnerTag(lastDay);
-
-  const statusHeader = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+function renderPlayerStatusHeader(lastDay) {
+  return `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
     <span>Player Status</span>
-    ${winnerHtml}
+    ${renderPreviousWinnerTag(lastDay)}
   </div>`;
-  
-  if (!t) {
+}
+
+function renderCompletedToday(t, canStartNextDay=false) {
+  const sg = sortedGuesses(t.guesses, t);
+  const nextDayBtn = canStartNextDay ? '<button class="btn btn-p" id="new-day-btn">Start Next Day →</button>' : '';
+
+  if (t.noWinner) {
     return `
-      <div class="card"><div class="card-lbl">${statusHeader}</div>
-        <div class="empty" style="padding:20px 0;">No active game today</div>
+      <div class="winner-banner no-winner-banner">
+        <div class="winner-sub">🎬 Day Complete</div>
+        <div class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</div>
+	        <div class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</div>
       </div>
-      ${lastDay ? `<p class="mono dim center">Last wrap: <span class="accent">${esc(lastDay.wrapTime)}</span></p>` : ''}
-    `;
-  }
-  
-  
-  
-  if (t.wrapTime) {
-    const sg = sortedGuesses(t.guesses, t);
-    
-    if (t.noWinner) {
-        return `
-          <div class="winner-banner no-winner-banner">
-            <div class="winner-sub">🎬 Day Complete</div>
-            <div class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</div>
-	            <div class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</div>
-          </div>
-          <div class="card"><div class="card-lbl">Results</div>
-            ${sg.map(g => {
-              const st = getPreviousStreak(g.name);
-              return `
-              <div class="row">
-                <div class="row-name">
-	                  <span>${esc(g.name)} ${g.time ? '🍣' : '🎣'}</span>
-                  ${g.time ? st.pill : ''}
-                </div>
-                ${g.time ? `
-	                  <div class="row-time">${esc(g.time)}</div>
-                  <div class="badge b-out">OUT</div>
-                ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
-              </div>`;
-            }).join('')}
+      <div class="card"><div class="card-lbl">Results</div>
+        ${sg.map(g => {
+          const st = getPreviousStreak(g.name);
+          return `
+          <div class="row">
+            <div class="row-name">
+	              <span>${esc(g.name)} ${g.time ? '🍣' : '🎣'}</span>
+              ${g.time ? st.pill : ''}
+            </div>
+            ${g.time ? `
+	              <div class="row-time">${esc(g.time)}</div>
+	              <div class="badge b-out">OUT</div>
+            ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
           </div>`;
-      }
-    
-    const todayWinnersList = t.winners ? t.winners.map(w => w.name) : [t.winner];
-    const todayWinnerStr = formatSafeNames(todayWinnersList);
-    return `
+        }).join('')}
+      </div>
+      ${nextDayBtn}`;
+  }
+
+  const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
+  const todayWinnerStr = formatSafeNames(todayWinnerNames);
+  return `
   <div class="winner-banner">
-    <div class="winner-sub">🎬 Today's Winner${todayWinnersList.length > 1 ? 's' : ''}</div>
+    <div class="winner-sub">🎬 Today's Winner${todayWinnerNames.length > 1 ? 's' : ''}</div>
     <div class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</div>
 	    <div class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</div>
   </div>
   <div class="card"><div class="card-lbl">Results</div>
     ${sg.map(g => {
       const st = getPreviousStreak(g.name);
-      const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
       const isWinner = todayWinnerNames.includes(g.name);
       const displayName = esc(g.name) + (isWinner ? ' 🦈' : (!g.time ? ' 🎣' : ' 🍣'));
       const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
@@ -1248,8 +1230,63 @@ function renderPlayerToday() {
         ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
       </div>`;
     }).join('')}
-  </div>`;
+  </div>
+  ${nextDayBtn}`;
+}
+
+function renderActiveTodayRows(t, sg, out, slices) {
+  return sg.map(g => {
+    const st = getPreviousStreak(g.name);
+    const isOut = out.has(g.name);
+    const displayName = esc(g.name) + (!g.time ? ' 🎣' : (isOut ? ' 🍣' : ' 🐟'));
+    const playerIdx = t.guesses.indexOf(g);
+    const playerId = playerDomId(playerIdx);
+    const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
+    const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
+    const boundaryInfo = slice ? boundaryRangeWithDuration(slice) : '';
+
+    return `
+    <div class="row${boundaryInfo ? ' row-with-boundary' : ''}">
+      <div class="row-name row-name-stack">
+        <div class="row-name-main">
+          <span id="name-span-${playerId}">${displayName}</span>
+          ${g.time ? st.pill : ''}
+        </div>
+        ${boundaryInfo ? `<div class="row-boundary">${boundaryInfo}</div>` : ''}
+      </div>
+
+      ${g.time ? `
+       <div class="badge b-prob" style="color: ${prob.color};">
+          ${prob.text}
+        </div>
+
+	        <div class="row-time">${esc(g.time)}</div>
+
+	        <div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">
+          ${isOut ? 'OUT' : 'IN'}
+        </div>
+      ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+    </div>`;
+  }).join('');
+}
+
+function renderPlayerToday() {
+  const t = S.today;
+  const lastDay = S.days && S.days.length > 0 ? S.days[S.days.length - 1] : null;
+  const statusHeader = renderPlayerStatusHeader(lastDay);
+
+  if (!t) {
+    return `
+      <div class="card"><div class="card-lbl">${statusHeader}</div>
+        <div class="empty" style="padding:20px 0;">No active game today</div>
+      </div>
+      ${lastDay ? `<p class="mono dim center">Last wrap: <span class="accent">${esc(lastDay.wrapTime)}</span></p>` : ''}
+    `;
   }
+
+
+
+  if (t.wrapTime) return renderCompletedToday(t);
 
   const sg = sortedGuesses(t.guesses || [], t);
   const hasValidGuesses = sg.some(g => g.time);
@@ -1263,7 +1300,6 @@ function renderPlayerToday() {
 
   const cur = gameNowSec(t);
   const out = eliminated(t.guesses, cur, t);
-  const dotClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
   const slices = boundaries(t.guesses, t);
 
   return `
@@ -1275,39 +1311,7 @@ function renderPlayerToday() {
     <div id="next-out-countdown" class="countdown-txt"></div>
   </div>
   <div class="card"><div class="card-lbl">${statusHeader}</div>
-    ${sg.map(g => {
-      const st = getPreviousStreak(g.name);
-      const isOut = out.has(g.name);
-      const displayName = esc(g.name) + (!g.time ? ' 🎣' : (isOut ? ' 🍣' : ' 🐟'));
-      const playerIdx = t.guesses.indexOf(g);
-      const playerId = playerDomId(playerIdx);
-      const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
-      const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
-      const boundaryInfo = slice ? boundaryRangeWithDuration(slice) : '';
-
-      return `
-      <div class="row${boundaryInfo ? ' row-with-boundary' : ''}">
-        <div class="row-name row-name-stack">
-          <div class="row-name-main">
-            <span id="name-span-${playerId}">${displayName}</span>
-            ${g.time ? st.pill : ''}
-          </div>
-          ${boundaryInfo ? `<div class="row-boundary">${boundaryInfo}</div>` : ''}
-        </div>
-        
-        ${g.time ? `
-         <div class="badge b-prob" style="color: ${prob.color};">
-            ${prob.text}
-          </div>
-          
-	          <div class="row-time">${esc(g.time)}</div>
-          
-	          <div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">
-            ${isOut ? 'OUT' : 'IN'}
-          </div>
-        ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
-      </div>`;
-    }).join('')}
+    ${renderActiveTodayRows(t, sg, out, slices)}
   </div>`;
 }
 
@@ -1351,12 +1355,7 @@ function renderMain() {
 function renderToday() {
   const t = S.today;
   const lastDay = S.days && S.days.length > 0 ? S.days[S.days.length - 1] : null;
-  const winnerHtml = renderPreviousWinnerTag(lastDay);
-
-  const statusHeader = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-    <span>Player Status</span>
-    ${winnerHtml}
-  </div>`;
+  const statusHeader = renderPlayerStatusHeader(lastDay);
   
   if (!t) {
     return `<div class="card">
@@ -1365,7 +1364,6 @@ function renderToday() {
     </div>`;
   }
 
-  const dotClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
   const clockCard = `
     <div class="card">
       <div style="display: flex; align-items: center; justify-content: center;">
@@ -1375,74 +1373,7 @@ function renderToday() {
       <div id="next-out-countdown" class="countdown-txt"></div>
     </div>`;
 
-  if (t.wrapTime) {
-    const sg = sortedGuesses(t.guesses, t);
-    
-    if (t.noWinner) {
-        return `
-          <div class="winner-banner no-winner-banner">
-            <div class="winner-sub">🎬 Day Complete</div>
-            <div class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</div>
-	            <div class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</div>
-          </div>
-          <div class="card"><div class="card-lbl">Results</div>
-            ${sg.map(g => {
-              const st = getPreviousStreak(g.name);
-              return `
-              <div class="row">
-                <div class="row-name">
-	                  <span>${esc(g.name)} ${g.time ? '🍣' : '🎣'}</span>
-                  ${g.time ? st.pill : ''}
-                </div>
-                ${g.time ? `
-	                  <div class="row-time">${esc(g.time)}</div>
-                  <div class="badge b-out">OUT</div>
-                ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
-              </div>`;
-            }).join('')}
-          </div>
-          <button class="btn btn-p" id="new-day-btn">Start Next Day →</button>
-        `;
-      }
-    
-    const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
-    const todayWinnerStr = formatSafeNames(todayWinnerNames);
-    return `
-      <div class="winner-banner">
-        <div class="winner-sub">🎬 Today's Winner${todayWinnerNames.length > 1 ? 's' : ''}</div>
-        <div class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</div>
-	        <div class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</div>
-      </div>
-        <div class="card"><div class="card-lbl">Results</div>
-          ${sg.map(g => {
-            const st = getPreviousStreak(g.name);
-            const isWinner = todayWinnerNames.includes(g.name);
-            const displayName = esc(g.name) + (isWinner ? ' 🦈' : (!g.time ? ' 🎣' : ' 🍣'));
-            const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
-
-            return `
-            <div class="row">
-              <div class="row-name">
-                <span>${displayName}</span>
-                ${g.time ? st.pill : ''}
-              </div>
-              
-              ${g.time ? `
-                <div class="badge b-prob" style="color: ${prob.color};">
-                  ${prob.text}
-                </div>
-                
-	                <div class="row-time">${esc(g.time)}</div>
-                <div class="badge ${isWinner ? 'b-win' : 'b-out'}">
-                  ${isWinner ? 'WIN' : 'OUT'}
-                </div>
-              ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
-            </div>`;
-          }).join('')}
-        </div>
-      <button class="btn btn-p" id="new-day-btn">Start Next Day →</button>
-    `;
-  }
+  if (t.wrapTime) return renderCompletedToday(t, true);
   
   if (t.guesses && t.guesses.length > 0) {
     const cur = gameNowSec(t);
@@ -1452,33 +1383,7 @@ function renderToday() {
     return `
       ${clockCard}
       <div class="card"><div class="card-lbl">${statusHeader}</div>
-        ${sg.map(g => {
-          const st = getPreviousStreak(g.name);
-          const isOut = out.has(g.name);
-          const displayName = esc(g.name) + (!g.time ? ' 🎣' : (isOut ? ' 🍣' : ' 🐟'));
-          const playerIdx = t.guesses.indexOf(g);
-          const playerId = playerDomId(playerIdx);
-          const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
-          const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
-          const boundaryInfo = slice ? boundaryRangeWithDuration(slice) : '';
-          
-          return `
-          <div class="row${boundaryInfo ? ' row-with-boundary' : ''}">
-            <div class="row-name row-name-stack">
-              <div class="row-name-main"><span id="name-span-${playerId}">${displayName}</span>${g.time ? st.pill : ''}</div>
-              ${boundaryInfo ? `<div class="row-boundary">${boundaryInfo}</div>` : ''}
-            </div>
-            ${g.time ? `
-              <div class="badge b-prob" style="color: ${prob.color};">
-                ${prob.text}
-              </div>
-	              <div class="row-time">${esc(g.time)}</div>
-              <div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">
-                ${isOut ? 'OUT' : 'IN'}
-              </div>
-            ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
-          </div>`;
-        }).join('')}
+        ${renderActiveTodayRows(t, sg, out, slices)}
       </div>
       <div class="card">
         <div class="card-lbl">Enter Official Wrap Time</div>
@@ -1686,8 +1591,9 @@ async function editHistoryDay(date) {
   }
 
   const prevS = cloneState();
+  const calculationDate = approvalDateISO(target.day);
   target.day.date = normalizedDate;
-  target.day.approvedDate = normalizedDate;
+  if (!target.day.approvedDate) target.day.approvedDate = calculationDate;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return; }
   toast('History date updated', 'ok');
