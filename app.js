@@ -1193,16 +1193,17 @@ function renderPlayerStatusHeader(lastDay) {
 
 function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
-  const shareBtn = canStartNextDay ? '<button class="btn btn-s" type="button" data-share-result>Share Result</button>' : '';
+  const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
+  const winnerCloseTag = canStartNextDay ? 'button' : 'div';
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p" id="new-day-btn">Start Next Day →</button>' : '';
 
   if (t.noWinner) {
     return `
-      <div class="winner-banner no-winner-banner">
-        <div class="winner-sub">🎬 Day Complete</div>
-        <div class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</div>
-	        <div class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</div>
-      </div>
+      <${winnerTag} class="winner-banner no-winner-banner">
+        <span class="winner-sub">🎬 Day Complete</span>
+        <span class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</span>
+	        <span class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</span>
+      </${winnerCloseTag}>
       <div class="card"><div class="card-lbl">Results</div>
         ${sg.map(g => {
           const st = getPreviousStreak(g.name);
@@ -1219,18 +1220,17 @@ function renderCompletedToday(t, canStartNextDay=false) {
           </div>`;
         }).join('')}
       </div>
-      ${shareBtn}
       ${nextDayBtn}`;
   }
 
   const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
   const todayWinnerStr = formatSafeNames(todayWinnerNames);
   return `
-  <div class="winner-banner">
-    <div class="winner-sub">🎬 Today's Winner${todayWinnerNames.length > 1 ? 's' : ''}</div>
-    <div class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</div>
-	    <div class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</div>
-  </div>
+  <${winnerTag} class="winner-banner">
+    <span class="winner-sub">🎬 Today's Winner${todayWinnerNames.length > 1 ? 's' : ''}</span>
+    <span class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</span>
+	    <span class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</span>
+  </${winnerCloseTag}>
   <div class="card"><div class="card-lbl">Results</div>
     ${sg.map(g => {
       const st = getPreviousStreak(g.name);
@@ -1259,7 +1259,6 @@ function renderCompletedToday(t, canStartNextDay=false) {
       </div>`;
     }).join('')}
   </div>
-  ${shareBtn}
   ${nextDayBtn}`;
 }
 
@@ -1297,8 +1296,8 @@ function getShareResultInfo(day) {
 function renderShareResultCard(info) {
   return `<article class="result-share-card${info.noWinner ? ' no-winner' : ''}">
     <div class="result-share-top">
-      <div class="result-share-brand">TotoWrap</div>
-      <div class="result-share-meta"><span>Estimated Wrap ${esc(info.estWrap)}</span><span>-</span><span>${esc(info.dayLabel)}</span></div>
+      <div class="result-share-brand"><img src="imgs/totowrap.png" alt="TotoWrap"></div>
+      <div class="result-share-meta"><span>${esc(info.dayLabel)}</span><span>-</span><span>Estimated Wrap ${esc(info.estWrap)}</span></div>
     </div>
     <div class="result-share-main">
       <div class="result-share-winner">
@@ -1379,21 +1378,24 @@ async function renderShareResultBlob() {
   const info = getShareResultInfo(S.today);
   if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
   const canvas = document.createElement('canvas');
-  canvas.width = 1080;
-  canvas.height = 1080;
+  const imageSize = 1080;
+  const exportScale = 2;
+  canvas.width = imageSize * exportScale;
+  canvas.height = imageSize * exportScale;
   const ctx = canvas.getContext('2d');
-  const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  ctx.scale(exportScale, exportScale);
+  const bg = ctx.createLinearGradient(0, 0, imageSize, imageSize);
   bg.addColorStop(0, '#3d4e6f');
   bg.addColorStop(1, '#1f2f4d');
   ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, imageSize, imageSize);
 
   const canImg = await loadShareImage('imgs/tunacan.png');
   if (canImg) {
     ctx.save();
     ctx.globalAlpha = .14;
     const size = 620;
-    ctx.drawImage(canImg, (canvas.width - size) / 2, 214, size, size);
+    ctx.drawImage(canImg, (imageSize - size) / 2, 214, size, size);
     ctx.restore();
   }
 
@@ -1402,15 +1404,20 @@ async function renderShareResultBlob() {
   canvasRoundRect(ctx, 20, 20, 1040, 1040, 22);
   ctx.stroke();
 
-  ctx.fillStyle = '#ffd04d';
-  ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.font = "bold 50px 'Alte Haas Grotesk', sans-serif";
-  ctx.fillText('TotoWrap', 80, 116);
+  const logoImg = await loadShareImage('imgs/totowrap.png');
+  if (logoImg) {
+    ctx.drawImage(logoImg, 80, 84, 220, 69);
+  } else {
+    ctx.fillStyle = '#ffd04d';
+    ctx.textAlign = 'left';
+    ctx.font = "bold 50px 'Alte Haas Grotesk', sans-serif";
+    ctx.fillText('TotoWrap', 80, 116);
+  }
   ctx.fillStyle = '#b8c9a8';
   ctx.textAlign = 'right';
   ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
-  ctx.fillText(`Estimated Wrap ${info.estWrap} - ${info.dayLabel}`, 1000, 116);
+  ctx.fillText(`${info.dayLabel} - Estimated Wrap ${info.estWrap}`, 1000, 116);
 
   ctx.strokeStyle = 'rgba(61,84,51,.72)';
   ctx.lineWidth = 2;
@@ -1497,7 +1504,8 @@ async function shareResultImage() {
       toast('Image sharing is not available here - download instead', 'err');
       return;
     }
-    await navigator.share({ files: [file], title: `${info.dayLabel} TotoWrap result` });
+    const shareTitle = `TotoWrap result - ${info.dayLabel}`;
+    await navigator.share({ files: [file], title: shareTitle, text: shareTitle });
   } catch(e) {
     if (e?.name !== 'AbortError') {
       console.error('Share result failed:', e);
@@ -1899,7 +1907,7 @@ function renderBoardPlayerStats(name) {
   const stats = getBoardPlayerStats(name);
   const wrapGap = stats.lastGap === null
     ? 'No completed bets yet'
-    : `Yesterday's bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> off the official wrap`;
+    : `Last bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> off the official wrap`;
   const closestWrongValue = stats.closestWrongGap === null ? '--' : formatBoardCompactGap(stats.closestWrongGap);
   const closestWrongStat = stats.closestWrongDate
     ? `<button class="board-stat board-stat-link" type="button" data-closest-wrong-date="${esc(stats.closestWrongDate)}" title="Open history day" aria-label="Open closest wrong bet history">

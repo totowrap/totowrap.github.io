@@ -315,14 +315,15 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   100% { transform: translateX(-25%); }
 }
 .winner-banner { background: linear-gradient(135deg, rgba(106,191,106,.16), rgba(106,191,106,.07)), linear-gradient(135deg, rgba(62, 79, 112, 0.84), rgba(38, 55, 89, 0.88)), rgba(38, 55, 89, 0.88); border: 1px solid rgba(106,191,106,.5); border-radius: var(--radius); padding: 20px 16px; text-align: center; margin-bottom: 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 8px 32px 0 rgba(0, 0, 0, 0.22); }
+.winner-banner[data-share-result] { display:block; width:100%; color:inherit; font:inherit; cursor:pointer; }
 .winner-banner.no-winner-banner { background: linear-gradient(135deg, rgba(217,85,85,.16), rgba(217,85,85,.07)), linear-gradient(135deg, rgba(62, 79, 112, 0.84), rgba(38, 55, 89, 0.88)), rgba(38, 55, 89, 0.88); border-color: rgba(217,85,85,.5); }
 @supports (-webkit-backdrop-filter: blur(1px)) {
   .winner-banner { background: linear-gradient(135deg, rgba(106,191,106,.10), rgba(106,191,106,.025)), linear-gradient(135deg, rgba(46, 60, 87, 0.54), rgba(46, 60, 87, 0.36)); -webkit-backdrop-filter: blur(14px) saturate(135%); backdrop-filter: blur(14px) saturate(135%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 32px 0 rgba(0, 0, 0, 0.2); }
   .winner-banner.no-winner-banner { background: linear-gradient(135deg, rgba(217,85,85,.12), rgba(217,85,85,.03)), linear-gradient(135deg, rgba(46, 60, 87, 0.54), rgba(46, 60, 87, 0.36)); border-color: rgba(217,85,85,.5); }
 }
-.winner-sub { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
-.winner-name { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 2.8rem; color: var(--accent); letter-spacing: .04em; line-height: 1; }
-.winner-pts { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .7rem; color: var(--dim); margin-top: 4px; }
+.winner-sub { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+.winner-name { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 2.8rem; color: var(--accent); letter-spacing: .04em; line-height: 1; }
+.winner-pts { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .7rem; color: var(--dim); margin-top: 4px; }
 .lb-rank { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 1.8rem; min-width: 32px; color: var(--dim); }
 .lb-rank.first { color: var(--accent); }
 .day-footer { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .67rem; color: var(--dim); margin-top: 8px; }
@@ -380,7 +381,8 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .result-share-card::before { content:""; position:absolute; inset:76px; opacity:.18; background:url('imgs/tunacan.png') center/contain no-repeat; pointer-events:none; }
 .result-share-top, .result-share-main, .result-share-bottom { position:relative; z-index:1; }
 .result-share-top { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:12px; border-bottom:1px solid rgba(61,84,51,.62); }
-.result-share-brand { color:var(--accent2); font-family:'Alte Haas Grotesk', sans-serif; font-size:1.12rem; line-height:1; text-transform:uppercase; white-space:nowrap; }
+.result-share-brand { flex:0 0 auto; }
+.result-share-brand img { display:block; width:82px; height:auto; }
 .result-share-meta { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:5px; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; line-height:1.2; text-align:right; text-transform:uppercase; }
 .result-share-main { display:grid; gap:10px; text-align:center; }
 .result-share-winner { border:1px solid rgba(106,191,106,.5); border-radius:8px; padding:20px 14px 18px; background:linear-gradient(135deg, rgba(106,191,106,.10), rgba(106,191,106,.025)), linear-gradient(135deg, rgba(46,60,87,.54), rgba(46,60,87,.36)); box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 8px 32px rgba(0,0,0,.2); }
