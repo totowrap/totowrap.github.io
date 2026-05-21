@@ -563,13 +563,6 @@ function displayToISO(dateStr) {
   const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   return m ? `${m[3]}-${pad(m[2])}-${pad(m[1])}` : localDateISO();
 }
-function normalizeDateInput(value) {
-  const raw = String(value || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw) && !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(raw)) return null;
-  const iso = displayToISO(raw);
-  const parsed = dateFromISO(iso);
-  return parsed ? localDateISO(parsed) : null;
-}
 function approvalSec(day=S.today) { return day?.approvedAt ? toSec(day.approvedAt) : null; }
 function approvalDateISO(day=S.today) { return day?.approvedDate || displayToISO(day?.date); }
 function inferBetDate(time, day=S.today) {
@@ -1556,7 +1549,7 @@ function findHistoryEntryByDate(date) {
 
 async function editHistoryDay(date) {
   if (!IS_ADMIN) return;
-  const action = prompt('History action: type "edit" to edit the date, or "delete" to delete this day.', 'edit');
+  const action = prompt('History action: type "edit" to edit the official wrap time, or "delete" to delete this day.', 'edit');
   if (!action) return;
   const normalizedAction = action.trim().toLowerCase();
   if (normalizedAction === 'delete') {
@@ -1574,30 +1567,43 @@ async function editHistoryDay(date) {
     return;
   }
 
-  const currentDate = target.day.date || '';
-  const nextDate = prompt('Edit game date', currentDate);
-
-  if (!nextDate || nextDate === currentDate) return;
-  const normalizedDate = normalizeDateInput(nextDate);
-  if (!normalizedDate) {
-    toast('Use date format YYYY-MM-DD or DD/MM/YYYY', 'err');
-    return;
-  }
-
-  const duplicate = getHistoryEntries().some(d => displayToISO(d.date) === normalizedDate && displayToISO(d.date) !== displayToISO(currentDate));
-  if (duplicate) {
-    toast('Another game already uses that date', 'err');
+  const currentWrap = target.day.wrapTime || '';
+  const nextWrap = prompt('Edit official wrap time', currentWrap);
+  if (nextWrap === null) return;
+  const normalizedWrap = nextWrap.trim();
+  if (!normalizedWrap || normalizedWrap === currentWrap) return;
+  if (!isValidHMS(normalizedWrap)) {
+    toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err');
     return;
   }
 
   const prevS = cloneState();
-  const calculationDate = approvalDateISO(target.day);
-  target.day.date = normalizedDate;
-  if (!target.day.approvedDate) target.day.approvedDate = calculationDate;
+  adjustCompletedDayScores(target.day, -1);
+  const { winner, winners, points, noWinner } = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
+  target.day.wrapTime = normalizedWrap;
+  target.day.winner = winner;
+  target.day.winners = winners;
+  target.day.points = points;
+  target.day.noWinner = noWinner;
+  adjustCompletedDayScores(target.day, 1);
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return; }
-  toast('History date updated', 'ok');
+  toast('Official wrap time updated', 'ok');
   render();
+}
+
+function adjustCompletedDayScores(day, direction) {
+  const points = Number(day?.points) || 0;
+  if (!points) return;
+  const names = day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : []);
+  names.forEach(name => {
+    const nextScore = (S.scores[name] || 0) + (direction * points);
+    if (nextScore > 0) {
+      S.scores[name] = nextScore;
+    } else {
+      delete S.scores[name];
+    }
+  });
 }
 
 async function deleteHistoryDay(date) {
@@ -1613,14 +1619,7 @@ async function deleteHistoryDay(date) {
   const day = target.kind === 'history' ? S.days[target.idx] : S.today;
 
   // Roll back score changes from the deleted completed day.
-  if (day) {
-    const winners = day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : []);
-    const pts = Number(day.points) || 0;
-    winners.forEach(name => {
-      S.scores[name] = (S.scores[name] || 0) - pts;
-      if (S.scores[name] <= 0) delete S.scores[name];
-    });
-  }
+  adjustCompletedDayScores(day, -1);
 
   if (target.kind === 'history') {
     S.days.splice(target.idx, 1);
