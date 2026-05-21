@@ -1812,12 +1812,34 @@ function formatBoardGap(totalSec) {
   return `${min} ${countWord(min, 'min', 'min')} ${pad(rest)} ${countWord(rest, 'sec', 'sec')}`;
 }
 
+function formatBoardCompactGap(totalSec) {
+  const sec = Math.max(0, Math.round(totalSec));
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) {
+    const min = Math.floor(sec / 60);
+    const rest = sec % 60;
+    return `${min}m${rest ? `${pad(rest)}s` : ''}`;
+  }
+  const hour = Math.floor(sec / 3600);
+  const min = Math.floor((sec % 3600) / 60);
+  return `${hour}h${min ? `${pad(min)}m` : ''}`;
+}
+
+function wrongTerritoryGap(name, day) {
+  if (!day?.wrapTime || !day.guesses?.length) return null;
+  const wrapSec = normalizeGameSec(day.wrapTime, day);
+  const slice = boundaries(day.guesses, day).find(s => s.names.includes(name));
+  if (!slice || (wrapSec >= slice.start && wrapSec <= slice.end)) return null;
+  return wrapSec < slice.start ? slice.start - wrapSec : wrapSec - slice.end;
+}
+
 function getBoardPlayerStats(name) {
   const completed = getHistoryEntries();
   let wins = 0;
   let exact = 0;
   let forgot = 0;
   let lastGap = null;
+  let closestWrongGap = null;
 
   [...completed].reverse().forEach(day => {
     const winnerNames = day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : []);
@@ -1829,19 +1851,24 @@ function getBoardPlayerStats(name) {
 
     const guess = day.guesses?.find(g => g.name === name);
     if (guess && !guess.time) forgot += 1;
-    if (lastGap === null && guess?.time && day.wrapTime) {
-      lastGap = Math.abs(guessGameSec(guess, day) - normalizeGameSec(day.wrapTime, day));
+    if (guess?.time && day.wrapTime) {
+      const gap = Math.abs(guessGameSec(guess, day) - normalizeGameSec(day.wrapTime, day));
+      if (lastGap === null) lastGap = gap;
+      const wrongGap = wrongTerritoryGap(name, day);
+      if (wrongGap !== null && (closestWrongGap === null || wrongGap < closestWrongGap)) {
+        closestWrongGap = wrongGap;
+      }
     }
   });
 
   return {
-    points: S.scores[name] || 0,
     wins,
     exact,
     forgot,
     days: completed.length,
     rate: completed.length ? `${Math.round((wins / completed.length) * 100)}%` : '0%',
-    lastGap
+    lastGap,
+    closestWrongGap
   };
 }
 
@@ -1849,14 +1876,14 @@ function renderBoardPlayerStats(name) {
   const stats = getBoardPlayerStats(name);
   const wrapGap = stats.lastGap === null
     ? 'No completed bets yet'
-    : `Last bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> from wrap`;
+    : `Most recent bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> off the official wrap`;
   return `<div class="board-player-stats">
     <div class="board-player-gap">${wrapGap}</div>
     <div class="board-stat-grid">
-      <div class="board-stat"><strong>${stats.points}</strong><span>${countWord(stats.points, 'point', 'points')}</span></div>
-      <div class="board-stat"><strong>${stats.wins}</strong><span>${countWord(stats.wins, 'win', 'wins')}</span></div>
-      <div class="board-stat"><strong>${stats.exact}</strong><span>${countWord(stats.exact, 'exact bet', 'exact bets')}</span></div>
-      <div class="board-stat"><strong>${stats.forgot}</strong><span>${countWord(stats.forgot, 'forgot bet', 'forgot bets')}</span></div>
+      <div class="board-stat"><strong>${stats.wins}</strong><span>Total Wins</span></div>
+      <div class="board-stat"><strong>${stats.exact}</strong><span>Exact Bet</span></div>
+      <div class="board-stat"><strong>${stats.forgot}</strong><span>Forgot Bets</span></div>
+      <div class="board-stat"><strong>${stats.closestWrongGap === null ? '--' : formatBoardCompactGap(stats.closestWrongGap)}</strong><span>Closest Wrong Bet</span></div>
     </div>
     <div class="board-win-rate">Win rate <span class="accent">${stats.rate}</span> - Won ${stats.wins} ${countWord(stats.wins, 'day', 'days')} out of ${stats.days}</div>
   </div>`;
