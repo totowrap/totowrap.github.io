@@ -40,6 +40,7 @@ const LOGO_STEP_SEC = 12.5;
 const _logoStartedAt = performance.now();
 let _lastConfettiWinner = null;
 let _boardView = 'list';
+let _openBoardPlayer = null;
 let _swipeStart = null;
 let _suppressNextClick = false;
 let _dragState = null;
@@ -348,6 +349,13 @@ document.addEventListener('click', e => {
   const boardBtn = e.target.closest?.('[data-board-view]');
   if (boardBtn) {
     setBoardView(boardBtn.dataset.boardView);
+    return;
+  }
+
+  const boardPlayerBtn = e.target.closest?.('[data-board-player]');
+  if (boardPlayerBtn) {
+    _openBoardPlayer = _openBoardPlayer === boardPlayerBtn.dataset.boardPlayer ? null : boardPlayerBtn.dataset.boardPlayer;
+    setBoardView('list');
     return;
   }
 
@@ -1511,10 +1519,82 @@ function renderBoard(view=_boardView) {
   }
   return `<div class="card">${toolbar}<div class="card-lbl" style="margin-top:4px;">Standings</div>
 ${pl.map((p,i)=>{
-  const st = getPreviousStreak(p.name);
-  return `<div class="row"><div class="lb-rank ${i===0?'first':''}">${i+1}</div><div class="row-name"><span>${esc(p.name)}</span>${st.pill}</div><div class="row-pts accent">${S.scores[p.name]||0} <span class="mono dim" style="font-size:.65rem">pts</span></div></div>`;
+  const score = S.scores[p.name] || 0;
+  const openKey = `${i}:${p.name}`;
+  const isOpen = _openBoardPlayer === openKey;
+  return `<div class="board-player${isOpen ? ' open' : ''}">
+    <div class="board-row">
+      <div class="board-rank">${i+1}</div>
+      <button class="board-player-name" type="button" data-board-player="${esc(openKey)}">${esc(p.name)}</button>
+      <div class="board-player-points accent">${score} <span class="mono dim">${countWord(score, 'pt', 'pts')}</span></div>
+    </div>
+    ${isOpen ? renderBoardPlayerStats(p.name) : ''}
+  </div>`;
 }).join('')}
 </div>`;
+}
+
+function countWord(value, singular, plural) {
+  return Number(value) === 1 ? singular : plural;
+}
+
+function formatBoardGap(totalSec) {
+  const sec = Math.max(0, Math.round(totalSec));
+  if (sec < 60) return `${sec} ${countWord(sec, 'sec', 'sec')}`;
+  const min = Math.floor(sec / 60);
+  const rest = sec % 60;
+  if (!rest) return `${min} ${countWord(min, 'min', 'min')}`;
+  return `${min} ${countWord(min, 'min', 'min')} ${pad(rest)} ${countWord(rest, 'sec', 'sec')}`;
+}
+
+function getBoardPlayerStats(name) {
+  const completed = getHistoryEntries();
+  let wins = 0;
+  let exact = 0;
+  let forgot = 0;
+  let lastGap = null;
+
+  [...completed].reverse().forEach(day => {
+    const winnerNames = day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : []);
+    const won = !day.noWinner && winnerNames.includes(name);
+    if (won) {
+      wins += 1;
+      if (Number(day.points) === 3) exact += 1;
+    }
+
+    const guess = day.guesses?.find(g => g.name === name);
+    if (guess && !guess.time) forgot += 1;
+    if (lastGap === null && guess?.time && day.wrapTime) {
+      lastGap = Math.abs(guessGameSec(guess, day) - normalizeGameSec(day.wrapTime, day));
+    }
+  });
+
+  return {
+    points: S.scores[name] || 0,
+    wins,
+    exact,
+    forgot,
+    days: completed.length,
+    rate: completed.length ? `${Math.round((wins / completed.length) * 100)}%` : '0%',
+    lastGap
+  };
+}
+
+function renderBoardPlayerStats(name) {
+  const stats = getBoardPlayerStats(name);
+  const wrapGap = stats.lastGap === null
+    ? 'No completed bets yet'
+    : `Last bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> from wrap`;
+  return `<div class="board-player-stats">
+    <div class="board-player-gap">${wrapGap}</div>
+    <div class="board-stat-grid">
+      <div class="board-stat"><strong>${stats.points}</strong><span>${countWord(stats.points, 'point', 'points')}</span></div>
+      <div class="board-stat"><strong>${stats.wins}</strong><span>${countWord(stats.wins, 'win', 'wins')}</span></div>
+      <div class="board-stat"><strong>${stats.exact}</strong><span>${countWord(stats.exact, 'exact bet', 'exact bets')}</span></div>
+      <div class="board-stat"><strong>${stats.forgot}</strong><span>${countWord(stats.forgot, 'forgot bet', 'forgot bets')}</span></div>
+    </div>
+    <div class="board-win-rate">Win rate <span class="accent">${stats.rate}</span> - Won ${stats.wins} ${countWord(stats.wins, 'day', 'days')} out of ${stats.days}</div>
+  </div>`;
 }
 
 function getHistoryEntries() {
