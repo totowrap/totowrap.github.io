@@ -650,7 +650,7 @@ function sortedGuesses(guesses, day=S.today) {
     // If times are different, sort by time (ascending)
     if (secA !== secB) return secA - secB;
     
-    // If times are the same, sort alphabetically
+    // If times are the same, sort names alphabetically
     return a.name.localeCompare(b.name);
   });
 
