@@ -352,6 +352,25 @@ document.addEventListener('click', e => {
     return;
   }
 
+  const shareResultBtn = e.target.closest?.('[data-share-result]');
+  if (shareResultBtn) {
+    openShareResult();
+    return;
+  }
+
+  const shareCloseBtn = e.target.closest?.('[data-share-close]');
+  if (shareCloseBtn || e.target.id === 'share-result-modal') {
+    closeShareResult();
+    return;
+  }
+
+  const shareActionBtn = e.target.closest?.('[data-share-action]');
+  if (shareActionBtn) {
+    if (shareActionBtn.dataset.shareAction === 'download') downloadShareResult();
+    if (shareActionBtn.dataset.shareAction === 'share') shareResultImage();
+    return;
+  }
+
   const boardPlayerBtn = e.target.closest?.('[data-board-player]');
   if (boardPlayerBtn) {
     _openBoardPlayer = _openBoardPlayer === boardPlayerBtn.dataset.boardPlayer ? null : boardPlayerBtn.dataset.boardPlayer;
@@ -1168,6 +1187,7 @@ function renderPlayerStatusHeader(lastDay) {
 
 function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
+  const shareBtn = canStartNextDay ? '<button class="btn btn-s" type="button" data-share-result>Share Result</button>' : '';
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p" id="new-day-btn">Start Next Day →</button>' : '';
 
   if (t.noWinner) {
@@ -1193,6 +1213,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
           </div>`;
         }).join('')}
       </div>
+      ${shareBtn}
       ${nextDayBtn}`;
   }
 
@@ -1232,7 +1253,251 @@ function renderCompletedToday(t, canStartNextDay=false) {
       </div>`;
     }).join('')}
   </div>
+  ${shareBtn}
   ${nextDayBtn}`;
+}
+
+function getShareResultInfo(day) {
+  const winnerNames = day?.winners ? day.winners.map(w => w.name).filter(Boolean) : (day?.winner ? [day.winner] : []);
+  const noWinner = Boolean(day?.noWinner || !winnerNames.length);
+  const winnerGuess = noWinner ? null : day.guesses?.find(g => winnerNames.includes(g.name) && g.time);
+  const winnerBet = winnerGuess?.time || '--:--';
+  const wrapGap = winnerGuess?.time && day.wrapTime
+    ? Math.abs(guessGameSec(winnerGuess, day) - normalizeGameSec(day.wrapTime, day))
+    : null;
+  const points = Number(day?.points) || 0;
+  const detail = noWinner
+    ? 'Outside all bets'
+    : points === 3
+      ? 'Exact bet'
+      : wrapGap === null ? 'Winner' : `${formatBoardGap(wrapGap)} from wrap`;
+  const dayNum = S.days.length + (S.today ? 1 : 0);
+
+  return {
+    noWinner,
+    estWrap: day?.estWrap || '--:--',
+    dayLabel: `Day ${dayNum || '—'}`,
+    kicker: noWinner ? 'Day Complete' : `Today's Winner${winnerNames.length > 1 ? 's' : ''}`,
+    name: noWinner ? 'No Winner' : formatNames(winnerNames),
+    bet: winnerBet,
+    wrap: day?.wrapTime || '--:--',
+    pointsText: winnerNames.length > 1 && !noWinner
+      ? `+${points} ${countWord(points, 'point', 'points')} each`
+      : `+${points} ${countWord(points, 'point', 'points')}`,
+    detail
+  };
+}
+
+function renderShareResultCard(info) {
+  return `<article class="result-share-card${info.noWinner ? ' no-winner' : ''}">
+    <div class="result-share-top">
+      <div class="result-share-brand">TotoWrap</div>
+      <div class="result-share-meta"><span>Estimated Wrap ${esc(info.estWrap)}</span><span>-</span><span>${esc(info.dayLabel)}</span></div>
+    </div>
+    <div class="result-share-main">
+      <div class="result-share-winner">
+        <div class="result-share-kicker">${esc(info.kicker)}</div>
+        <div class="result-share-name">${esc(info.name)}</div>
+      </div>
+      <div class="result-share-times">
+        <div class="result-share-time"><span>Bet</span><strong>${esc(info.bet)}</strong></div>
+        <div class="result-share-time"><span>Official Wrap</span><strong>${esc(info.wrap)}</strong></div>
+      </div>
+    </div>
+    <div class="result-share-bottom">
+      <div class="result-share-points">${esc(info.pointsText)}</div>
+      <div class="result-share-detail">${esc(info.detail)}</div>
+    </div>
+  </article>`;
+}
+
+function openShareResult() {
+  if (!IS_ADMIN || !S.today?.wrapTime) return;
+  closeShareResult();
+  const info = getShareResultInfo(S.today);
+  const modal = document.createElement('div');
+  modal.id = 'share-result-modal';
+  modal.className = 'result-share-modal';
+  modal.innerHTML = `<div class="result-share-panel" role="dialog" aria-modal="true" aria-label="Share result">
+    <button class="result-share-close" type="button" aria-label="Close" data-share-close>×</button>
+    <div class="card-lbl">Share Result</div>
+    <div class="result-share-preview">${renderShareResultCard(info)}</div>
+    <div class="result-share-actions">
+      <button class="btn btn-s" type="button" data-share-action="download">Download Image</button>
+      <button class="btn btn-p" type="button" data-share-action="share">Share Image</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function closeShareResult() {
+  document.getElementById('share-result-modal')?.remove();
+}
+
+function shareImageFilename(info) {
+  return `totowrap-${info.dayLabel.toLowerCase().replace(/\s+/g, '-')}-result.png`;
+}
+
+function canvasRoundRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function drawShareText(ctx, text, x, y, maxWidth, maxSize, minSize=28) {
+  let size = maxSize;
+  while (size > minSize) {
+    ctx.font = `bold ${size}px 'Alte Haas Grotesk', sans-serif`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size -= 2;
+  }
+  ctx.fillText(text, x, y);
+}
+
+function loadShareImage(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+async function renderShareResultBlob() {
+  if (!S.today?.wrapTime) throw new Error('No completed result');
+  const info = getShareResultInfo(S.today);
+  if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
+  const canvas = document.createElement('canvas');
+  canvas.width = 1080;
+  canvas.height = 1080;
+  const ctx = canvas.getContext('2d');
+  const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  bg.addColorStop(0, '#3d4e6f');
+  bg.addColorStop(1, '#1f2f4d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const canImg = await loadShareImage('imgs/tunacan.png');
+  if (canImg) {
+    ctx.save();
+    ctx.globalAlpha = .14;
+    const size = 620;
+    ctx.drawImage(canImg, (canvas.width - size) / 2, 214, size, size);
+    ctx.restore();
+  }
+
+  ctx.strokeStyle = 'rgba(238,199,99,.22)';
+  ctx.lineWidth = 3;
+  canvasRoundRect(ctx, 20, 20, 1040, 1040, 22);
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffd04d';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = "bold 50px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText('TotoWrap', 80, 116);
+  ctx.fillStyle = '#b8c9a8';
+  ctx.textAlign = 'right';
+  ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText(`Estimated Wrap ${info.estWrap} - ${info.dayLabel}`, 1000, 116);
+
+  ctx.strokeStyle = 'rgba(61,84,51,.72)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(80, 168);
+  ctx.lineTo(1000, 168);
+  ctx.stroke();
+
+  canvasRoundRect(ctx, 80, 238, 920, 300, 20);
+  ctx.fillStyle = info.noWinner ? 'rgba(217,85,85,.14)' : 'rgba(106,191,106,.12)';
+  ctx.fill();
+  ctx.strokeStyle = info.noWinner ? 'rgba(217,85,85,.56)' : 'rgba(106,191,106,.56)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#b8c9a8';
+  ctx.font = "bold 25px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText(info.kicker.toUpperCase(), 540, 335);
+  ctx.fillStyle = info.noWinner ? '#d65656' : '#ffd04d';
+  drawShareText(ctx, info.name, 540, 415, 800, info.name.length > 20 ? 72 : 98, 48);
+
+  const times = [
+    { label: 'BET', value: info.bet },
+    { label: 'OFFICIAL WRAP', value: info.wrap }
+  ];
+  times.forEach((item, idx) => {
+    const x = 80 + idx * 468;
+    canvasRoundRect(ctx, x, 578, 452, 172, 18);
+    ctx.fillStyle = 'rgba(38,55,89,.58)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(184,201,168,.14)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#b8c9a8';
+    ctx.font = "bold 22px 'Alte Haas Grotesk', sans-serif";
+    ctx.fillText(item.label, x + 226, 632);
+    ctx.fillStyle = '#eec763';
+    ctx.font = "bold 54px 'Alte Haas Grotesk', sans-serif";
+    ctx.fillText(item.value, x + 226, 696);
+  });
+
+  ctx.strokeStyle = 'rgba(61,84,51,.72)';
+  ctx.beginPath();
+  ctx.moveTo(80, 888);
+  ctx.lineTo(1000, 888);
+  ctx.stroke();
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffd04d';
+  ctx.font = "bold 54px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText(info.pointsText, 80, 974);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#b8c9a8';
+  ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText(info.detail.toUpperCase(), 1000, 974);
+
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('Could not create image');
+  return { blob, info };
+}
+
+async function downloadShareResult() {
+  try {
+    const { blob, info } = await renderShareResultBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = shareImageFilename(info);
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch(e) {
+    console.error('Share result download failed:', e);
+    toast('Could not create result image', 'err');
+  }
+}
+
+async function shareResultImage() {
+  try {
+    const { blob, info } = await renderShareResultBlob();
+    const file = new File([blob], shareImageFilename(info), { type: 'image/png' });
+    if (!navigator.share || !navigator.canShare?.({ files: [file] })) {
+      toast('Image sharing is not available here - download instead', 'err');
+      return;
+    }
+    await navigator.share({ files: [file], title: `${info.dayLabel} TotoWrap result` });
+  } catch(e) {
+    if (e?.name !== 'AbortError') {
+      console.error('Share result failed:', e);
+      toast('Could not share result image', 'err');
+    }
+  }
 }
 
 function renderActiveTodayRows(t, sg, out, slices) {
