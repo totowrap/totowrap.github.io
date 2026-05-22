@@ -12,7 +12,8 @@
     () => 'E anche stasera Galeone perderà!',
     () => 'TotoWrap is love, TotoWrap is life.',
     () => 'La ludopatia è un problema solo se perdi!',
-    () => 'You miss 100% of the bets you don’t place.';
+    () => 'You miss 100% of the bets you don’t place.',
+    () => 'Your strategy is so confusing that it fooled even you.',
     () => {
       const name = storedNames[Math.floor(Math.random() * storedNames.length)];
       return name ? `Dude, let's focus. There's no way ${name} is better than you!` : '';
