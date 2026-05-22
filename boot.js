@@ -9,7 +9,7 @@
     () => '99% of players stop playing before winning. Keep gambling!',
     () => 'Che ti sei perso due Range Rover?',
     () => 'Never bet the same time as Beatrice K. or you will make her cry!',
-    () => 'E anche stasera Galeone perderà!',
+    () => 'E anche oggi, purtroppo, Luigi ha perso al TotoWrap...',
     () => 'TotoWrap is love, TotoWrap is life.',
     () => 'La ludopatia è un problema solo se perdi!',
     () => 'You miss 100% of the bets you don’t place.',
