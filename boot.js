@@ -10,7 +10,7 @@
     () => 'Che ti sei perso due Range Rover?',
     () => 'Never bet the same time as Beatrice K. or you will make her cry!',
     () => 'E anche stasera Galeone perderà!',
-    () => 'TotoWrap is love. </n>TotoWrap is life.',
+    () => 'TotoWrap is love, TotoWrap is life.',
     () => 'La ludopatia è un problema solo se perdi!',
     () => {
       const name = storedNames[Math.floor(Math.random() * storedNames.length)];
