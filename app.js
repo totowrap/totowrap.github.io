@@ -51,8 +51,9 @@ let _lastSaveWasConflict = false;
 let _skipNextUIRestore = false;
 const INACTIVITY_REFRESH_MS = 5 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
-const BOOT_TOTAL_MS = 1500;
-const BOOT_FADE_MS = 350;
+const BOOT_TOTAL_MS = 4500;
+const BOOT_FADE_MS = 1500;
+const BOOT_PLAYER_NAMES_STORAGE_KEY = 'totowrap-boot-player-names';
 const BOOT_STARTED_AT = Date.now();
 let _bootHideQueued = false;
 
@@ -62,6 +63,14 @@ function waitMs(ms) {
 
 function nextFrame() {
   return new Promise(resolve => requestAnimationFrame(resolve));
+}
+
+function storeBootPlayerNames() {
+  const names = [...new Set((S.playerRoster || []).map(player => String(player.name || '').trim()).filter(Boolean))];
+  if (!names.length) return;
+  try {
+    localStorage.setItem(BOOT_PLAYER_NAMES_STORAGE_KEY, JSON.stringify(names));
+  } catch (_) {}
 }
 
 function isBootContentReady() {
@@ -454,6 +463,25 @@ function esc(value) {
   }[ch]));
 }
 
+function nameKey(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function getDuplicateNameKeys(names) {
+  const counts = {};
+  (names || []).forEach(name => {
+    const key = nameKey(name);
+    if (key) counts[key] = (counts[key] || 0) + 1;
+  });
+  return Object.keys(counts).filter(key => counts[key] > 1);
+}
+
+function stateHasDuplicateNames(state=S) {
+  if (getDuplicateNameKeys(state?.playerRoster?.map(player => player.name)).length) return true;
+  const days = [...(state?.days || []), state?.today].filter(Boolean);
+  return days.some(day => getDuplicateNameKeys(day.guesses?.map(guess => guess.name)).length);
+}
+
 function formatSafeNames(names) {
   return formatNames((names || []).map(esc));
 }
@@ -515,6 +543,11 @@ async function saveS() {
   _lastSaveWasConflict = false;
   if (!IS_ADMIN || !currentUser) {
     toast("Sign in as admin to save changes", "err");
+    render();
+    return false;
+  }
+  if (stateHasDuplicateNames()) {
+    toast("Duplicate names", "err");
     render();
     return false;
   }
@@ -671,14 +704,14 @@ function parsePaste(text) {
 
 function buildFullGuessList(parsed) {
   const result = [];
-  const rosterNames = new Map(S.playerRoster.map(p => [p.name.toLowerCase(), p.name]));
-  const submitted = new Set(parsed.map(g => g.name.toLowerCase()));
+  const rosterNames = new Map(S.playerRoster.map(p => [nameKey(p.name), p.name]));
+  const submitted = new Set(parsed.map(g => nameKey(g.name)));
   parsed.forEach(g => {
-    const rosterName = rosterNames.get(g.name.toLowerCase());
+    const rosterName = rosterNames.get(nameKey(g.name));
     result.push({ ...g, name: rosterName || g.name });
   });
   S.playerRoster.forEach(p => {
-    if (!submitted.has(p.name.toLowerCase())) {
+    if (!submitted.has(nameKey(p.name))) {
       result.push({ name: p.name, time: null });
     }
   });
@@ -2009,10 +2042,10 @@ function openHistoryDayActions(date) {
 }
 
 function getHistoryPlayersMissingBet(day) {
-  const dayBets = new Set((day?.guesses || []).filter(g => g.time).map(g => g.name));
+  const dayBets = new Set((day?.guesses || []).filter(g => g.time).map(g => nameKey(g.name)));
   return S.playerRoster
     .map(player => player.name)
-    .filter(name => name && !dayBets.has(name))
+    .filter(name => name && !dayBets.has(nameKey(name)))
     .sort((a, b) => a.localeCompare(b));
 }
 
@@ -2041,7 +2074,7 @@ function openHistoryBetTimeDialog(date, name) {
     return;
   }
   if (!getHistoryPlayersMissingBet(target.day).includes(name)) {
-    toast('Player already has a bet on this day', 'err');
+    toast('Duplicate names', 'err');
     return;
   }
   openAdminDialog({
@@ -2151,9 +2184,9 @@ async function addHistoryPlayerBet(date, name, betTime) {
     toast('Use a valid bet time (HH:MM)', 'err');
     return false;
   }
-  const existingGuess = (target.day.guesses || []).find(g => g.name === name);
+  const existingGuess = (target.day.guesses || []).find(g => nameKey(g.name) === nameKey(name));
   if (existingGuess?.time) {
-    toast('Player already has a bet on this day', 'err');
+    toast('Duplicate names', 'err');
     return false;
   }
 
@@ -2488,12 +2521,7 @@ function showPreview() {
        </div>`
     : '';
   
-  const nameCounts = {};
-  parsed.forEach(g => {
-    const n = g.name.toLowerCase();
-    nameCounts[n] = (nameCounts[n] || 0) + 1;
-  });
-  const duplicates = Object.keys(nameCounts).filter(n => nameCounts[n] > 1);
+  const duplicates = getDuplicateNameKeys(parsed.map(g => g.name));
   
   const duplicateWarning = duplicates.length > 0 
     ? `<div class="card" style="border: 1px solid var(--red); background: rgba(214, 86, 86, 0.1); margin-bottom: 12px;">
@@ -2503,12 +2531,12 @@ function showPreview() {
        </div>`
     : '';
 
-  const existingNames = new Set(S.playerRoster.map(p => p.name.toLowerCase()));
+  const existingNames = new Set(S.playerRoster.map(p => nameKey(p.name)));
   const newPlayers = [];
   parsed.forEach(g => {
-    if (!existingNames.has(g.name.toLowerCase())) {
+    if (!existingNames.has(nameKey(g.name))) {
       newPlayers.push(g.name);
-      existingNames.add(g.name.toLowerCase());
+      existingNames.add(nameKey(g.name));
     }
   });
   
@@ -2550,7 +2578,7 @@ function showPreview() {
     <div class="preview-card">
       <div class="preview-head"><span>Player</span><span>Bet</span><span>Date</span></div>
       ${sorted.map(g => {
-        const isDup = duplicates.includes(g.name.toLowerCase());
+        const isDup = duplicates.includes(nameKey(g.name));
         return `
         <div class="row preview-row" style="${isDup ? 'border-left: 3px solid var(--red); padding-left: 8px;' : ''}">
           <div class="row-name">
@@ -2575,8 +2603,8 @@ function showPreview() {
   startClock();
   
 	  document.getElementById('confirm-btn')?.addEventListener('click', async () => {
-		    if (duplicates.length > 0) {
-		      toast('Fix duplicate player names before starting the day', 'err');
+	    if (duplicates.length > 0) {
+		      toast('Duplicate names', 'err');
 		      return;
 		    }
 		    let finalWrap = wrapTime;
@@ -2624,8 +2652,8 @@ async function savePlayer(idx) {
   const newName = nameInput.value.trim();
   const newPoints = parseInt(ptsInput.value) || 0;
   if (!newName) { toast('Name cannot be empty', 'err'); return; }
-  const duplicate = S.playerRoster.find((p, i) => i !== idx && p.name.toLowerCase() === newName.toLowerCase());
-  if (duplicate) { toast('Player name already exists', 'err'); return; }
+  const duplicate = S.playerRoster.find((p, i) => i !== idx && nameKey(p.name) === nameKey(newName));
+  if (duplicate) { toast('Duplicate names', 'err'); return; }
   if (oldName !== newName) {
     S.playerRoster[idx].name = newName;
     S.scores[newName] = S.scores[oldName] || 0;
@@ -2741,6 +2769,7 @@ onSnapshot(STATE_REF, (snap) => {
   } else {
     S = normalizeState({});
   }
+  storeBootPlayerNames();
   _stateReady = true;
   render();
   

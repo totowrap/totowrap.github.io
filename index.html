@@ -17,15 +17,19 @@ if (/(?:^|[?&])admin(?:=|&|$)/.test(location.search)) {
 </script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preload" as="image" href="imgs/tunacan.png">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?boot-phrases=1">
 <meta name="apple-mobile-web-app-title" content="TotoWrap">
 </head>
 <body>
 <div id="boot-loader" aria-label="Loading TotoWrap">
-  <img src="imgs/tunacan.png" alt="" class="boot-can">
+  <div class="boot-content">
+    <img src="imgs/tunacan.png" alt="" class="boot-can">
+    <p class="boot-phrase" data-boot-phrase></p>
+  </div>
 </div>
 <div id="app"></div>
 <div id="toast"></div>
+<script src="boot.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
