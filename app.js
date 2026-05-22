@@ -2085,6 +2085,10 @@ function openHistoryBetTimeDialog(date, name) {
       <label class="inp-lbl" for="admin-history-bet-input">Bet Time (HH:MM)</label>
       <input class="admin-dialog-wrap-input" type="text" id="admin-history-bet-input" placeholder="18:30" maxlength="5" pattern="[0-9]{2}:[0-9]{2}">
     </div>
+    <div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-history-bet-date-input">Bet Date (Optional)</label>
+      <input class="admin-dialog-wrap-input" type="date" id="admin-history-bet-date-input">
+    </div>
     <div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-action="history-bet-players-open" data-history-date="${esc(date)}">Back</button>
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="history-bet-save" data-history-date="${esc(date)}" data-history-player="${esc(name)}">Confirm</button>
@@ -2163,7 +2167,7 @@ async function updateHistoryWrapTime(date, nextWrap) {
   return true;
 }
 
-async function addHistoryPlayerBet(date, name, betTime) {
+async function addHistoryPlayerBet(date, name, betTime, betDate='') {
   if (!IS_ADMIN) return false;
   const target = findHistoryEntryByDate(date);
   if (!target) {
@@ -2184,6 +2188,11 @@ async function addHistoryPlayerBet(date, name, betTime) {
     toast('Use a valid bet time (HH:MM)', 'err');
     return false;
   }
+  const normalizedDate = String(betDate || '').trim();
+  if (normalizedDate && !dateFromISO(normalizedDate)) {
+    toast('Use a valid bet date', 'err');
+    return false;
+  }
   const existingGuess = (target.day.guesses || []).find(g => nameKey(g.name) === nameKey(name));
   if (existingGuess?.time) {
     toast('Duplicate names', 'err');
@@ -2195,7 +2204,7 @@ async function addHistoryPlayerBet(date, name, betTime) {
   target.day.guesses = target.day.guesses || [];
   const nextGuess = existingGuess || { name };
   nextGuess.time = normalizedBet;
-  nextGuess.date = inferBetDate(normalizedBet, target.day);
+  nextGuess.date = normalizedDate || inferBetDate(normalizedBet, target.day);
   if (!existingGuess) target.day.guesses.push(nextGuess);
   const { winner, winners, points, noWinner } = calcWinner(target.day.guesses, target.day.wrapTime, target.day);
   target.day.winner = winner;
@@ -2240,6 +2249,45 @@ function openManualTodayWrapDialog() {
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-save">Confirm</button>
     </div>`
   });
+}
+
+function openRosterPlayerDialog() {
+  if (!IS_ADMIN) return;
+  openAdminDialog({
+    title: 'Add Player',
+    copy: 'Add a player to the current roster.',
+    focusSelector: '#admin-roster-player-input',
+    body: `<div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-roster-player-input">Player Name</label>
+      <input class="admin-dialog-wrap-input" type="text" id="admin-roster-player-input" placeholder="Name" maxlength="80">
+    </div>
+    <div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="roster-player-save">Add</button>
+    </div>`
+  });
+}
+
+async function addRosterPlayer(name) {
+  if (!IS_ADMIN) return false;
+  const newName = String(name || '').trim();
+  if (!newName) {
+    toast('Name cannot be empty', 'err');
+    return false;
+  }
+  if (S.playerRoster.some(player => nameKey(player.name) === nameKey(newName))) {
+    toast('Duplicate names', 'err');
+    return false;
+  }
+
+  const prevS = cloneState();
+  S.playerRoster.push({ name: newName });
+  S.scores[newName] = Number(S.scores[newName]) || 0;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Player added', 'ok');
+  render();
+  return true;
 }
 
 async function confirmTodayWrap(wrapTime) {
@@ -2295,7 +2343,12 @@ async function handleAdminDialogAction(btn) {
     return;
   }
   if (action === 'history-bet-save') {
-    const saved = await addHistoryPlayerBet(date, btn.dataset.historyPlayer, document.getElementById('admin-history-bet-input')?.value);
+    const saved = await addHistoryPlayerBet(
+      date,
+      btn.dataset.historyPlayer,
+      document.getElementById('admin-history-bet-input')?.value,
+      document.getElementById('admin-history-bet-date-input')?.value
+    );
     if (saved) closeAdminDialog();
     return;
   }
@@ -2306,6 +2359,15 @@ async function handleAdminDialogAction(btn) {
   }
   if (action === 'today-wrap-manual') {
     openManualTodayWrapDialog();
+    return;
+  }
+  if (action === 'roster-player-open') {
+    openRosterPlayerDialog();
+    return;
+  }
+  if (action === 'roster-player-save') {
+    const saved = await addRosterPlayer(document.getElementById('admin-roster-player-input')?.value);
+    if (saved) closeAdminDialog();
     return;
   }
   if (action === 'today-wrap-approve') {
@@ -2482,6 +2544,7 @@ ${pl.map((p, idx)=> {
       <button class="settings-save" type="button" title="Save player" aria-label="Save player" data-save-player="${realIdx}">✓</button>
     </div>
   </div>`}).join('')}
+<button class="btn btn-s settings-add-player" type="button" data-admin-dialog-action="roster-player-open">Add Player</button>
 </div>
 <div class="card"><div class="card-lbl">Admin Account</div>
 	<p class="mono dim mt8" style="margin-bottom:12px">${esc(currentUser?.email || 'Signed in')}</p>
