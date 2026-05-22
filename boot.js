@@ -7,10 +7,10 @@
   const storedNames = getPlayerNames();
   const phrases = [
     () => '99% of players stop playing before winning.\nKeep betting!',
-    () => 'La ludopatia è un problema solo se perdi',
+    () => 'La ludopatia è un problema solo se perdi!',
     () => {
       const name = storedNames[Math.floor(Math.random() * storedNames.length)];
-      return name ? `Dude, let's focus, there's no way ${name} is better than you!` : '';
+      return name ? `Dude, let's focus. There's no way ${name} is better than you!` : '';
     }
   ];
 
