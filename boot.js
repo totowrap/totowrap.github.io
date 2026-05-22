@@ -6,8 +6,10 @@
   const PLAYER_NAMES_KEY = 'totowrap-boot-player-names';
   const storedNames = getPlayerNames();
   const phrases = [
-    () => '99% of players stop playing before winning.\nKeep betting!',
+    () => '99% of players stop playing before winning. Keep betting!',
     () => 'Che ti sei perso due Range Rover?',
+    () => 'Never bet the same time as Beatrice K. or you will make her cry',
+    () => 'E anche stasera Galeone perderà',
     () => 'La ludopatia è un problema solo se perdi!',
     () => {
       const name = storedNames[Math.floor(Math.random() * storedNames.length)];
