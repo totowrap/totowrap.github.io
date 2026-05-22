@@ -403,7 +403,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .result-share-actions .btn + .btn { margin-top:0; }
 @supports (-webkit-backdrop-filter: blur(1px)) {
   .result-share-modal { -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
-  .result-share-panel, .result-share-winner { -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); }
+  .result-share-panel { -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); }
 }
 @media (max-width:420px) {
   .result-share-card { padding:16px; }
