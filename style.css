@@ -240,6 +240,7 @@ body::before {
 .b-streak { background: linear-gradient(135deg, #f0b428 0%, #ffd04d 100%); color: #000; box-shadow: 0 0 8px rgba(240, 180, 40, 0.4); border: none; padding: 3px 7px 1px; border-radius: 20px; font-weight: bold; font-size: 0.52rem; letter-spacing: 0.02em; transform: translateY(1px); }
 .b-missing { background: rgba(184,201,168,.1); color: var(--dim); font-size: .56rem; font-style: italic; }
 .b-prob { background: rgba(184,201,168,.6); color: var(--dim); min-width: 44px; text-align: right; font-size: .72rem; font-weight: bold; font-variant-numeric: tabular-nums; padding: 2px 5px; }
+.b-prob-live { background:none; padding-right:0; padding-left:0; }
 .preview-head, .preview-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 152px; align-items: center; column-gap: 16px; }
 .preview-head { padding: 0 0 8px; border-bottom: 1px solid var(--border); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .56rem; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
 .preview-row { min-height: 50px; }

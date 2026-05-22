@@ -1536,7 +1536,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
       </div>
 
       ${g.time ? `
-       <div class="badge b-prob" style="color: ${prob.color};">
+       <div class="badge b-prob b-prob-live" style="color: ${prob.color};">
           ${prob.text}
         </div>
 
