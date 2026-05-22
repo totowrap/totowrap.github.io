@@ -1759,7 +1759,7 @@ function renderBoardPie(pl) {
       const lx = (cx + r * 0.62 * Math.cos(mid)).toFixed(1);
       const ly = (cy + r * 0.62 * Math.sin(mid)).toFixed(1);
       const fs = sweep >= 0.65 ? 9 : 7.5;
-      labelSVG += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-family="'Alte Haas Grotesk',sans-serif" font-size="${fs}" font-style="italic" fill="#ffffff" style="pointer-events:none;">${esc(p.name)}</text>`;
+      labelSVG += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-family="'Alte Haas Grotesk',sans-serif" font-size="${fs}" font-style="italic" fill="#10151f" style="pointer-events:none;">${esc(p.name)}</text>`;
     }
 
     angle = end;
