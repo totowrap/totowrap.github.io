@@ -29,10 +29,6 @@
     () => {
       const name = storedNames[Math.floor(Math.random() * storedNames.length)];
       return name ? `${name} continua così, il tuo talento è nascosto benissimo.` : '';
-    },
-    () => {
-      const name = storedNames[Math.floor(Math.random() * storedNames.length)];
-      return name ? `Your strategy is so confusing that it fooled even ${name}.` : '';
   }
 ];
 
