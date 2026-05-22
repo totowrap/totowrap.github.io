@@ -239,8 +239,7 @@ body::before {
 .b-win   { background: rgba(106,191,106,.12); color: var(--green); }
 .b-streak { background: linear-gradient(135deg, #f0b428 0%, #ffd04d 100%); color: #000; box-shadow: 0 0 8px rgba(240, 180, 40, 0.4); border: none; padding: 3px 7px 1px; border-radius: 20px; font-weight: bold; font-size: 0.52rem; letter-spacing: 0.02em; transform: translateY(1px); }
 .b-missing { background: rgba(184,201,168,.1); color: var(--dim); font-size: .56rem; font-style: italic; }
-.b-prob { background: rgba(184,201,168,.6); color: var(--dim); min-width: 44px; text-align: right; font-size: .72rem; font-weight: bold; font-variant-numeric: tabular-nums; padding: 2px 5px; }
-.b-prob-live { background:none; padding-right:0; padding-left:0; }
+.b-prob { color: var(--dim); min-width: 44px; text-align: right; font-size: .72rem; font-weight: bold; font-variant-numeric: tabular-nums; padding: 2px 0; }
 .preview-head, .preview-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 152px; align-items: center; column-gap: 16px; }
 .preview-head { padding: 0 0 8px; border-bottom: 1px solid var(--border); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .56rem; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
 .preview-row { min-height: 50px; }
@@ -396,7 +395,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .result-share-time { min-height:62px; border:1px solid rgba(184,201,168,.14); border-radius:7px; padding:10px 8px; background:rgba(38,55,89,.58); }
 .result-share-time span { display:block; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.54rem; line-height:1; margin-bottom:6px; text-transform:uppercase; }
 .result-share-time strong { display:block; color:var(--text); font-family:'Alte Haas Grotesk', sans-serif; font-size:1.16rem; line-height:1; }
-.result-share-bottom { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-top:12px; border-top:1px solid rgba(61,84,51,.62); }
+.result-share-bottom { display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding-top:12px; border-top:1px solid rgba(61,84,51,.62); }
 .result-share-points { color:var(--accent2); font-family:'Alte Haas Grotesk', sans-serif; font-size:1.22rem; line-height:1; }
 .result-share-detail { color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.64rem; line-height:1; text-align:right; text-transform:uppercase; }
 .result-share-actions { display:flex; gap:8px; }

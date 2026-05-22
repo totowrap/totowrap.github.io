@@ -1258,7 +1258,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
         </div>
         
         ${g.time ? `
-          <div class="badge b-prob" style="color: ${prob.color};">
+          <div class="badge b-prob">
             ${prob.text}
           </div>
           
@@ -1294,7 +1294,7 @@ function getShareResultInfo(day) {
     noWinner,
     estWrap: day?.estWrap || '--:--',
     dayLabel: `Day ${dayNum || '—'}`,
-    kicker: noWinner ? 'Day Complete' : `Today's Winner${winnerNames.length > 1 ? 's' : ''}`,
+    kicker: noWinner ? 'Day Complete' : `🎬 Today's Winner${winnerNames.length > 1 ? 's' : ''}`,
     name: noWinner ? 'No Winner' : formatNames(winnerNames),
     bet: winnerBet,
     wrap: day?.wrapTime || '--:--',
@@ -1548,7 +1548,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
       </div>
 
       ${g.time ? `
-       <div class="badge b-prob b-prob-live" style="color: ${prob.color};">
+       <div class="badge b-prob">
           ${prob.text}
         </div>
 
@@ -1712,11 +1712,12 @@ function renderBoardPie(pl) {
   const colorOf = name => COLORS[allNames.indexOf(name) % COLORS.length];
 
   // Only players with >0 points
-  const active = pl.filter(p => (S.scores[p.name] || 0) > 0);
-  if (!active.length) {
-    return '<div class="empty" style="padding:20px 0;">No points scored yet</div>';
-  }
-
+  const active = pl
+    .filter(p => (S.scores[p.name] || 0) > 0)
+    .sort((a, b) => {
+      const pointDiff = (S.scores[a.name] || 0) - (S.scores[b.name] || 0);
+      return pointDiff || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    });
   const total = active.reduce((sum, p) => sum + (S.scores[p.name] || 0), 0);
   const cx = 150, cy = 150, r = 146;
 
@@ -1728,7 +1729,7 @@ function renderBoardPie(pl) {
     const pts = S.scores[p.name] || 0;
     const frac = pts / total;
     const sweep = frac * 2 * Math.PI;
-    const end = angle + sweep;
+    const end = angle - sweep;
     const color = colorOf(p.name);
 
     let pathD;
@@ -1747,14 +1748,14 @@ function renderBoardPie(pl) {
       const x2 = (cx + r * Math.cos(end)).toFixed(3);
       const y2 = (cy + r * Math.sin(end)).toFixed(3);
       const large = sweep > Math.PI ? 1 : 0;
-      pathD = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+      pathD = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 0 ${x2} ${y2} Z`;
     }
 
     sliceSVG += `<path d="${pathD}" fill="${color}" stroke="#263759" stroke-width="1.5"/>`;
 
     // Label — show full name when slice is large enough
     if (sweep >= 0.38) {
-      const mid = angle + sweep / 2;
+      const mid = angle - sweep / 2;
       const lx = (cx + r * 0.62 * Math.cos(mid)).toFixed(1);
       const ly = (cy + r * 0.62 * Math.sin(mid)).toFixed(1);
       const fs = sweep >= 0.65 ? 9 : 7.5;
@@ -1764,9 +1765,9 @@ function renderBoardPie(pl) {
     angle = end;
   });
 
-  const legendHtml = active.map(p => {
+  const legendHtml = pl.map(p => {
     const pts = S.scores[p.name] || 0;
-    const pct = ((pts / total) * 100).toFixed(1);
+    const pct = total ? ((pts / total) * 100).toFixed(1) : '0.0';
     return `
     <div class="legend-item">
       <div class="legend-swatch" style="background:${colorOf(p.name)};"></div>
@@ -1778,10 +1779,10 @@ function renderBoardPie(pl) {
   return `
   <div class="board-pie-wrap">
     <div class="board-pie-graphic">
-      <svg class="board-pie-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+      ${active.length ? `<svg class="board-pie-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
         ${sliceSVG}
         ${labelSVG}
-      </svg>
+      </svg>` : '<div class="empty" style="padding:20px 0;">No points scored yet</div>'}
     </div>
     <div class="board-legend">${legendHtml}</div>
   </div>`;
@@ -2258,7 +2259,7 @@ function renderHistory() {
                   ${slice ? `<div class="row-boundary">${slice.startStr} → ${slice.endStr}</div>` : ''}
                 </div>
                 ${g.time ? `
-                  <div class="badge b-prob" style="color:${prob.color};">${prob.text}</div>
+                  <div class="badge b-prob">${prob.text}</div>
                   <div class="row-time">${esc(g.time)}</div>
                   <div class="badge b-out">—</div>
                 ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
@@ -2305,7 +2306,7 @@ function renderHistory() {
               ${slice ? `<div class="row-boundary">${slice.startStr} → ${slice.endStr}</div>` : ''}
             </div>
             ${g.time ? `
-              <div class="badge b-prob" style="color:${prob.color};">${prob.text}</div>
+              <div class="badge b-prob">${prob.text}</div>
               <div class="row-time">${esc(g.time)}</div>
               <div class="badge ${isWinner ? 'b-win' : 'b-out'}">
                 ${isWinner ? `+${d.points}` : '—'}
