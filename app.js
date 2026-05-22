@@ -2002,7 +2002,59 @@ function openHistoryDayActions(date) {
     copy: 'Choose what to change.',
     body: `<div class="admin-dialog-actions">
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-wrap-open" data-history-date="${safeDate}">Edit Official Wrap</button>
+      <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-bet-players-open" data-history-date="${safeDate}">Add Player Bet</button>
       <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="history-delete-open" data-history-date="${safeDate}">Delete Day</button>
+    </div>`
+  });
+}
+
+function getHistoryPlayersMissingBet(day) {
+  const dayBets = new Set((day?.guesses || []).filter(g => g.time).map(g => g.name));
+  return S.playerRoster
+    .map(player => player.name)
+    .filter(name => name && !dayBets.has(name))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function openHistoryBetPlayersDialog(date) {
+  if (!IS_ADMIN) return;
+  const target = findHistoryEntryByDate(date);
+  if (!target) {
+    toast('History day not found', 'err');
+    return;
+  }
+  const missingPlayers = getHistoryPlayersMissingBet(target.day);
+  openAdminDialog({
+    title: 'Add Player Bet',
+    copy: `${getHistoryDayLabel(date)} - choose a roster player missing a bet.`,
+    body: missingPlayers.length ? `<div class="admin-dialog-actions">
+      ${missingPlayers.map(name => `<button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-bet-player-open" data-history-date="${esc(date)}" data-history-player="${esc(name)}">${esc(name)}</button>`).join('')}
+    </div>` : `<p class="admin-dialog-copy">Every roster player already has a bet on this day.</p>`
+  });
+}
+
+function openHistoryBetTimeDialog(date, name) {
+  if (!IS_ADMIN) return;
+  const target = findHistoryEntryByDate(date);
+  if (!target) {
+    toast('History day not found', 'err');
+    return;
+  }
+  if (!getHistoryPlayersMissingBet(target.day).includes(name)) {
+    toast('Player already has a bet on this day', 'err');
+    return;
+  }
+  openAdminDialog({
+    title: `Add ${name} Bet`,
+    copy: `${getHistoryDayLabel(date)} official wrap: ${target.day.wrapTime || '--:--'}`,
+    focusSelector: '#admin-history-bet-input',
+    body: `<div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-history-bet-input">Bet Time (HH:MM)</label>
+      <input class="admin-dialog-wrap-input" type="text" id="admin-history-bet-input" placeholder="18:30" maxlength="5" pattern="[0-9]{2}:[0-9]{2}">
+    </div>
+    <div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-action="history-bet-players-open" data-history-date="${esc(date)}">Back</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="history-bet-save" data-history-date="${esc(date)}" data-history-player="${esc(name)}">Confirm</button>
     </div>`
   });
 }
@@ -2078,6 +2130,54 @@ async function updateHistoryWrapTime(date, nextWrap) {
   return true;
 }
 
+async function addHistoryPlayerBet(date, name, betTime) {
+  if (!IS_ADMIN) return false;
+  const target = findHistoryEntryByDate(date);
+  if (!target) {
+    toast('History day not found', 'err');
+    return false;
+  }
+  const rosterPlayer = S.playerRoster.find(player => player.name === name);
+  if (!rosterPlayer) {
+    toast('Choose a roster player', 'err');
+    return false;
+  }
+  const normalizedBet = String(betTime || '').trim();
+  if (!normalizedBet) {
+    toast('Enter bet time', 'err');
+    return false;
+  }
+  if (!isValidHM(normalizedBet)) {
+    toast('Use a valid bet time (HH:MM)', 'err');
+    return false;
+  }
+  const existingGuess = (target.day.guesses || []).find(g => g.name === name);
+  if (existingGuess?.time) {
+    toast('Player already has a bet on this day', 'err');
+    return false;
+  }
+
+  const prevS = cloneState();
+  adjustCompletedDayScores(target.day, -1);
+  target.day.guesses = target.day.guesses || [];
+  const nextGuess = existingGuess || { name };
+  nextGuess.time = normalizedBet;
+  nextGuess.date = inferBetDate(normalizedBet, target.day);
+  if (!existingGuess) target.day.guesses.push(nextGuess);
+  const { winner, winners, points, noWinner } = calcWinner(target.day.guesses, target.day.wrapTime, target.day);
+  target.day.winner = winner;
+  target.day.winners = winners;
+  target.day.points = points;
+  target.day.noWinner = noWinner;
+  adjustCompletedDayScores(target.day, 1);
+
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast(`${name} bet added to ${getHistoryDayLabel(date)}`, 'ok');
+  render();
+  return true;
+}
+
 function openLiveWrapActions(wrapTime) {
   if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
   const capturedWrap = String(wrapTime || nowHMS());
@@ -2144,6 +2244,14 @@ async function handleAdminDialogAction(btn) {
     openHistoryWrapDialog(date);
     return;
   }
+  if (action === 'history-bet-players-open') {
+    openHistoryBetPlayersDialog(date);
+    return;
+  }
+  if (action === 'history-bet-player-open') {
+    openHistoryBetTimeDialog(date, btn.dataset.historyPlayer);
+    return;
+  }
   if (action === 'history-delete-open') {
     openHistoryDeleteDialog(date);
     return;
@@ -2151,6 +2259,11 @@ async function handleAdminDialogAction(btn) {
   if (action === 'history-wrap-save') {
     const updated = await updateHistoryWrapTime(date, document.getElementById('admin-history-wrap-input')?.value);
     if (updated) closeAdminDialog();
+    return;
+  }
+  if (action === 'history-bet-save') {
+    const saved = await addHistoryPlayerBet(date, btn.dataset.historyPlayer, document.getElementById('admin-history-bet-input')?.value);
+    if (saved) closeAdminDialog();
     return;
   }
   if (action === 'history-delete-confirm') {
@@ -2226,7 +2339,7 @@ function renderHistory() {
     const historyDate = esc(d.date);
     const actionBtns = canManage ? `
 	<div class="hist-actions">
-	  <button class="hist-edit" type="button" title="Edit or delete" aria-label="Edit or delete" data-history-edit="${historyDate}">✎</button>
+	  <button class="hist-edit" type="button" title="Edit day" aria-label="Edit day" data-history-edit="${historyDate}">✎</button>
 	</div>` : '';
     
     if (d.noWinner) {
