@@ -346,6 +346,18 @@ document.addEventListener('click', e => {
 }, true);
 
 document.addEventListener('click', e => {
+  const adminDialogCloseBtn = e.target.closest?.('[data-admin-dialog-close]');
+  if (adminDialogCloseBtn || e.target.id === 'admin-dialog-modal') {
+    closeAdminDialog();
+    return;
+  }
+
+  const adminDialogActionBtn = e.target.closest?.('[data-admin-dialog-action]');
+  if (adminDialogActionBtn) {
+    handleAdminDialogAction(adminDialogActionBtn);
+    return;
+  }
+
   const boardBtn = e.target.closest?.('[data-board-view]');
   if (boardBtn) {
     setBoardView(boardBtn.dataset.boardView);
@@ -387,7 +399,7 @@ document.addEventListener('click', e => {
   const historyEditBtn = e.target.closest?.('[data-history-edit]');
   if (historyEditBtn) {
     e.stopPropagation();
-    editHistoryDay(historyEditBtn.dataset.historyEdit);
+    openHistoryDayActions(historyEditBtn.dataset.historyEdit);
     return;
   }
 
@@ -1647,7 +1659,7 @@ function renderToday() {
   const clockCard = `
     <div class="card">
       <div style="display: flex; align-items: center; justify-content: center;">
-        <div class="big-clock js-clock" id="admin-clock" style="cursor:pointer; user-select:none;" title="Tap to set wrap time">--:--:--</div>
+        <button class="big-clock js-clock admin-clock-trigger" id="admin-clock" type="button" title="Tap to set wrap time">--:--:--</button>
       </div>
       <div class="big-clock-lbl">Live Time · Tap to Wrap</div>
       <div id="next-out-countdown" class="countdown-txt"></div>
@@ -1664,16 +1676,6 @@ function renderToday() {
       ${clockCard}
       <div class="card"><div class="card-lbl">${statusHeader}</div>
         ${renderActiveTodayRows(t, sg, out, slices)}
-      </div>
-      <div class="card">
-        <div class="card-lbl">Enter Official Wrap Time</div>
-        <div class="inp-wrap">
-          <label class="inp-lbl">Wrap Time (HH:MM:SS)</label>
-          <input type="text" id="wrap-inp" placeholder="18:30:45" maxlength="8" 
-            pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}" 
-            style="font-family:'Alte Haas Grotesk',monospace;">
-        </div>
-        <button class="btn btn-p" id="wrap-btn">Confirm Wrap ✓</button>
       </div>
     `;
   }
@@ -1956,34 +1958,106 @@ function findHistoryEntryByDate(date) {
   return null;
 }
 
-async function editHistoryDay(date) {
-  if (!IS_ADMIN) return;
-  const action = prompt('History action: type "edit" to edit the official wrap time, or "delete" to delete this day.', 'edit');
-  if (!action) return;
-  const normalizedAction = action.trim().toLowerCase();
-  if (normalizedAction === 'delete') {
-    await deleteHistoryDay(date);
-    return;
-  }
-  if (normalizedAction !== 'edit') {
-    toast('Type edit or delete', 'err');
-    return;
-  }
+function closeAdminDialog() {
+  document.getElementById('admin-dialog-modal')?.remove();
+}
 
+function openAdminDialog({ title, copy='', body='', focusSelector='' }) {
+  closeAdminDialog();
+  const modal = document.createElement('div');
+  modal.id = 'admin-dialog-modal';
+  modal.className = 'admin-dialog-modal';
+  modal.innerHTML = `<div class="admin-dialog-panel" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="admin-dialog-head">
+      <div>
+        <div class="admin-dialog-title">${esc(title)}</div>
+        ${copy ? `<p class="admin-dialog-copy">${esc(copy)}</p>` : ''}
+      </div>
+      <button class="admin-dialog-close" type="button" aria-label="Close" data-admin-dialog-close>×</button>
+    </div>
+    ${body}
+  </div>`;
+  document.body.appendChild(modal);
+  if (focusSelector) requestAnimationFrame(() => modal.querySelector(focusSelector)?.focus());
+}
+
+function getHistoryDayLabel(date) {
+  const isoDate = displayToISO(date);
+  const idx = getHistoryEntries().findIndex(day => displayToISO(day.date) === isoDate);
+  return idx === -1 ? 'History Day' : `Day ${idx + 1}`;
+}
+
+function openHistoryDayActions(date) {
+  if (!IS_ADMIN) return;
   const target = findHistoryEntryByDate(date);
   if (!target) {
     toast('History day not found', 'err');
     return;
   }
+  const safeDate = esc(date);
+  openAdminDialog({
+    title: getHistoryDayLabel(date),
+    copy: 'Choose what to change.',
+    body: `<div class="admin-dialog-actions">
+      <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-wrap-open" data-history-date="${safeDate}">Edit Official Wrap</button>
+      <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="history-delete-open" data-history-date="${safeDate}">Delete Day</button>
+    </div>`
+  });
+}
 
+function openHistoryWrapDialog(date) {
+  if (!IS_ADMIN) return;
+  const target = findHistoryEntryByDate(date);
+  if (!target) {
+    toast('History day not found', 'err');
+    return;
+  }
   const currentWrap = target.day.wrapTime || '';
-  const nextWrap = prompt('Edit official wrap time', currentWrap);
-  if (nextWrap === null) return;
-  const normalizedWrap = nextWrap.trim();
-  if (!normalizedWrap || normalizedWrap === currentWrap) return;
+  openAdminDialog({
+    title: 'Edit Official Wrap',
+    copy: `${getHistoryDayLabel(date)} current wrap: ${currentWrap || '--:--'}`,
+    focusSelector: '#admin-history-wrap-input',
+    body: `<div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-history-wrap-input">Wrap Time (HH:MM:SS)</label>
+      <input class="admin-dialog-wrap-input" type="text" id="admin-history-wrap-input" value="${esc(currentWrap)}" placeholder="18:30:45" maxlength="8" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
+    </div>
+    <div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="history-wrap-save" data-history-date="${esc(date)}">Confirm</button>
+    </div>`
+  });
+}
+
+function openHistoryDeleteDialog(date) {
+  if (!IS_ADMIN) return;
+  const target = findHistoryEntryByDate(date);
+  if (!target) {
+    toast('History day not found', 'err');
+    return;
+  }
+  openAdminDialog({
+    title: `Delete ${getHistoryDayLabel(date)}?`,
+    copy: 'This cannot be undone.',
+    body: `<div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
+      <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="history-delete-confirm" data-history-date="${esc(date)}">Delete</button>
+    </div>`
+  });
+}
+
+async function updateHistoryWrapTime(date, nextWrap) {
+  if (!IS_ADMIN) return false;
+  const target = findHistoryEntryByDate(date);
+  if (!target) {
+    toast('History day not found', 'err');
+    return false;
+  }
+  const currentWrap = target.day.wrapTime || '';
+  const normalizedWrap = String(nextWrap || '').trim();
+  if (!normalizedWrap || normalizedWrap === currentWrap) return true;
   if (!isValidHMS(normalizedWrap)) {
     toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err');
-    return;
+    return false;
   }
 
   const prevS = cloneState();
@@ -1996,9 +2070,105 @@ async function editHistoryDay(date) {
   target.day.noWinner = noWinner;
   adjustCompletedDayScores(target.day, 1);
   const saved = await saveS();
-  if (!saved) { restoreAfterFailedSave(prevS); return; }
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Official wrap time updated', 'ok');
   render();
+  return true;
+}
+
+function openLiveWrapActions(wrapTime) {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
+  const capturedWrap = String(wrapTime || nowHMS());
+  openAdminDialog({
+    title: 'Set Official Wrap',
+    copy: `Time captured from the clock: ${capturedWrap}`,
+    body: `<div class="admin-dialog-actions">
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-approve" data-wrap-time="${esc(capturedWrap)}">Approve ${esc(capturedWrap)}</button>
+      <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="today-wrap-manual">Manual</button>
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Undo</button>
+    </div>`
+  });
+}
+
+function openManualTodayWrapDialog() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
+  openAdminDialog({
+    title: 'Insert Wrap Manually',
+    copy: 'Type the official wrap time and confirm.',
+    focusSelector: '#admin-today-wrap-input',
+    body: `<div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-today-wrap-input">Wrap Time (HH:MM:SS)</label>
+      <input class="admin-dialog-wrap-input" type="text" id="admin-today-wrap-input" placeholder="18:30:45" maxlength="8" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
+    </div>
+    <div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Undo</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-save">Confirm</button>
+    </div>`
+  });
+}
+
+async function confirmTodayWrap(wrapTime) {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return false;
+  const normalizedWrap = String(wrapTime || '').trim();
+  if (!normalizedWrap) { toast('Enter wrap time', 'err'); return false; }
+  if (!isValidHMS(normalizedWrap)) { toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err'); return false; }
+
+  const prevS = cloneState();
+  const { winner, winners, points, noWinner } = calcWinner(S.today.guesses, normalizedWrap, S.today);
+  S.today.wrapTime = normalizedWrap;
+  S.today.winner = winner;
+  S.today.winners = winners;
+  S.today.points = points;
+  S.today.noWinner = noWinner;
+
+  if (!noWinner) {
+    winners.forEach(w => { S.scores[w.name] = (S.scores[w.name] || 0) + points; });
+    const saved = await saveS();
+    if (!saved) { restoreAfterFailedSave(prevS); return false; }
+    toast(`${formatNames(winners.map(w=>w.name))} win +${points} pt!`, 'ok');
+  } else {
+    const saved = await saveS();
+    if (!saved) { restoreAfterFailedSave(prevS); return false; }
+    toast('No winner - wrap time outside all territories', 'err');
+  }
+  render();
+  return true;
+}
+
+async function handleAdminDialogAction(btn) {
+  const action = btn.dataset.adminDialogAction;
+  const date = btn.dataset.historyDate;
+  if (action === 'history-wrap-open') {
+    openHistoryWrapDialog(date);
+    return;
+  }
+  if (action === 'history-delete-open') {
+    openHistoryDeleteDialog(date);
+    return;
+  }
+  if (action === 'history-wrap-save') {
+    const updated = await updateHistoryWrapTime(date, document.getElementById('admin-history-wrap-input')?.value);
+    if (updated) closeAdminDialog();
+    return;
+  }
+  if (action === 'history-delete-confirm') {
+    closeAdminDialog();
+    deleteHistoryDay(date, true);
+    return;
+  }
+  if (action === 'today-wrap-manual') {
+    openManualTodayWrapDialog();
+    return;
+  }
+  if (action === 'today-wrap-approve') {
+    const saved = await confirmTodayWrap(btn.dataset.wrapTime);
+    if (saved) closeAdminDialog();
+    return;
+  }
+  if (action === 'today-wrap-save') {
+    const saved = await confirmTodayWrap(document.getElementById('admin-today-wrap-input')?.value);
+    if (saved) closeAdminDialog();
+  }
 }
 
 function adjustCompletedDayScores(day, direction) {
@@ -2015,14 +2185,14 @@ function adjustCompletedDayScores(day, direction) {
   });
 }
 
-async function deleteHistoryDay(date) {
+async function deleteHistoryDay(date, confirmed=false) {
   const target = deleteHistoryDayByDate(date);
   if (!target) {
     toast('History day not found', 'err');
     return;
   }
   const label = displayDate(date) || date;
-  if (!confirm(`Delete Day ${label}? This cannot be undone.`)) return;
+  if (!confirmed && !confirm(`Delete Day ${label}? This cannot be undone.`)) return;
 
   const prevS = cloneState();
   const day = target.kind === 'history' ? S.days[target.idx] : S.today;
@@ -2425,42 +2595,9 @@ function bindMain() {
     if (!saved) { restoreAfterFailedSave(prevS); return; }
     render();
   });
-  document.getElementById('wrap-btn')?.addEventListener('click', async () => {
-    const inp = document.getElementById('wrap-inp');
-    if (!inp?.value) { toast('Enter wrap time', 'err'); return; }
-    if (!isValidHMS(inp.value)) { toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err'); return; }
-    const prevS = cloneState();
-    const { winner, winners, points, noWinner } = calcWinner(S.today.guesses, inp.value, S.today);
-    S.today.wrapTime = inp.value;
-    S.today.winner = winner;
-    S.today.winners = winners;
-    S.today.points = points;
-    S.today.noWinner = noWinner;
-    
-    if (!noWinner) {
-    winners.forEach(w => { S.scores[w.name] = (S.scores[w.name] || 0) + points; });
-    const saved = await saveS();
-    if (!saved) { restoreAfterFailedSave(prevS); return; }
-    toast(`${formatNames(winners.map(w=>w.name))} win +${points} pt!`, 'ok');
-    } else {
-        const saved = await saveS();
-	    if (!saved) { restoreAfterFailedSave(prevS); return; }
-        toast('No winner - wrap time outside all territories', 'err');
-          }
-    render();
-  });
   document.getElementById('parse-btn')?.addEventListener('click', showPreview);
   document.getElementById('admin-clock')?.addEventListener('click', () => {
-    const currentTime = nowHMS();
-    const choice = confirm(`Use current time as wrap time?\n\n${currentTime}\n\nOK = Use this time\nCancel = Enter manually`);
-    const inp = document.getElementById('wrap-inp');
-    if (!inp) return;
-    if (choice) {
-      inp.value = currentTime;
-      toast('Time set to ' + currentTime, 'ok');
-    } else {
-      inp.focus();
-    }
+    openLiveWrapActions(nowHMS());
   });
   document.getElementById('delete-day-btn')?.addEventListener('click', () => {
     if (S.today) deleteHistoryDay(S.today.date);
