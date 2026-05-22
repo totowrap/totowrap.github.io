@@ -1438,7 +1438,8 @@ async function renderShareResultBlob() {
   ctx.lineTo(1000, 168);
   ctx.stroke();
 
-  canvasRoundRect(ctx, 80, 238, 920, 300, 20);
+  const shareMainY = 22;
+  canvasRoundRect(ctx, 80, 238 + shareMainY, 920, 300, 20);
   ctx.fillStyle = info.noWinner ? 'rgba(217,85,85,.14)' : 'rgba(106,191,106,.12)';
   ctx.fill();
   ctx.strokeStyle = info.noWinner ? 'rgba(217,85,85,.56)' : 'rgba(106,191,106,.56)';
@@ -1448,9 +1449,9 @@ async function renderShareResultBlob() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#b8c9a8';
   ctx.font = "bold 25px 'Alte Haas Grotesk', sans-serif";
-  ctx.fillText(info.kicker.toUpperCase(), 540, 335);
+  ctx.fillText(info.kicker.toUpperCase(), 540, 335 + shareMainY);
   ctx.fillStyle = info.noWinner ? '#d65656' : '#ffd04d';
-  drawShareText(ctx, info.name, 540, 415, 800, info.name.length > 20 ? 72 : 98, 48);
+  drawShareText(ctx, info.name, 540, 415 + shareMainY, 800, info.name.length > 20 ? 72 : 98, 48);
 
   const times = [
     { label: 'BET', value: info.bet },
@@ -1458,7 +1459,7 @@ async function renderShareResultBlob() {
   ];
   times.forEach((item, idx) => {
     const x = 80 + idx * 468;
-    canvasRoundRect(ctx, x, 578, 452, 172, 18);
+    canvasRoundRect(ctx, x, 578 + shareMainY, 452, 172, 18);
     ctx.fillStyle = 'rgba(38,55,89,.58)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(184,201,168,.14)';
@@ -1467,10 +1468,10 @@ async function renderShareResultBlob() {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#b8c9a8';
     ctx.font = "bold 22px 'Alte Haas Grotesk', sans-serif";
-    ctx.fillText(item.label, x + 226, 632);
+    ctx.fillText(item.label, x + 226, 632 + shareMainY);
     ctx.fillStyle = '#eec763';
     ctx.font = "bold 54px 'Alte Haas Grotesk', sans-serif";
-    ctx.fillText(item.value, x + 226, 696);
+    ctx.fillText(item.value, x + 226, 696 + shareMainY);
   });
 
   ctx.strokeStyle = 'rgba(61,84,51,.72)';
