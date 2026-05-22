@@ -16,14 +16,10 @@
     () => {
       const name = storedNames[Math.floor(Math.random() * storedNames.length)];
       return name ? `Dude, let's focus. There's no way ${name} is better than you!` : '';
-      const name = storedNames[Math.floor(Math.random() * storedNames.length)];
       return name ? 'Bet responsibly. Unless you’re ${name}, then just don’t bet.';
-      const name = storedNames[Math.floor(Math.random() * storedNames.length)];
       return name ? 'Tonight’s forecast: 100% chance of ${name} blaming lag.';
-      const name = storedNames[Math.floor(Math.random() * storedNames.length)];
       return name ? '${name} continua così, il tuo talento è nascosto benissimo.';
-      const name = storedNames[Math.floor(Math.random() * storedNames.length)];
-      return name ? 'Your strategy is so confusing that it fooled even you.'
+      return name ? 'Your strategy is so confusing that it fooled even you.';
     }
   ];
 
