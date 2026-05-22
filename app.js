@@ -1856,11 +1856,14 @@ function countWord(value, singular, plural) {
 
 function formatBoardGap(totalSec) {
   const sec = Math.max(0, Math.round(totalSec));
-  if (sec < 60) return `${sec} ${countWord(sec, 'sec', 'sec')}`;
-  const min = Math.floor(sec / 60);
+  const hour = Math.floor(sec / 3600);
+  const min = Math.floor((sec % 3600) / 60);
   const rest = sec % 60;
-  if (!rest) return `${min} ${countWord(min, 'min', 'min')}`;
-  return `${min} ${countWord(min, 'min', 'min')} ${pad(rest)} ${countWord(rest, 'sec', 'sec')}`;
+  const parts = [];
+  if (hour) parts.push(`${hour} ${countWord(hour, 'hour', 'hours')}`);
+  if (min) parts.push(`${min} ${countWord(min, 'min', 'min')}`);
+  if (rest) parts.push(`${pad(rest)} ${countWord(rest, 'sec', 'sec')}`);
+  return parts.join(', ') || '0 sec';
 }
 
 function formatBoardCompactGap(totalSec) {
