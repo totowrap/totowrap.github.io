@@ -903,12 +903,44 @@ function startClock() {
   tickClock();
 }
 
+function betCloseDiffSec(day=S.today) {
+  if (!day?.betCloseAt || !isValidHM(day.betCloseAt)) return null;
+  let closeSec = toSec(day.betCloseAt);
+  const currentSec = nowSec();
+  if (closeSec < currentSec && (currentSec - closeSec) > 12 * 3600) closeSec += DAY_SEC;
+  return closeSec - currentSec;
+}
+
+function formatBetCloseCountdown(diffSec) {
+  const total = Math.max(0, Math.round(diffSec));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const parts = [];
+  if (h) parts.push(`${h}h`);
+  if (h || m) parts.push(`${pad(m)}m`);
+  parts.push(`${pad(s)}s`);
+  return parts.join(' ');
+}
+
+function updateBetCloseCountdown() {
+  document.querySelectorAll('[data-bet-close-countdown]').forEach(el => {
+    const diff = betCloseDiffSec();
+    if (diff === null) {
+      el.textContent = '--';
+      return;
+    }
+    el.textContent = diff <= 0 ? 'Betting closed' : formatBetCloseCountdown(diff);
+  });
+}
+
 function tickClock() {
   const t = nowHMS();
   const cur = gameNowSec();
   
   // Update all clocks on the page
   document.querySelectorAll('.js-clock').forEach(el => el.textContent = t);
+  updateBetCloseCountdown();
   
   const countdownEl = document.getElementById('next-out-countdown');
   if (!countdownEl || !S.today || !S.today.guesses || S.today.wrapTime) {
@@ -1624,8 +1656,8 @@ function renderPlayerToday() {
   const hasValidGuesses = sg.some(g => g.time);
   if (!hasValidGuesses) {
     return `
-  <div class="card">
-    <div class="card-lbl">Collecting Guesses</div>
+  ${renderBetClosePlayerCard(t)}
+  <div class="card waiting-guesses-card">
     <p class="mono dim center">Waiting for admin to submit today's guesses…</p>
   </div>`;
   }
@@ -1721,16 +1753,43 @@ function renderToday() {
   }
   return `
     <div class="card">
+      <div class="card-lbl">Set Wrap Time</div>
+      <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set the estimated wrap time players see before the game starts.</p>
+      <div class="admin-bet-close-row">
+        <input type="time" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" aria-label="Estimated wrap time">
+        <button class="btn btn-p btn-sm" id="save-est-wrap-btn" type="button">Save</button>
+      </div>
+      ${t.estWrap && t.estWrap !== '--:--' ? `<p class="mono dim center mt8">Players see: <span class="accent">Wrap ${esc(t.estWrap)}</span></p>` : ''}
+    </div>
+    <div class="card">
+      <div class="card-lbl">Closing Bet Time</div>
+      <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set when players must stop submitting bets. Players will see a countdown until guesses are pasted.</p>
+      <div class="admin-bet-close-row">
+        <input type="time" id="bet-close-input" value="${esc(t.betCloseAt || '')}" aria-label="Closing bet time">
+        <button class="btn btn-p btn-sm" id="save-bet-close-btn" type="button">Save</button>
+      </div>
+      ${t.betCloseAt ? `<p class="mono dim center mt8">Time left: <span class="accent" data-bet-close-countdown>--</span></p>` : ''}
+    </div>
+    <div class="card">
       <div class="card-lbl">Paste Today's Guesses</div>
-      <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Format: Name - HH:MM (one per line). Include "Wrap - HH:MM"</p>
+      <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Format: Name - HH:MM (one per line).</p>
       <textarea id="paste-inp" placeholder="ES:
 Luigi - 18:30
 Daniela - 19:15
-Marco - 17:45
-Wrap - 18:30"></textarea>
+Marco - 17:45"></textarea>
       <button class="btn btn-p mt12" id="parse-btn">Preview Guesses →</button>
     </div>
   `;
+}
+
+function renderBetClosePlayerCard(day) {
+  if (!day?.betCloseAt) return '';
+  return `<div class="card bet-close-card">
+    <div class="card-lbl">Bets Close At</div>
+    <div class="bet-close-time">${esc(day.betCloseAt)}</div>
+    <p class="mono dim center">Time left to bet</p>
+    <div class="bet-close-countdown" data-bet-close-countdown>--</div>
+  </div>`;
 }
 
 function setBoardView(v) {
@@ -2322,6 +2381,46 @@ async function confirmTodayWrap(wrapTime) {
   return true;
 }
 
+async function saveBetCloseTime() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  const closeTime = document.getElementById('bet-close-input')?.value || '';
+  if (!closeTime) {
+    toast('Choose a closing time', 'err');
+    return false;
+  }
+  if (!isValidHM(closeTime)) {
+    toast('Use a valid closing time', 'err');
+    return false;
+  }
+  const prevS = cloneState();
+  S.today.betCloseAt = closeTime;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Closing bet time saved', 'ok');
+  render();
+  return true;
+}
+
+async function saveEstimatedWrapTime() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  const wrapTime = document.getElementById('est-wrap-input')?.value || '';
+  if (!wrapTime) {
+    toast('Choose a wrap time', 'err');
+    return false;
+  }
+  if (!isValidHM(wrapTime)) {
+    toast('Use a valid wrap time', 'err');
+    return false;
+  }
+  const prevS = cloneState();
+  S.today.estWrap = wrapTime;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Wrap time saved', 'ok');
+  render();
+  return true;
+}
+
 async function handleAdminDialogAction(btn) {
   const action = btn.dataset.adminDialogAction;
   const date = btn.dataset.historyDate;
@@ -2570,10 +2669,15 @@ function showPreview() {
   const text = inp?.value || '';
   if (!text.trim()) { toast('Paste guesses first', 'err'); return; }
   
-  const { guesses: parsed, wrapTime, formatErrors } = parsePaste(text);
-  if (!parsed.length && !wrapTime && (!formatErrors || !formatErrors.length)) {
+  const { guesses: parsed, formatErrors } = parsePaste(text);
+  if (!parsed.length && (!formatErrors || !formatErrors.length)) {
       toast('No valid data found', 'err');
       return;
+  }
+  const savedWrap = S.today?.estWrap && S.today.estWrap !== '--:--' ? S.today.estWrap : '';
+  if (!savedWrap) {
+    toast('Set wrap time first', 'err');
+    return;
   }
   
   const errorWarning = formatErrors.length > 0
@@ -2624,7 +2728,7 @@ function showPreview() {
   <div class="hdr-day">Day ${totalDays}/51 Preview</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap">Wrap ${esc(wrapTime || 'Missing')}</div>
+    <div class="hdr-wrap">Wrap ${esc(savedWrap)}</div>
     <span class="sync-dot live js-sync-dot"></span>
   </div>
 </div>
@@ -2632,14 +2736,6 @@ function showPreview() {
   ${errorWarning}
   ${duplicateWarning}
 
-  <div class="card">
-    <div class="card-lbl">Confirmed Wrap Time</div>
-    ${wrapTime 
-      ? `<p class="accent" style="font-weight:bold; font-size:1.4rem; text-align:center;">🎬 ${esc(wrapTime)}</p>` 
-      : `<p class="red" style="font-size:0.8rem; margin-bottom:10px;">⚠️ Wrap time not found in paste. Please set it manually:</p>
-         <input type="time" id="manual-wrap" style="text-align:center; font-size:1.2rem;">`
-    }
-  </div>
   <div class="card">
     <div class="card-lbl">Confirm These Guesses</div>
     <div class="preview-card">
@@ -2674,11 +2770,8 @@ function showPreview() {
 		      toast('Duplicate names', 'err');
 		      return;
 		    }
-		    let finalWrap = wrapTime;
-	    if (!finalWrap) {
-	      finalWrap = document.getElementById('manual-wrap')?.value;
-	      if (!finalWrap) { toast('Please set a wrap time', 'err'); return; }
-	    }
+		    let finalWrap = S.today?.estWrap && S.today.estWrap !== '--:--' ? S.today.estWrap : '';
+	    if (!finalWrap) { toast('Set wrap time first', 'err'); return; }
 	    if (!isValidHM(finalWrap)) { toast('Use a valid wrap time (HH:MM)', 'err'); return; }
 	    
 	    const prevS = cloneState();
@@ -2806,6 +2899,8 @@ function bindMain() {
     render();
   });
   document.getElementById('parse-btn')?.addEventListener('click', showPreview);
+  document.getElementById('save-est-wrap-btn')?.addEventListener('click', saveEstimatedWrapTime);
+  document.getElementById('save-bet-close-btn')?.addEventListener('click', saveBetCloseTime);
   document.getElementById('admin-clock')?.addEventListener('click', () => {
     openLiveWrapActions(nowHMS());
   });

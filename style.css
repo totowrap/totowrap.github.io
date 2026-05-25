@@ -250,6 +250,14 @@ body::before {
 .preview-row { min-height: 50px; }
 .preview-row .row-name { display: block; }
 .bet-date-input { max-width: 152px; font-size: .78rem; padding: 7px 8px; font-variant-numeric: tabular-nums; }
+.admin-bet-close-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; }
+.bet-close-card { text-align: center; }
+.bet-close-card .card-lbl { margin-bottom: 2px; }
+.bet-close-card p { font-size: .66rem; line-height: 1; margin-top: 20px; }
+.bet-close-time { color: var(--accent); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 2.4rem; font-weight: bold; line-height: 1; margin: 0; font-variant-numeric: tabular-nums; }
+.bet-close-countdown { color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.14rem; font-weight: bold; line-height: 1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.waiting-guesses-card { display: grid; place-items: center; min-height: 74px; text-align: center; }
+.waiting-guesses-card p { margin: 0; }
 .inp-wrap { margin-bottom: 12px; }
 .inp-lbl { display: block; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
 input[type=text], input[type=password], input[type=date], input[type=time], textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .9rem; outline: none; transition: border-color .2s; }
