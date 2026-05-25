@@ -531,12 +531,14 @@ function restoreAfterFailedSave(prevS) {
 }
 
 function getSortedPlayerRoster() {
-  return [...S.playerRoster].sort((a, b) => {
-    const scoreA = S.scores[a.name] || 0;
-    const scoreB = S.scores[b.name] || 0;
-    if (scoreB !== scoreA) return scoreB - scoreA;
-    return a.name.localeCompare(b.name);
-  });
+  return [...S.playerRoster].sort(comparePlayersByScoreThenName);
+}
+
+function comparePlayersByScoreThenName(a, b) {
+  const scoreA = S.scores[a.name] || 0;
+  const scoreB = S.scores[b.name] || 0;
+  if (scoreB !== scoreA) return scoreB - scoreA;
+  return String(a.name || '').localeCompare(String(b.name || ''));
 }
 
 function getAlphabeticalPlayerRoster() {
@@ -1750,12 +1752,7 @@ function renderBoardPie(pl) {
   const colorOf = name => COLORS[allNames.indexOf(name) % COLORS.length];
 
   // Only players with >0 points
-  const active = pl
-    .filter(p => (S.scores[p.name] || 0) > 0)
-    .sort((a, b) => {
-      const pointDiff = (S.scores[a.name] || 0) - (S.scores[b.name] || 0);
-      return pointDiff || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-    });
+  const active = pl.filter(p => (S.scores[p.name] || 0) > 0);
   const total = active.reduce((sum, p) => sum + (S.scores[p.name] || 0), 0);
   const cx = 150, cy = 150, r = 146;
 
@@ -1767,7 +1764,7 @@ function renderBoardPie(pl) {
     const pts = S.scores[p.name] || 0;
     const frac = pts / total;
     const sweep = frac * 2 * Math.PI;
-    const end = angle - sweep;
+    const end = angle + sweep;
     const color = colorOf(p.name);
 
     let pathD;
@@ -1786,14 +1783,14 @@ function renderBoardPie(pl) {
       const x2 = (cx + r * Math.cos(end)).toFixed(3);
       const y2 = (cy + r * Math.sin(end)).toFixed(3);
       const large = sweep > Math.PI ? 1 : 0;
-      pathD = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 0 ${x2} ${y2} Z`;
+      pathD = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
     }
 
     sliceSVG += `<path d="${pathD}" fill="${color}" stroke="#263759" stroke-width="1.5"/>`;
 
     // Label — show full name when slice is large enough
     if (sweep >= 0.38) {
-      const mid = angle - sweep / 2;
+      const mid = angle + sweep / 2;
       const lx = (cx + r * 0.62 * Math.cos(mid)).toFixed(1);
       const ly = (cy + r * 0.62 * Math.sin(mid)).toFixed(1);
       const fs = sweep >= 0.65 ? 9 : 7.5;
