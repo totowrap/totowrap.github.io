@@ -539,6 +539,10 @@ function getSortedPlayerRoster() {
   });
 }
 
+function getAlphabeticalPlayerRoster() {
+  return [...S.playerRoster].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+
 async function saveS() {
   _lastSaveWasConflict = false;
   if (!IS_ADMIN || !currentUser) {
@@ -2533,7 +2537,7 @@ function renderHistory() {
 }
 
 function renderSettings() {
-  const pl = getSortedPlayerRoster();
+  const pl = getAlphabeticalPlayerRoster();
   const hasCurrentDay = S.today !== null;
   return `<div class="card"><div class="card-lbl">Player Roster — Editable</div>
 ${pl.map((p, idx)=> {
