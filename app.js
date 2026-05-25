@@ -2498,6 +2498,30 @@ function adjustCompletedDayScores(day, direction) {
   });
 }
 
+function removeAutoAddedPlayersFromDeletedDays(deletedDays) {
+  const autoAddedKeys = new Set();
+  deletedDays.forEach(day => {
+    (day?.addedPlayers || []).forEach(name => autoAddedKeys.add(nameKey(name)));
+  });
+  if (!autoAddedKeys.size) return;
+
+  const usedKeys = new Set();
+  const remainingDays = [...S.days, S.today].filter(Boolean);
+  remainingDays.forEach(day => {
+    (day.guesses || []).forEach(guess => usedKeys.add(nameKey(guess.name)));
+    (day.winners || []).forEach(winner => usedKeys.add(nameKey(winner.name)));
+    if (day.winner) usedKeys.add(nameKey(day.winner));
+  });
+
+  S.playerRoster = S.playerRoster.filter(player => {
+    const key = nameKey(player.name);
+    if (!autoAddedKeys.has(key)) return true;
+    if (usedKeys.has(key) || (Number(S.scores[player.name]) || 0) > 0) return true;
+    delete S.scores[player.name];
+    return false;
+  });
+}
+
 async function deleteHistoryDay(date, confirmed=false) {
   const target = deleteHistoryDayByDate(date);
   if (!target) {
@@ -2518,10 +2542,38 @@ async function deleteHistoryDay(date, confirmed=false) {
   } else {
     S.today = null;
   }
+  removeAutoAddedPlayersFromDeletedDays([day]);
 
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return; }
   toast('History day deleted', 'ok');
+  render();
+}
+
+async function deleteCurrentDayAndMatchingHistory() {
+  if (!IS_ADMIN || !S.today) return;
+  const isoDate = displayToISO(S.today.date);
+  const label = displayDate(isoDate) || isoDate;
+  const matchingHistoryIndexes = S.days
+    .map((day, idx) => displayToISO(day.date) === isoDate ? idx : -1)
+    .filter(idx => idx !== -1);
+
+  const confirmCopy = matchingHistoryIndexes.length
+    ? `Delete today's game and ${matchingHistoryIndexes.length} matching history ${matchingHistoryIndexes.length === 1 ? 'entry' : 'entries'} for ${label}? This cannot be undone.`
+    : `Delete today's game for ${label}? This cannot be undone.`;
+  if (!confirm(confirmCopy)) return;
+
+  const prevS = cloneState();
+  const deletedDays = [S.today, ...matchingHistoryIndexes.map(idx => S.days[idx])];
+  adjustCompletedDayScores(S.today, -1);
+  matchingHistoryIndexes.forEach(idx => adjustCompletedDayScores(S.days[idx], -1));
+  S.days = S.days.filter(day => displayToISO(day.date) !== isoDate);
+  S.today = null;
+  removeAutoAddedPlayersFromDeletedDays(deletedDays);
+
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return; }
+  toast('Current day deleted', 'ok');
   render();
 }
 
@@ -2656,7 +2708,7 @@ ${pl.map((p, idx)=> {
 </div>
 <div class="card"><div class="card-lbl">Danger Zone</div>
 ${hasCurrentDay ? `
-<p class="mono dim" style="font-size:.7rem;margin-bottom:12px">Delete today's game only (keeps history & scores)</p>
+<p class="mono dim" style="font-size:.7rem;margin-bottom:12px">Delete today's game, matching history, and scores for that day</p>
 <button class="btn btn-d" id="delete-day-btn" style="margin-bottom:16px;">Delete Current Day</button>
 ` : ''}
 <p class="mono dim mt8" style="margin-bottom:12px">This will erase all data permanently for everyone.</p>
@@ -2789,6 +2841,7 @@ function showPreview() {
 	    S.today.approvedDate = previewApprovedDate;
 	    S.today.guesses = fullList;
 	    S.today.estWrap = finalWrap;
+	    S.today.addedPlayers = newPlayers;
 	    const saved = await saveS();
 		    if (!saved) { restoreAfterFailedSave(prevS); return; }
 	    toast('Day started!', 'ok');
@@ -2824,12 +2877,18 @@ async function savePlayer(idx) {
       if (day.winners) {
         day.winners.forEach(w => { if (w.name === oldName) w.name = newName; });
       }
+      if (day.addedPlayers) {
+        day.addedPlayers = day.addedPlayers.map(name => name === oldName ? newName : name);
+      }
     });
     if (S.today && S.today.guesses) {
       S.today.guesses.forEach(g => { if (g.name === oldName) g.name = newName; });
       if (S.today.winner === oldName) S.today.winner = newName;
       if (S.today.winners) {
         S.today.winners.forEach(w => { if (w.name === oldName) w.name = newName; });
+      }
+      if (S.today.addedPlayers) {
+        S.today.addedPlayers = S.today.addedPlayers.map(name => name === oldName ? newName : name);
       }
     }
   }
@@ -2905,7 +2964,7 @@ function bindMain() {
     openLiveWrapActions(nowHMS());
   });
   document.getElementById('delete-day-btn')?.addEventListener('click', () => {
-    if (S.today) deleteHistoryDay(S.today.date);
+    deleteCurrentDayAndMatchingHistory();
   });
   document.getElementById('reset-btn')?.addEventListener('click',async ()=>{
     if(confirm('Reset all data?')){
