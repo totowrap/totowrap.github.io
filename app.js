@@ -545,6 +545,11 @@ function getAlphabeticalPlayerRoster() {
   return [...S.playerRoster].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 }
 
+function hasRosterDuplicateName(name, ignoreIdx=-1) {
+  const key = nameKey(name);
+  return S.playerRoster.some((player, idx) => idx !== ignoreIdx && nameKey(player.name) === key);
+}
+
 async function saveS() {
   _lastSaveWasConflict = false;
   if (!IS_ADMIN || !currentUser) {
@@ -674,17 +679,9 @@ function parsePaste(text) {
   const lines = text.trim().split('\n').filter(l => l.trim());
   const guesses = [];
   const formatErrors = []; // Track invalid formats here
-  let wrapTime = null;
   
   for (const line of lines) {
-    // Check for "Wrap - HH:MM" line
-    const wrapMatch = line.match(/^wrap\s*[-\s:]\s*(\d{2}:\d{2})$/i);
-    if (wrapMatch) {
-      if (isValidHM(wrapMatch[1])) {
-        wrapTime = wrapMatch[1];
-      } else {
-        formatErrors.push({ name: 'Wrap', rawTime: wrapMatch[1] });
-      }
+    if (/^wrap\b/i.test(line.trim())) {
       continue;
     }
     
@@ -705,7 +702,7 @@ function parsePaste(text) {
       }
     }
   }
-  return { guesses, wrapTime, formatErrors };
+  return { guesses, formatErrors };
 }
 
 function buildFullGuessList(parsed) {
@@ -2189,9 +2186,13 @@ function openHistoryDeleteDialog(date) {
     toast('History day not found', 'err');
     return;
   }
+  const matchCount = target.kind === 'history' ? getHistoryDateMatchCount(date) : 0;
+  const copy = matchCount > 1
+    ? `${matchCount} history entries have this date. This will delete the first matching entry only.`
+    : 'This cannot be undone.';
   openAdminDialog({
     title: `Delete ${getHistoryDayLabel(date)}?`,
-    copy: 'This cannot be undone.',
+    copy,
     body: `<div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
       <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="history-delete-confirm" data-history-date="${esc(date)}">Delete</button>
@@ -2338,7 +2339,7 @@ async function addRosterPlayer(name) {
     toast('Name cannot be empty', 'err');
     return false;
   }
-  if (S.playerRoster.some(player => nameKey(player.name) === nameKey(newName))) {
+  if (hasRosterDuplicateName(newName)) {
     toast('Duplicate names', 'err');
     return false;
   }
@@ -2498,6 +2499,15 @@ function adjustCompletedDayScores(day, direction) {
   });
 }
 
+function recalculateCompletedDay(day) {
+  if (!day?.wrapTime) return;
+  const { winner, winners, points, noWinner } = calcWinner(day.guesses || [], day.wrapTime, day);
+  day.winner = winner;
+  day.winners = winners;
+  day.points = points;
+  day.noWinner = noWinner;
+}
+
 function removeAutoAddedPlayersFromDeletedDays(deletedDays) {
   const autoAddedKeys = new Set();
   deletedDays.forEach(day => {
@@ -2522,6 +2532,11 @@ function removeAutoAddedPlayersFromDeletedDays(deletedDays) {
   });
 }
 
+function getHistoryDateMatchCount(date) {
+  const isoDate = displayToISO(date);
+  return S.days.filter(day => displayToISO(day.date) === isoDate).length;
+}
+
 async function deleteHistoryDay(date, confirmed=false) {
   const target = deleteHistoryDayByDate(date);
   if (!target) {
@@ -2529,7 +2544,11 @@ async function deleteHistoryDay(date, confirmed=false) {
     return;
   }
   const label = displayDate(date) || date;
-  if (!confirmed && !confirm(`Delete Day ${label}? This cannot be undone.`)) return;
+  const matchCount = target.kind === 'history' ? getHistoryDateMatchCount(date) : 0;
+  const duplicateWarning = matchCount > 1
+    ? `\n\nWarning: ${matchCount} history entries have this date. This action deletes the first matching entry only.`
+    : '';
+  if (!confirmed && !confirm(`Delete Day ${label}? This cannot be undone.${duplicateWarning}`)) return;
 
   const prevS = cloneState();
   const day = target.kind === 'history' ? S.days[target.idx] : S.today;
@@ -2559,7 +2578,7 @@ async function deleteCurrentDayAndMatchingHistory() {
     .filter(idx => idx !== -1);
 
   const confirmCopy = matchingHistoryIndexes.length
-    ? `Delete today's game and ${matchingHistoryIndexes.length} matching history ${matchingHistoryIndexes.length === 1 ? 'entry' : 'entries'} for ${label}? This cannot be undone.`
+    ? `Delete today's game and ${matchingHistoryIndexes.length} matching history ${matchingHistoryIndexes.length === 1 ? 'entry' : 'entries'} for ${label}? This cannot be undone.${matchingHistoryIndexes.length > 1 ? '\n\nWarning: duplicate history dates were found and all matching entries will be deleted.' : ''}`
     : `Delete today's game for ${label}? This cannot be undone.`;
   if (!confirm(confirmCopy)) return;
 
@@ -2875,8 +2894,7 @@ async function savePlayer(idx) {
   const newName = nameInput.value.trim();
   const newPoints = parseInt(ptsInput.value) || 0;
   if (!newName) { toast('Name cannot be empty', 'err'); return; }
-  const duplicate = S.playerRoster.find((p, i) => i !== idx && nameKey(p.name) === nameKey(newName));
-  if (duplicate) { toast('Duplicate names', 'err'); return; }
+  if (hasRosterDuplicateName(newName, idx)) { toast('Duplicate names', 'err'); return; }
   if (oldName !== newName) {
     S.playerRoster[idx].name = newName;
     S.scores[newName] = S.scores[oldName] || 0;
@@ -2911,24 +2929,10 @@ async function savePlayer(idx) {
 
 function removePlayerFromDay(day, name) {
   if (!day) return;
-  if (day.guesses) day.guesses = day.guesses.filter(g => g.name !== name);
-
-  if (Array.isArray(day.winners)) {
-    day.winners = day.winners.filter(w => w.name !== name);
-    if (day.winners.length > 0) {
-      day.winner = day.winners[0].name;
-      return;
-    }
-  } else if (day.winner && day.winner !== name) {
-    return;
-  }
-
-  if (day.winner === name || (Array.isArray(day.winners) && day.winners.length === 0)) {
-    day.winner = "Nobody wins, everytuna's happy!";
-    day.winners = [];
-    day.points = 0;
-    day.noWinner = true;
-  }
+  const key = nameKey(name);
+  if (day.guesses) day.guesses = day.guesses.filter(g => nameKey(g.name) !== key);
+  if (day.addedPlayers) day.addedPlayers = day.addedPlayers.filter(playerName => nameKey(playerName) !== key);
+  recalculateCompletedDay(day);
 }
 
 async function deletePlayer(idx) {
@@ -2937,10 +2941,14 @@ async function deletePlayer(idx) {
   if (!confirm(`Delete ${player.name}?`)) return;
   const prevS = cloneState();
   const name = player.name;
+  const daysToUpdate = [...S.days, S.today].filter(Boolean);
+  daysToUpdate.forEach(day => adjustCompletedDayScores(day, -1));
   S.playerRoster.splice(idx, 1);
   delete S.scores[name];
-  S.days.forEach(day => removePlayerFromDay(day, name));
-  removePlayerFromDay(S.today, name);
+  daysToUpdate.forEach(day => {
+    removePlayerFromDay(day, name);
+    adjustCompletedDayScores(day, 1);
+  });
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return; }
   toast('Player deleted', 'ok');
