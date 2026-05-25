@@ -4,6 +4,7 @@
     
   if (phrase.dataset.bootPhraseReady === 'true') return;
   phrase.dataset.bootPhraseReady = 'true';
+  phrase.classList.add('is-loading');
 
   const LAST_PHRASE_KEY = 'totowrap-last-boot-phrase';
   const PLAYER_NAMES_KEY = 'totowrap-boot-player-names';
@@ -74,6 +75,7 @@
     const choice = choices[Math.floor(Math.random() * choices.length)] || available[0];
     phrase.textContent = choice?.text || '';
     if (choice) storePhraseIndex(choice.index);
+    phrase.classList.remove('is-loading');
     phrase.classList.add('is-ready');
   }
 

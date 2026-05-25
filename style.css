@@ -3,7 +3,8 @@ html, body { background: #263759; height: 100%; overflow: hidden; }
 #boot-loader.done { opacity: 0; visibility: hidden; pointer-events: none; }
 .boot-content { display: grid; justify-items: center; gap: 10px; width: min(100%, 400px); padding: 18px; text-align: center; }
 .boot-can { width: 320px; height: 320px; object-fit: contain; animation: boot-spin 3.5s linear infinite; filter: drop-shadow(0 14px 32px rgba(0,0,0,.32)); }
-.boot-phrase { display: grid; place-items: center; min-height: 2.8em; width: min(100%, 360px); color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.05rem; font-weight: bold; line-height: 1.32; text-align: center; text-transform: uppercase; white-space: pre-line; opacity: 0; }
+.boot-phrase { display: grid; place-items: center; min-height: 2.8em; width: min(100%, 360px); color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.05rem; font-weight: bold; line-height: 1.32; text-align: center; text-transform: uppercase; white-space: pre-line; }
+.boot-phrase.is-loading { opacity: 0; }
 .boot-phrase.is-ready { animation: phrase-fade-in 0.4s ease 0.1s forwards; }
 @keyframes boot-spin { to { transform: rotate(360deg); } }
 @keyframes phrase-fade-in { to { opacity: 1; } }
