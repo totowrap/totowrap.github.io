@@ -2790,18 +2790,18 @@ function showPreview() {
 
   <div class="card">
     <div class="card-lbl">Confirm These Guesses</div>
-    <div class="preview-card">
-      <div class="preview-head"><span>Player</span><span>Bet</span><span>Date</span></div>
+    <div class="preview-card compact-preview-card">
+      <div class="preview-head compact-preview-head"><span>Player</span><span>Bet</span><span>Date</span></div>
       ${sorted.map(g => {
         const isDup = duplicates.includes(nameKey(g.name));
         return `
-        <div class="row preview-row" style="${isDup ? 'border-left: 3px solid var(--red); padding-left: 8px;' : ''}">
+        <div class="row preview-row compact-preview-row" style="${isDup ? 'border-left: 3px solid var(--red); padding-left: 8px;' : ''}">
           <div class="row-name">
             ${esc(g.name)} ${isDup ? '<span class="red" style="font-size:0.5rem; font-weight:bold;">(DUPLICATE)</span>' : ''}
           </div>
           ${g.time ? `
-            <div class="row-time">${esc(g.time)}</div>
-            <input type="date" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${g.date}">
+            <input type="time" class="bet-time-input" id="bet-time-${g._previewIdx}" value="${esc(g.time)}" aria-label="${esc(g.name)} bet time">
+            <input type="date" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${esc(g.date)}" aria-label="${esc(g.name)} bet date">
           ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
         </div>`;
       }).join('')}
@@ -2825,6 +2825,21 @@ function showPreview() {
 		    let finalWrap = S.today?.estWrap && S.today.estWrap !== '--:--' ? S.today.estWrap : '';
 	    if (!finalWrap) { toast('Set wrap time first', 'err'); return; }
 	    if (!isValidHM(finalWrap)) { toast('Use a valid wrap time (HH:MM)', 'err'); return; }
+	    const editedFullList = fullList.map(g => {
+	      const nextGuess = { ...g };
+	      if (nextGuess.time) {
+	        const editedTime = document.getElementById(`bet-time-${nextGuess._previewIdx}`)?.value || nextGuess.time;
+	        if (!isValidHM(editedTime)) {
+	          toast(`Check ${nextGuess.name}'s bet time`, 'err');
+	          return null;
+	        }
+	        nextGuess.time = editedTime;
+	        nextGuess.date = document.getElementById(`bet-date-${nextGuess._previewIdx}`)?.value || nextGuess.date;
+	      }
+	      delete nextGuess._previewIdx;
+	      return nextGuess;
+	    });
+	    if (editedFullList.some(g => !g)) return;
 	    
 	    const prevS = cloneState();
 	    newPlayers.forEach(name => {
@@ -2832,14 +2847,9 @@ function showPreview() {
 	      S.scores[name] = 0;
     });
     
-    fullList.forEach(g => {
-      if (g.time) g.date = document.getElementById(`bet-date-${g._previewIdx}`)?.value || g.date;
-      delete g._previewIdx;
-    });
-    
     S.today.approvedAt = previewApprovedAt;
 	    S.today.approvedDate = previewApprovedDate;
-	    S.today.guesses = fullList;
+	    S.today.guesses = editedFullList;
 	    S.today.estWrap = finalWrap;
 	    S.today.addedPlayers = newPlayers;
 	    const saved = await saveS();
