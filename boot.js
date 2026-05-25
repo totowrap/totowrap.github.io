@@ -42,13 +42,18 @@
   }
 
   function getLastPhraseIndex() {
-    try {
-      const index = Number(localStorage.getItem(LAST_PHRASE_KEY));
-      return Number.isInteger(index) ? index : -1;
-    } catch (_) {
-      return -1;
-    }
+  try {
+    const raw = localStorage.getItem(LAST_PHRASE_KEY);
+    if (raw === null) return -1;
+
+    const index = Number(raw);
+    return Number.isInteger(index) && index >= 0 && index < phrases.length
+      ? index
+      : -1;
+  } catch (_) {
+    return -1;
   }
+}
 
   function storePhraseIndex(index) {
     try {
