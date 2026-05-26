@@ -259,6 +259,12 @@ body::before {
 .compact-preview-row .bet-date-input { max-width: 128px; color: var(--text); }
 .compact-preview-row .b-missing { grid-column: 2 / -1; justify-self: stretch; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .admin-bet-close-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; }
+.admin-time-save-row { display: grid; grid-template-columns: 118px auto; justify-content: center; gap: 8px; align-items: center; }
+.admin-wrap-save-row { grid-template-columns: 82px 128px auto; }
+.admin-time-input,
+.admin-date-input { height: 36px; min-width: 0; padding: 8px 7px; font-size: .78rem; text-align: center; font-variant-numeric: tabular-nums; }
+.admin-time-input { color: var(--accent); }
+.admin-date-input { color: var(--text); }
 .bet-close-card { text-align: center; }
 .bet-close-card .card-lbl { margin-bottom: 2px; }
 .bet-close-card p { font-size: .66rem; line-height: 1; margin-top: 20px; }

@@ -1752,8 +1752,9 @@ function renderToday() {
     <div class="card">
       <div class="card-lbl">Set Wrap Time</div>
       <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set the estimated wrap time players see before the game starts.</p>
-      <div class="admin-bet-close-row">
-        <input type="time" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" aria-label="Estimated wrap time">
+      <div class="admin-time-save-row admin-wrap-save-row">
+        <input type="time" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" aria-label="Estimated wrap time">
+        <input type="date" class="admin-date-input" id="est-wrap-date-input" value="${esc(t.estWrapDate || t.date || localDateISO())}" aria-label="Wrap date">
         <button class="btn btn-p btn-sm" id="save-est-wrap-btn" type="button">Save</button>
       </div>
       ${t.estWrap && t.estWrap !== '--:--' ? `<p class="mono dim center mt8">Players see: <span class="accent">Wrap ${esc(t.estWrap)}</span></p>` : ''}
@@ -1761,8 +1762,8 @@ function renderToday() {
     <div class="card">
       <div class="card-lbl">Closing Bet Time</div>
       <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set when players must stop submitting bets. Players will see a countdown until guesses are pasted.</p>
-      <div class="admin-bet-close-row">
-        <input type="time" id="bet-close-input" value="${esc(t.betCloseAt || '')}" aria-label="Closing bet time">
+      <div class="admin-time-save-row">
+        <input type="time" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" aria-label="Closing bet time">
         <button class="btn btn-p btn-sm" id="save-bet-close-btn" type="button">Save</button>
       </div>
       ${t.betCloseAt ? `<p class="mono dim center mt8">Time left: <span class="accent" data-bet-close-countdown>--</span></p>` : ''}
@@ -2405,6 +2406,7 @@ async function saveBetCloseTime() {
 async function saveEstimatedWrapTime() {
   if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
   const wrapTime = document.getElementById('est-wrap-input')?.value || '';
+  const wrapDate = document.getElementById('est-wrap-date-input')?.value || localDateISO();
   if (!wrapTime) {
     toast('Choose a wrap time', 'err');
     return false;
@@ -2413,8 +2415,14 @@ async function saveEstimatedWrapTime() {
     toast('Use a valid wrap time', 'err');
     return false;
   }
+  if (!dateFromISO(wrapDate)) {
+    toast('Use a valid wrap date', 'err');
+    return false;
+  }
   const prevS = cloneState();
   S.today.estWrap = wrapTime;
+  S.today.estWrapDate = wrapDate;
+  S.today.date = wrapDate;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Wrap time saved', 'ok');
@@ -2750,6 +2758,7 @@ function showPreview() {
     toast('Set wrap time first', 'err');
     return;
   }
+  const savedWrapDate = S.today?.estWrapDate || S.today?.date || localDateISO();
   
   const errorWarning = formatErrors.length > 0
     ? `<div class="card" style="border: 1px solid var(--red); background: rgba(214, 86, 86, 0.1); margin-bottom: 12px;">
@@ -2783,7 +2792,7 @@ function showPreview() {
   });
   
   const previewApprovedAt = nowHMS();
-  const previewApprovedDate = localDateISO();
+  const previewApprovedDate = savedWrapDate;
   const previewDay = { approvedAt: previewApprovedAt, approvedDate: previewApprovedDate };
   const fullList = buildFullGuessList(parsed).map((g, idx) => ({
     ...g,
@@ -2868,8 +2877,10 @@ function showPreview() {
     
     S.today.approvedAt = previewApprovedAt;
 	    S.today.approvedDate = previewApprovedDate;
+	    S.today.date = previewApprovedDate;
 	    S.today.guesses = editedFullList;
 	    S.today.estWrap = finalWrap;
+	    S.today.estWrapDate = previewApprovedDate;
 	    S.today.addedPlayers = newPlayers;
 	    const saved = await saveS();
 		    if (!saved) { restoreAfterFailedSave(prevS); return; }
