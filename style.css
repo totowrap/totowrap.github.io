@@ -259,10 +259,10 @@ body::before {
 .compact-preview-row .bet-date-input { max-width: 128px; color: var(--text); }
 .compact-preview-row .b-missing { grid-column: 2 / -1; justify-self: stretch; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .admin-bet-close-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; }
-.admin-time-save-row { display: grid; grid-template-columns: 118px auto; justify-content: center; gap: 8px; align-items: center; }
-.admin-wrap-save-row { grid-template-columns: 82px 128px auto; }
+.admin-time-save-row { display: grid; grid-template-columns: minmax(0, 118px) max-content; justify-content: center; gap: 8px; align-items: center; max-width: 100%; }
+.admin-wrap-save-row { grid-template-columns: minmax(0, 82px) minmax(0, 128px) max-content; }
 .admin-time-input,
-.admin-date-input { height: 36px; min-width: 0; padding: 8px 7px; font-size: .78rem; text-align: center; font-variant-numeric: tabular-nums; }
+.admin-date-input { width: 100%; height: 32px; min-width: 0; padding: 5px 7px; border-radius: 6px; background: rgba(38,55,89,.66); font-size: .76rem; text-align: center; font-variant-numeric: tabular-nums; }
 .admin-time-input { color: var(--accent); }
 .admin-date-input { color: var(--text); }
 .bet-close-card { text-align: center; }
@@ -380,6 +380,15 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   .compact-preview-row .bet-time-input,
   .compact-preview-row .bet-date-input { grid-column: auto; height: 30px; min-height: 30px; padding: 4px 5px; font-size: .68rem; }
   .compact-preview-row .bet-date-input { max-width: 112px; }
+  .admin-time-save-row { grid-template-columns: minmax(0, 112px) max-content; }
+  .admin-wrap-save-row { grid-template-columns: minmax(0, 78px) minmax(0, 120px) max-content; }
+  .admin-time-input,
+  .admin-date-input { height: 32px; padding: 5px 6px; font-size: .72rem; }
+  .admin-time-save-row .btn-sm { height: 32px; padding: 7px 10px; }
+}
+@media (max-width: 340px) {
+  .admin-wrap-save-row { grid-template-columns: minmax(0, 82px) minmax(0, 1fr); }
+  .admin-wrap-save-row .btn-sm { grid-column: 1 / -1; justify-self: center; width: auto; min-width: 76px; }
 }
 
 .board-toolbar { display:flex; gap:8px; margin-bottom:14px; }
