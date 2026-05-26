@@ -1789,7 +1789,7 @@ function renderToday() {
       <div class="admin-time-save-row admin-wrap-save-row">
         <input type="time" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" aria-label="Estimated wrap time">
         <input type="date" class="admin-date-input" id="est-wrap-date-input" value="${esc(t.estWrapDate || localDateISO())}" aria-label="Wrap date">
-        <button class="btn btn-p btn-sm" id="save-est-wrap-btn" type="button">Save</button>
+        <button class="settings-save admin-time-save-btn" id="save-est-wrap-btn" type="button" title="Save wrap time" aria-label="Save wrap time">✓</button>
       </div>
       ${t.estWrap && t.estWrap !== '--:--' ? `<p class="mono dim center mt8">Players see: <span class="accent">Wrap ${esc(t.estWrap)}</span></p>` : ''}
     </div>
@@ -1798,7 +1798,7 @@ function renderToday() {
       <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set when players must stop submitting bets. Players will see a countdown until guesses are pasted.</p>
       <div class="admin-time-save-row">
         <input type="time" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" aria-label="Closing bet time">
-        <button class="btn btn-p btn-sm" id="save-bet-close-btn" type="button">Save</button>
+        <button class="settings-save admin-time-save-btn" id="save-bet-close-btn" type="button" title="Save closing bet time" aria-label="Save closing bet time">✓</button>
       </div>
       ${t.betCloseAt ? `<p class="mono dim center mt8">Time left: <span class="accent" data-bet-close-countdown>--</span></p>` : ''}
     </div>
