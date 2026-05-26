@@ -259,13 +259,15 @@ body::before {
 .compact-preview-row .bet-date-input { max-width: 128px; color: var(--text); }
 .compact-preview-row .b-missing { grid-column: 2 / -1; justify-self: stretch; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .admin-bet-close-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; }
-.admin-time-save-row { display: grid; grid-template-columns: minmax(0, 118px) max-content; justify-content: center; gap: 8px; align-items: center; max-width: 100%; }
-.admin-wrap-save-row { grid-template-columns: minmax(0, 82px) minmax(0, 128px) max-content; }
+.admin-time-save-row { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }
 .admin-time-input,
-.admin-date-input { width: 100%; height: 32px; min-width: 0; padding: 5px 7px; border-radius: 6px; background: rgba(38,55,89,.66); font-size: .76rem; text-align: center; font-variant-numeric: tabular-nums; }
+.admin-date-input { flex: 0 1 auto; height: 32px; min-width: 0; padding: 6px 9px; border-radius: 7px; background: var(--bg4); font-size: .84rem; text-align: center; font-variant-numeric: tabular-nums; }
+.admin-time-input { width: 76px; }
+.admin-date-input { width: 118px; }
+.admin-time-save-row:not(.admin-wrap-save-row) .admin-time-input { width: 118px; }
 .admin-time-input { color: var(--accent); }
 .admin-date-input { color: var(--text); }
-.admin-time-save-btn { width: 26px; height: 26px; font-size: .86rem; }
+.admin-time-save-btn { width: 22px; height: 22px; font-size: .82rem; }
 .bet-close-card { text-align: center; }
 .bet-close-card .card-lbl { margin-bottom: 2px; }
 .bet-close-card p { font-size: .66rem; line-height: 1; margin-top: 20px; }
@@ -381,15 +383,17 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   .compact-preview-row .bet-time-input,
   .compact-preview-row .bet-date-input { grid-column: auto; height: 30px; min-height: 30px; padding: 4px 5px; font-size: .68rem; }
   .compact-preview-row .bet-date-input { max-width: 112px; }
-  .admin-time-save-row { grid-template-columns: minmax(0, 112px) max-content; }
-  .admin-wrap-save-row { grid-template-columns: minmax(0, 78px) minmax(0, 120px) max-content; }
+  .admin-time-save-row { gap: 6px; }
   .admin-time-input,
-  .admin-date-input { height: 32px; padding: 5px 6px; font-size: .72rem; }
-  .admin-time-save-btn { width: 24px; height: 24px; font-size: .82rem; }
+  .admin-date-input { height: 32px; padding: 6px 7px; font-size: .8rem; }
+  .admin-time-input { width: 72px; }
+  .admin-date-input { width: 112px; }
+  .admin-time-save-row:not(.admin-wrap-save-row) .admin-time-input { width: 112px; }
 }
 @media (max-width: 340px) {
-  .admin-wrap-save-row { grid-template-columns: minmax(0, 82px) minmax(0, 1fr); }
-  .admin-wrap-save-row .admin-time-save-btn { grid-column: 1 / -1; justify-self: center; }
+  .admin-wrap-save-row { display: grid; grid-template-columns: minmax(0, 72px) minmax(0, 112px) 22px; }
+  .admin-wrap-save-row .admin-time-input,
+  .admin-wrap-save-row .admin-date-input { width: 100%; }
 }
 
 .board-toolbar { display:flex; gap:8px; margin-bottom:14px; }

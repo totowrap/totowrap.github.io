@@ -667,6 +667,14 @@ function displayToISO(dateStr) {
   const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   return m ? `${m[3]}-${pad(m[2])}-${pad(m[1])}` : localDateISO();
 }
+function parseDateInput(dateStr) {
+  const value = String(dateStr || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return dateFromISO(value) ? value : null;
+  const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const iso = `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+  return dateFromISO(iso) ? iso : null;
+}
 function approvalSec(day=S.today) { return day?.approvedAt ? toSec(day.approvedAt) : null; }
 function approvalDateISO(day=S.today) { return day?.approvedDate || displayToISO(day?.date); }
 function inferBetDate(time, day=S.today) {
@@ -1787,8 +1795,8 @@ function renderToday() {
       <div class="card-lbl">Set Wrap Time</div>
       <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set the estimated wrap time players see before the game starts.</p>
       <div class="admin-time-save-row admin-wrap-save-row">
-        <input type="time" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" aria-label="Estimated wrap time">
-        <input type="date" class="admin-date-input" id="est-wrap-date-input" value="${esc(t.estWrapDate || localDateISO())}" aria-label="Wrap date">
+        <input type="text" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" placeholder="HH:MM" inputmode="numeric" maxlength="5" aria-label="Estimated wrap time">
+        <input type="text" class="admin-date-input" id="est-wrap-date-input" value="${esc(displayDate(t.estWrapDate || localDateISO()))}" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10" aria-label="Wrap date">
         <button class="settings-save admin-time-save-btn" id="save-est-wrap-btn" type="button" title="Save wrap time" aria-label="Save wrap time">✓</button>
       </div>
       ${t.estWrap && t.estWrap !== '--:--' ? `<p class="mono dim center mt8">Players see: <span class="accent">Wrap ${esc(t.estWrap)}</span></p>` : ''}
@@ -1797,7 +1805,7 @@ function renderToday() {
       <div class="card-lbl">Closing Bet Time</div>
       <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set when players must stop submitting bets. Players will see a countdown until guesses are pasted.</p>
       <div class="admin-time-save-row">
-        <input type="time" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" aria-label="Closing bet time">
+        <input type="text" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" placeholder="HH:MM" inputmode="numeric" maxlength="5" aria-label="Closing bet time">
         <button class="settings-save admin-time-save-btn" id="save-bet-close-btn" type="button" title="Save closing bet time" aria-label="Save closing bet time">✓</button>
       </div>
       ${t.betCloseAt ? `<p class="mono dim center mt8">Time left: <span class="accent" data-bet-close-countdown>--</span></p>` : ''}
@@ -2440,7 +2448,7 @@ async function saveBetCloseTime() {
 async function saveEstimatedWrapTime() {
   if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
   const wrapTime = document.getElementById('est-wrap-input')?.value || '';
-  const wrapDate = document.getElementById('est-wrap-date-input')?.value || localDateISO();
+  const wrapDate = parseDateInput(document.getElementById('est-wrap-date-input')?.value) || null;
   if (!wrapTime) {
     toast('Choose a wrap time', 'err');
     return false;
@@ -2449,7 +2457,7 @@ async function saveEstimatedWrapTime() {
     toast('Use a valid wrap time', 'err');
     return false;
   }
-  if (!dateFromISO(wrapDate)) {
+  if (!wrapDate) {
     toast('Use a valid wrap date', 'err');
     return false;
   }
