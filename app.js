@@ -524,6 +524,21 @@ function cloneState() {
   return JSON.parse(JSON.stringify(S));
 }
 
+const DISPLAY_TOTAL_DAYS = 50;
+
+function displayDayNumber(internalDayNumber) {
+  const n = Number(internalDayNumber);
+  return Number.isFinite(n) ? n - 1 : '—';
+}
+
+function displayDayLabel(internalDayNumber) {
+  return `Day ${displayDayNumber(internalDayNumber)}`;
+}
+
+function displayDayProgress(internalDayNumber) {
+  return `${displayDayLabel(internalDayNumber)}/${DISPLAY_TOTAL_DAYS}`;
+}
+
 function restoreAfterFailedSave(prevS) {
   if (_lastSaveWasConflict) return;
   S = prevS;
@@ -658,6 +673,25 @@ function inferBetDate(time, day=S.today) {
   const baseDate = approvalDateISO(day);
   const start = approvalSec(day);
   if (!time || start === null) return baseDate;
+
+  const wrapDate = day?.estWrapDate;
+  const wrapTime = day?.estWrap;
+  if (dateFromISO(wrapDate) && isValidHM(wrapTime)) {
+    const wrapGameSec = dateDiffDays(baseDate, wrapDate) * DAY_SEC + toSec(wrapTime);
+    const candidateDates = [...new Set([
+      baseDate,
+      addDaysISO(baseDate, 1),
+      wrapDate,
+      addDaysISO(wrapDate, -1),
+      addDaysISO(wrapDate, 1)
+    ])];
+    const candidates = candidateDates
+      .map(date => ({ date, sec: dateDiffDays(baseDate, date) * DAY_SEC + toSec(time) }))
+      .filter(candidate => candidate.sec > start)
+      .sort((a, b) => Math.abs(a.sec - wrapGameSec) - Math.abs(b.sec - wrapGameSec));
+    if (candidates.length) return candidates[0].date;
+  }
+
   return toSec(time) <= start ? addDaysISO(baseDate, 1) : baseDate;
 }
 function normalizeGameSec(time, day=S.today, explicitDate=null) {
@@ -1241,7 +1275,7 @@ function renderPlayerMain() {
   const estWrap = S.today?.estWrap || '--:--';
   return `
 <div class="hdr">
-  <div class="hdr-day">Day ${dayNum || '—'}/51</div>
+  <div class="hdr-day">${dayNum ? displayDayProgress(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap ${esc(estWrap)}</div>
@@ -1361,7 +1395,7 @@ function getShareResultInfo(day) {
   return {
     noWinner,
     estWrap: day?.estWrap || '--:--',
-    dayLabel: `Day ${dayNum || '—'}`,
+    dayLabel: dayNum ? displayDayLabel(dayNum) : 'Day —',
     kicker: noWinner ? 'Day Complete' : `🎬 Today's Winner${winnerNames.length > 1 ? 's' : ''}`,
     name: noWinner ? 'No Winner' : formatNames(winnerNames),
     bet: winnerBet,
@@ -1689,7 +1723,7 @@ function renderMain() {
   const estWrap = S.today?.estWrap || '--:--';
   return `
 <div class="hdr">
-  <div class="hdr-day">Day ${totalDays||'—'}/51</div>
+  <div class="hdr-day">${totalDays ? displayDayProgress(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap ${esc(estWrap)}</div>
@@ -1754,7 +1788,7 @@ function renderToday() {
       <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set the estimated wrap time players see before the game starts.</p>
       <div class="admin-time-save-row admin-wrap-save-row">
         <input type="time" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" aria-label="Estimated wrap time">
-        <input type="date" class="admin-date-input" id="est-wrap-date-input" value="${esc(t.estWrapDate || t.date || localDateISO())}" aria-label="Wrap date">
+        <input type="date" class="admin-date-input" id="est-wrap-date-input" value="${esc(t.estWrapDate || localDateISO())}" aria-label="Wrap date">
         <button class="btn btn-p btn-sm" id="save-est-wrap-btn" type="button">Save</button>
       </div>
       ${t.estWrap && t.estWrap !== '--:--' ? `<p class="mono dim center mt8">Players see: <span class="accent">Wrap ${esc(t.estWrap)}</span></p>` : ''}
@@ -2080,7 +2114,7 @@ function openAdminDialog({ title, copy='', body='', focusSelector='' }) {
 function getHistoryDayLabel(date) {
   const isoDate = displayToISO(date);
   const idx = getHistoryEntries().findIndex(day => displayToISO(day.date) === isoDate);
-  return idx === -1 ? 'History Day' : `Day ${idx + 1}`;
+  return idx === -1 ? 'History Day' : displayDayLabel(idx + 1);
 }
 
 function openHistoryDayActions(date) {
@@ -2422,7 +2456,6 @@ async function saveEstimatedWrapTime() {
   const prevS = cloneState();
   S.today.estWrap = wrapTime;
   S.today.estWrapDate = wrapDate;
-  S.today.date = wrapDate;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Wrap time saved', 'ok');
@@ -2625,7 +2658,7 @@ function renderHistory() {
         <div class="card hist-row" data-history-row data-history-date="${historyDate}">
           <div class="hist-summary">
             <div class="hist-main-info">
-              <span class="hist-day-tag">Day ${num}</span>
+              <span class="hist-day-tag">${displayDayLabel(num)}</span>
               <span class="hist-title red" style="font-weight:bold">No Winner</span>
             </div>
             <div class="hist-meta">
@@ -2670,7 +2703,7 @@ function renderHistory() {
     <div class="card hist-row" data-history-row data-history-date="${historyDate}">
       <div class="hist-summary">
         <div class="hist-main-info">
-          <span class="hist-day-tag">Day ${num}</span>
+          <span class="hist-day-tag">${displayDayLabel(num)}</span>
           <span class="hist-title accent" style="font-weight:bold">${histWinnerStr}</span>
           <span class="hist-bet mono dim" style="font-size:0.75rem">(${esc(winnerBet)})</span>
         </div>
@@ -2792,7 +2825,7 @@ function showPreview() {
   });
   
   const previewApprovedAt = nowHMS();
-  const previewApprovedDate = savedWrapDate;
+  const previewApprovedDate = S.today?.date || localDateISO();
   const previewDay = { approvedAt: previewApprovedAt, approvedDate: previewApprovedDate };
   const fullList = buildFullGuessList(parsed).map((g, idx) => ({
     ...g,
@@ -2805,7 +2838,7 @@ function showPreview() {
   
   app.innerHTML = `
 <div class="hdr">
-  <div class="hdr-day">Day ${totalDays}/51 Preview</div>
+  <div class="hdr-day">${displayDayProgress(totalDays)} Preview</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap ${esc(savedWrap)}</div>
@@ -2880,7 +2913,7 @@ function showPreview() {
 	    S.today.date = previewApprovedDate;
 	    S.today.guesses = editedFullList;
 	    S.today.estWrap = finalWrap;
-	    S.today.estWrapDate = previewApprovedDate;
+	    S.today.estWrapDate = savedWrapDate;
 	    S.today.addedPlayers = newPlayers;
 	    const saved = await saveS();
 		    if (!saved) { restoreAfterFailedSave(prevS); return; }
