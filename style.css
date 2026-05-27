@@ -259,12 +259,12 @@ body::before {
 .preview-row { min-height: 50px; }
 .preview-row .row-name { display: block; }
 .bet-date-input { max-width: 152px; font-size: .78rem; padding: 7px 8px; font-variant-numeric: tabular-nums; }
-.compact-preview-head { grid-template-columns: minmax(0, 1fr) 82px 128px; column-gap: 8px; padding-bottom: 6px; }
-.compact-preview-row { grid-template-columns: minmax(0, 1fr) 82px 128px; column-gap: 8px; min-height: 40px; padding: 6px 0; }
+.compact-preview-head { grid-template-columns: minmax(0, 1fr) 76px 118px; column-gap: 8px; padding-bottom: 6px; }
+.compact-preview-row { grid-template-columns: minmax(0, 1fr) 76px 118px; column-gap: 8px; min-height: 40px; padding: 6px 0; }
 .compact-preview-row .row-name { color: var(--accent); font-size: .82rem; line-height: 1.05; }
 .bet-time-input,
-.compact-preview-row .bet-date-input { height: 32px; padding: 5px 7px; border-radius: 6px; background: rgba(38,55,89,.66); font-size: .76rem; text-align: center; color: var(--accent); font-variant-numeric: tabular-nums; }
-.compact-preview-row .bet-date-input { max-width: 128px; color: var(--text); }
+.compact-preview-row .bet-date-input { display: block; width: 100%; min-width: 0; height: 32px; padding: 6px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg4); font-size: .84rem; text-align: center; color: var(--accent); font-variant-numeric: tabular-nums; }
+.compact-preview-row .bet-date-input { max-width: none; color: var(--text); }
 .compact-preview-row .b-missing { grid-column: 2 / -1; justify-self: stretch; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .admin-bet-close-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; }
 .admin-time-save-row { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }
@@ -400,11 +400,11 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   .preview-row { grid-template-columns: minmax(0, 1fr) 64px; row-gap: 8px; column-gap: 10px; }
   .preview-row .bet-date-input { grid-column: 1 / -1; justify-self: stretch; max-width: none; }
   .compact-preview-card { padding: 6px 8px; max-height: min(64vh, 560px); }
-  .compact-preview-row { grid-template-columns: minmax(0, 1fr) 74px 112px; column-gap: 6px; row-gap: 0; min-height: 36px; padding: 5px 0; }
+  .compact-preview-row { grid-template-columns: minmax(0, 1fr) 76px 118px; column-gap: 6px; row-gap: 0; min-height: 36px; padding: 5px 0; }
   .compact-preview-row .row-name { font-size: .78rem; }
   .compact-preview-row .bet-time-input,
-  .compact-preview-row .bet-date-input { grid-column: auto; height: 30px; min-height: 30px; padding: 4px 5px; font-size: .68rem; }
-  .compact-preview-row .bet-date-input { max-width: 112px; }
+  .compact-preview-row .bet-date-input { grid-column: auto; height: 32px; min-height: 32px; padding: 6px 7px; font-size: .8rem; }
+  .compact-preview-row .bet-date-input { max-width: none; }
   .admin-time-save-row { gap: 6px; }
   .admin-time-input,
   .admin-date-input { height: 32px; padding: 6px 7px; font-size: .8rem; }

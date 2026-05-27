@@ -1143,8 +1143,8 @@ function confetti() {
       confettiEl.style.width = size + 'px';
       confettiEl.style.height = size + 'px';
       
-      // Random duration for fall speed
-      const duration = Math.random() * 2 + 2;
+      // Random duration for fall speed, with each particle lasting at least 4 seconds.
+      const duration = Math.random() * 1.5 + 4;
       confettiEl.style.animationDuration = duration + 's';
       
       // Random delay for staggered effect
@@ -3399,7 +3399,7 @@ function showPreview() {
   ${duplicateWarning}
 
   <div class="card">
-    <div class="card-lbl">Confirm These Guesses</div>
+    <div class="card-lbl">Confirm Player Guesses</div>
     <div class="preview-card compact-preview-card">
       <div class="preview-head compact-preview-head"><span>Player</span><span>Bet</span><span>Date</span></div>
       ${sorted.map(g => {
