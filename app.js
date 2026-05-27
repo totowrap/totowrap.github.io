@@ -641,6 +641,14 @@ function isValidHM(t) {
   const h = Number(m[1]), min = Number(m[2]);
   return h >= 0 && h < 24 && min >= 0 && min < 60;
 }
+function normalizeHMInput(value) {
+  const raw = String(value || '').trim();
+  if (/^\d{2}:\d{2}$/.test(raw)) return raw;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 3) return `0${digits[0]}:${digits.slice(1)}`;
+  if (digits.length === 4) return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  return raw;
+}
 function isValidHMS(t) {
   const m = String(t || '').match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
   if (!m) return false;
@@ -1818,8 +1826,9 @@ function renderToday() {
       <div class="card-lbl">Set Wrap Time</div>
       <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set the estimated wrap time players see before the game starts.</p>
       <div class="admin-time-save-row admin-wrap-save-row">
-        <input type="text" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" placeholder="HH:MM" inputmode="numeric" maxlength="5" aria-label="Estimated wrap time">
+        <input type="text" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" placeholder="HH:MM" inputmode="text" maxlength="5" aria-label="Estimated wrap time">
         <input type="text" class="admin-date-input" id="est-wrap-date-input" value="${esc(displayDate(t.estWrapDate || localDateISO()))}" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10" aria-label="Wrap date">
+        <button class="settings-delete admin-time-delete-btn" id="clear-est-wrap-btn" type="button" title="Clear wrap time" aria-label="Clear wrap time">×</button>
         <button class="settings-save admin-time-save-btn" id="save-est-wrap-btn" type="button" title="Save wrap time" aria-label="Save wrap time">✓</button>
       </div>
       ${t.estWrap && t.estWrap !== '--:--' ? `<p class="mono dim center mt8">Players see: <span class="accent">Wrap ${esc(t.estWrap)}</span></p>` : ''}
@@ -1828,7 +1837,8 @@ function renderToday() {
       <div class="card-lbl">Closing Bet Time</div>
       <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set when players must stop submitting bets. Players will see a countdown until guesses are pasted.</p>
       <div class="admin-time-save-row">
-        <input type="text" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" placeholder="HH:MM" inputmode="numeric" maxlength="5" aria-label="Closing bet time">
+        <input type="text" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" placeholder="HH:MM" inputmode="text" maxlength="5" aria-label="Closing bet time">
+        <button class="settings-delete admin-time-delete-btn" id="clear-bet-close-btn" type="button" title="Clear closing bet time" aria-label="Clear closing bet time">×</button>
         <button class="settings-save admin-time-save-btn" id="save-bet-close-btn" type="button" title="Save closing bet time" aria-label="Save closing bet time">✓</button>
       </div>
       ${t.betCloseAt ? `<p class="mono dim center mt8">Time left: <span class="accent" data-bet-close-countdown>--</span></p>` : ''}
@@ -2637,7 +2647,7 @@ async function confirmTodayWrap(wrapTime) {
 
 async function saveBetCloseTime() {
   if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
-  const closeTime = document.getElementById('bet-close-input')?.value || '';
+  const closeTime = normalizeHMInput(document.getElementById('bet-close-input')?.value || '');
   if (!closeTime) {
     toast('Choose a closing time', 'err');
     return false;
@@ -2655,9 +2665,24 @@ async function saveBetCloseTime() {
   return true;
 }
 
+async function clearBetCloseTime() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  if (!S.today.betCloseAt) {
+    toast('No closing time to clear', 'err');
+    return false;
+  }
+  const prevS = cloneState();
+  S.today.betCloseAt = null;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Closing bet time cleared', 'ok');
+  render();
+  return true;
+}
+
 async function saveEstimatedWrapTime() {
   if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
-  const wrapTime = document.getElementById('est-wrap-input')?.value || '';
+  const wrapTime = normalizeHMInput(document.getElementById('est-wrap-input')?.value || '');
   const wrapDate = parseDateInput(document.getElementById('est-wrap-date-input')?.value) || null;
   if (!wrapTime) {
     toast('Choose a wrap time', 'err');
@@ -2677,6 +2702,22 @@ async function saveEstimatedWrapTime() {
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Wrap time saved', 'ok');
+  render();
+  return true;
+}
+
+async function clearEstimatedWrapTime() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  if (!S.today.estWrap && !S.today.estWrapDate) {
+    toast('No wrap time to clear', 'err');
+    return false;
+  }
+  const prevS = cloneState();
+  S.today.estWrap = null;
+  S.today.estWrapDate = null;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Wrap time cleared', 'ok');
   render();
   return true;
 }
@@ -3239,7 +3280,9 @@ function bindMain() {
   });
   document.getElementById('parse-btn')?.addEventListener('click', showPreview);
   document.getElementById('save-est-wrap-btn')?.addEventListener('click', saveEstimatedWrapTime);
+  document.getElementById('clear-est-wrap-btn')?.addEventListener('click', clearEstimatedWrapTime);
   document.getElementById('save-bet-close-btn')?.addEventListener('click', saveBetCloseTime);
+  document.getElementById('clear-bet-close-btn')?.addEventListener('click', clearBetCloseTime);
   document.getElementById('admin-clock')?.addEventListener('click', () => {
     openLiveWrapActions(nowHMS());
   });

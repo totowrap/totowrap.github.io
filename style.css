@@ -267,7 +267,9 @@ body::before {
 .admin-time-save-row:not(.admin-wrap-save-row) .admin-time-input { width: 118px; }
 .admin-time-input { color: var(--accent); }
 .admin-date-input { color: var(--text); }
-.admin-time-save-btn { width: 22px; height: 22px; font-size: .82rem; }
+.admin-time-save-btn,
+.admin-time-delete-btn { width: 22px; height: 22px; }
+.admin-time-save-btn { font-size: .82rem; }
 .bet-close-card { text-align: center; }
 .bet-close-card .card-lbl { margin-bottom: 2px; }
 .bet-close-card p { font-size: .66rem; line-height: 1; margin-top: 20px; }
@@ -391,7 +393,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   .admin-time-save-row:not(.admin-wrap-save-row) .admin-time-input { width: 112px; }
 }
 @media (max-width: 340px) {
-  .admin-wrap-save-row { display: grid; grid-template-columns: minmax(0, 72px) minmax(0, 112px) 22px; }
+  .admin-wrap-save-row { display: grid; grid-template-columns: minmax(0, 72px) minmax(0, 112px) 22px 22px; }
   .admin-wrap-save-row .admin-time-input,
   .admin-wrap-save-row .admin-date-input { width: 100%; }
 }
