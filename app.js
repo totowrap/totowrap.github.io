@@ -1155,6 +1155,23 @@ function confetti() {
   setTimeout(() => pieces.forEach(piece => piece.remove()), (maxLife + 0.2) * 1000);
 }
 
+function getWinnerConfettiKey() {
+  if (!S.today || !S.today.wrapTime || S.today.points !== 3) return null;
+  const winnerNames = S.today.winners
+    ? S.today.winners.map(w => w.name).join(',')
+    : S.today.winner;
+  return S.today.date + '_' + winnerNames;
+}
+
+function scheduleWinnerConfetti() {
+  setTimeout(() => {
+    const winnerKey = getWinnerConfettiKey();
+    if (!winnerKey || _lastConfettiWinner === winnerKey) return;
+    _lastConfettiWinner = winnerKey;
+    confetti();
+  }, 300);
+}
+
 function captureUIState() {
   const active = document.activeElement;
   const isField = active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
@@ -1249,16 +1266,7 @@ function render() {
   }
   scheduleBootLoaderHide();
   
-  // Trigger confetti for 3-point wins (only once per winner)
-  setTimeout(() => {
-    if (S.today && S.today.wrapTime && S.today.points === 3) {
-      const winnerKey = S.today.date + '_' + (S.today.winners ? S.today.winners.map(w => w.name).join(',') : S.today.winner);
-      if (_lastConfettiWinner !== winnerKey) {
-        _lastConfettiWinner = winnerKey;
-        confetti();
-      }
-    }
-  }, 300);
+  scheduleWinnerConfetti();
 }
 
 function renderAdminLoading() {
