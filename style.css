@@ -262,8 +262,8 @@ body::before {
 .compact-preview-row .b-missing { grid-column: 2 / -1; justify-self: stretch; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .admin-bet-close-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; }
 .admin-time-save-row { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }
-.admin-close-save-row { position: relative; min-height: 32px; display: block; }
-.admin-close-save-row .admin-time-input { display: block; margin: 0 auto; }
+.admin-close-save-row { position: relative; min-height: 32px; display: block; width: 100%; }
+.admin-close-save-row .admin-time-input { position: absolute; left: 50%; top: 50%; display: block; margin: 0; transform: translate(-50%,-50%); }
 .admin-close-save-row .admin-time-delete-btn,
 .admin-close-save-row .admin-time-save-btn { position: absolute; top: 50%; transform: translateY(-50%); }
 .admin-close-save-row .admin-time-delete-btn { left: calc(50% + 65px); }
