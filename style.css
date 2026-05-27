@@ -468,8 +468,8 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .closeness-legend-item.on { border-color:rgba(var(--yellow-rgb), .24); background:rgba(var(--yellow-rgb), .06); }
 .result-share-modal { position:fixed; inset:0; z-index:9500; display:grid; place-items:center; padding:18px; background:rgba(18,28,48,.62); overflow-y:auto; }
 .result-share-panel { position:relative; width:min(100%,440px); border:1px solid var(--border-glass); border-radius:10px; padding:16px; background:linear-gradient(135deg, rgba(62,79,112,.96), rgba(38,55,89,.98)); box-shadow:0 18px 52px rgba(0,0,0,.42); }
-.result-share-close { position:absolute; top:10px; right:10px; width:27px; height:27px; display:inline-grid; place-items:center; border:1px solid rgba(var(--red-rgb), .36); border-radius:999px; background:rgba(var(--red-rgb), .12); color:transparent; font-family:'Alte Haas Grotesk', sans-serif; font-size:0; line-height:1; cursor:pointer; z-index:2; overflow:hidden; }
-.result-share-close::before { content:"×"; position:absolute; left:50%; top:50%; transform:translate(-50%, -60%); color:var(--red); font-family:'Alte Haas Grotesk', sans-serif; font-size:1.15rem; line-height:1; }
+.result-share-close { position:absolute; top:10px; right:10px; width:27px; height:27px; display:inline-grid; place-items:center; border:1px solid rgba(var(--neutral-rgb), .16); border-radius:999px; background:rgba(38,55,89,.62); color:transparent; font-family:'Alte Haas Grotesk', sans-serif; font-size:0; line-height:1; cursor:pointer; z-index:2; overflow:hidden; }
+.result-share-close::before { content:"×"; position:absolute; left:50%; top:50%; transform:translate(-50%, -60%); color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:1.15rem; line-height:1; }
 .result-share-preview { display:flex; justify-content:center; margin-bottom:12px; }
 .live-time-share-preview { padding-top:14px; }
 .live-time-share-preview-img { display:block; width:100%; max-width:320px; height:auto; border:1px solid rgba(var(--yellow-rgb), .22); border-radius:8px; }
