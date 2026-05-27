@@ -50,6 +50,7 @@ let _stateReady = false;
 let _stateLoadFailed = false;
 let _lastSaveWasConflict = false;
 let _skipNextUIRestore = false;
+let _bootHiddenPromise = null;
 const INACTIVITY_REFRESH_MS = 5 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
@@ -107,6 +108,32 @@ async function scheduleBootLoaderHide() {
   if (!loader) return;
   loader.classList.add('done');
   setTimeout(() => loader.remove(), BOOT_FADE_MS + 100);
+}
+
+function waitForBootLoaderGone() {
+  const loader = document.getElementById('boot-loader');
+  if (!loader) return Promise.resolve();
+  if (_bootHiddenPromise) return _bootHiddenPromise;
+  _bootHiddenPromise = new Promise(resolve => {
+    let settled = false;
+    let observer = null;
+    let fallback = null;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      observer?.disconnect();
+      if (fallback) clearTimeout(fallback);
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    };
+    observer = new MutationObserver(() => {
+      if (!document.getElementById('boot-loader')) finish();
+    });
+    observer.observe(document.body, { childList: true });
+    if (loader.classList.contains('done')) {
+      fallback = setTimeout(finish, BOOT_FADE_MS + 160);
+    }
+  });
+  return _bootHiddenPromise;
 }
 
 function setStoredInactiveAt(value) {
@@ -1224,7 +1251,8 @@ function getWinnerConfettiKey() {
 }
 
 function scheduleWinnerConfetti() {
-  setTimeout(() => {
+  setTimeout(async () => {
+    await waitForBootLoaderGone();
     const winnerKey = getWinnerConfettiKey();
     if (!winnerKey || _lastConfettiWinner === winnerKey) return;
     _lastConfettiWinner = winnerKey;
