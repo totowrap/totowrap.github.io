@@ -262,6 +262,12 @@ body::before {
 .compact-preview-row .b-missing { grid-column: 2 / -1; justify-self: stretch; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .admin-bet-close-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; }
 .admin-time-save-row { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }
+.admin-close-save-row { position: relative; min-height: 32px; display: block; }
+.admin-close-save-row .admin-time-input { display: block; margin: 0 auto; }
+.admin-close-save-row .admin-time-delete-btn,
+.admin-close-save-row .admin-time-save-btn { position: absolute; top: 50%; transform: translateY(-50%); }
+.admin-close-save-row .admin-time-delete-btn { left: calc(50% + 65px); }
+.admin-close-save-row .admin-time-save-btn { left: calc(50% + 93px); }
 .admin-time-input,
 .admin-date-input { flex: 0 1 auto; height: 32px; min-width: 0; padding: 6px 9px; border-radius: 7px; background: var(--bg4); font-size: .84rem; text-align: center; font-variant-numeric: tabular-nums; }
 .admin-time-input { width: 76px; }
@@ -393,6 +399,8 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   .admin-time-input { width: 72px; }
   .admin-date-input { width: 112px; }
   .admin-time-save-row:not(.admin-wrap-save-row) .admin-time-input { width: 112px; }
+  .admin-close-save-row .admin-time-delete-btn { left: calc(50% + 62px); }
+  .admin-close-save-row .admin-time-save-btn { left: calc(50% + 90px); }
 }
 @media (max-width: 340px) {
   .admin-wrap-save-row { display: grid; grid-template-columns: minmax(0, 72px) minmax(0, 112px) 22px 22px; }

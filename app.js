@@ -1837,7 +1837,7 @@ function renderToday() {
     <div class="card">
       <div class="card-lbl">Closing Bet Time</div>
       <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set when players must stop submitting bets. Players will see a countdown until guesses are pasted.</p>
-      <div class="admin-time-save-row">
+      <div class="admin-time-save-row admin-close-save-row">
         <input type="text" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" placeholder="HH:MM" inputmode="text" maxlength="5" aria-label="Closing bet time">
         <button class="settings-delete admin-time-delete-btn" id="clear-bet-close-btn" type="button" title="Clear closing bet time" aria-label="Clear closing bet time">×</button>
         <button class="settings-save admin-time-save-btn" id="save-bet-close-btn" type="button" title="Save closing bet time" aria-label="Save closing bet time">✓</button>
