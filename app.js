@@ -422,6 +422,7 @@ document.addEventListener('click', e => {
     _closenessPlayer = closenessPlayerBtn.dataset.closenessPlayer;
     const board = document.querySelector('.sec[data-view="board"]');
     if (board) board.innerHTML = renderBoard(_boardView);
+    scrollAccuracyGraphIntoViewIfNeeded();
     return;
   }
 
@@ -1870,6 +1871,35 @@ function setBoardView(v) {
   _boardView = v;
   const board = document.querySelector('.sec[data-view="board"]');
   if (board) board.innerHTML = renderBoard(_boardView);
+}
+
+function animateScrollTop(container, targetTop, duration=850) {
+  const startTop = container.scrollTop;
+  const distance = targetTop - startTop;
+  if (Math.abs(distance) < 2) return;
+  const startedAt = performance.now();
+  const ease = t => 1 - Math.pow(1 - t, 3);
+
+  function step(now) {
+    const progress = Math.min(1, (now - startedAt) / duration);
+    container.scrollTop = startTop + distance * ease(progress);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
+}
+
+function scrollAccuracyGraphIntoViewIfNeeded() {
+  if (!isMobileSwipeSurface() || _boardView !== 'closeness') return;
+  requestAnimationFrame(() => {
+    const board = document.querySelector('.sec[data-view="board"]');
+    const graph = board?.querySelector('.closeness-graph');
+    if (!board || !graph) return;
+    const boardRect = board.getBoundingClientRect();
+    const graphRect = graph.getBoundingClientRect();
+    const isFullyVisible = graphRect.top >= boardRect.top && graphRect.bottom <= boardRect.bottom;
+    if (!isFullyVisible) animateScrollTop(board, 0, 950);
+  });
 }
 
 function renderBoardPie(pl) {
