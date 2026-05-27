@@ -41,6 +41,7 @@ const _logoStartedAt = performance.now();
 let _lastConfettiWinner = null;
 let _boardView = 'list';
 let _openBoardPlayer = null;
+let _closenessPlayer = null;
 let _swipeStart = null;
 let _suppressNextClick = false;
 let _dragState = null;
@@ -164,7 +165,11 @@ function getCurrentSwipeIndex() {
 function normalizeActiveTab() {
   const tabs = getMainTabs();
   if (!tabs.includes(_tab)) _tab = 'today';
-  if (_tab === 'board' && !['list', 'pie'].includes(_boardView)) _boardView = 'list';
+  if (_tab === 'board' && !getBoardViews().includes(_boardView)) _boardView = 'list';
+}
+
+function getBoardViews() {
+  return IS_ADMIN && currentUser ? ['list', 'pie', 'closeness'] : ['list', 'pie'];
 }
 
 function setMainTab(tab) {
@@ -402,6 +407,21 @@ document.addEventListener('click', e => {
   const closestWrongBtn = e.target.closest?.('[data-closest-wrong-date]');
   if (closestWrongBtn) {
     openHistoryDay(closestWrongBtn.dataset.closestWrongDate);
+    return;
+  }
+
+  const closenessDotBtn = e.target.closest?.('[data-closeness-date]');
+  if (closenessDotBtn) {
+    e.preventDefault();
+    openHistoryDay(closenessDotBtn.dataset.closenessDate);
+    return;
+  }
+
+  const closenessPlayerBtn = e.target.closest?.('[data-closeness-player]');
+  if (closenessPlayerBtn) {
+    _closenessPlayer = closenessPlayerBtn.dataset.closenessPlayer;
+    const board = document.querySelector('.sec[data-view="board"]');
+    if (board) board.innerHTML = renderBoard(_boardView);
     return;
   }
 
@@ -1177,6 +1197,9 @@ function render() {
   }
   syncTabUI(false);
   restoreUIState(uiState);
+  if (location.hash.startsWith('#history-')) {
+    setTimeout(openHistoryHash, 0);
+  }
   scheduleBootLoaderHide();
   
   // Trigger confetti for 3-point wins (only once per winner)
@@ -1833,7 +1856,7 @@ function renderBetClosePlayerCard(day) {
 }
 
 function setBoardView(v) {
-  if (!['list', 'pie'].includes(v)) return;
+  if (!getBoardViews().includes(v)) return;
   _boardView = v;
   const board = document.querySelector('.sec[data-view="board"]');
   if (board) board.innerHTML = renderBoard(_boardView);
@@ -1922,14 +1945,176 @@ function renderBoardPie(pl) {
   </div>`;
 }
 
+function getBoardClosenessStats(pl) {
+  const completed = getHistoryEntries().filter(day => day?.wrapTime && Array.isArray(day.guesses));
+  return pl.map(player => {
+    let totalGap = 0;
+    let count = 0;
+    completed.forEach(day => {
+      const guess = day.guesses.find(g => nameKey(g.name) === nameKey(player.name));
+      if (!guess?.time) return;
+      totalGap += boardClosenessGap(guess, day);
+      count += 1;
+    });
+    return {
+      name: player.name,
+      count,
+      avgGap: count ? totalGap / count : null
+    };
+  }).sort((a, b) => {
+    if (a.avgGap === null && b.avgGap === null) return a.name.localeCompare(b.name);
+    if (a.avgGap === null) return 1;
+    if (b.avgGap === null) return -1;
+    if (a.avgGap !== b.avgGap) return a.avgGap - b.avgGap;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function clockDistanceSec(a, b) {
+  const diff = Math.abs(toSec(a) - toSec(b));
+  return Math.min(diff, DAY_SEC - diff);
+}
+
+function boardClosenessGap(guess, day) {
+  if (day?.noWinner) return clockDistanceSec(guess.time, day.wrapTime);
+  return Math.abs(guessGameSec(guess, day) - normalizeGameSec(day.wrapTime, day));
+}
+
+function renderBoardCloseness(pl) {
+  const COLORS = [
+    '#e3b74f', '#6dd87a', '#e06c6c', '#5bc8f5', '#f07dba',
+    '#a374f7', '#fb8c5f', '#40e4e4', '#f9a8a8', '#7ede8a',
+    '#8faeff', '#ffd166', '#d98ef5', '#6fecb5', '#ffb347',
+  ];
+  const allNames = S.playerRoster.map(p => p.name);
+  const colorOf = name => COLORS[Math.max(0, allNames.indexOf(name)) % COLORS.length];
+  const stats = getBoardClosenessStats(pl);
+  const completed = getHistoryEntries().filter(day => day?.wrapTime && Array.isArray(day.guesses));
+  const selectablePlayers = stats.filter(item => item.avgGap !== null).map(item => item.name);
+  const activePlayer = selectablePlayers.includes(_closenessPlayer)
+    ? _closenessPlayer
+    : (selectablePlayers[0] || null);
+  const points = [];
+  if (!activePlayer) {
+    return '<div class="empty" style="padding:20px 0;">No completed bets yet</div>';
+  }
+  completed.forEach((day, dayIdx) => {
+    pl.forEach(player => {
+      if (player.name !== activePlayer) return;
+      const guess = day.guesses.find(g => nameKey(g.name) === nameKey(player.name));
+      if (!guess?.time) return;
+      points.push({
+        name: player.name,
+        day: dayIdx,
+        date: displayToISO(day.date),
+        gap: boardClosenessGap(guess, day)
+      });
+    });
+  });
+  if (!points.length) {
+    return '<div class="empty" style="padding:20px 0;">No completed bets yet</div>';
+  }
+
+  const maxDay = Math.max(0, completed.length - 1);
+  const maxGap = Math.max(...points.map(point => point.gap), 1);
+  const pointPosition = point => ({
+    left: maxDay ? (point.day / maxDay) * 96 : 0,
+    top: 88 - (point.gap / maxGap) * 78
+  });
+  const grouped = new Map();
+  points.forEach(point => {
+    if (!grouped.has(point.name)) grouped.set(point.name, []);
+    grouped.get(point.name).push(point);
+  });
+  const lineSvg = [...grouped.entries()].flatMap(([name, playerPoints]) => {
+    const color = colorOf(name);
+    const sortedPoints = playerPoints.sort((a, b) => a.day - b.day);
+    const segments = [];
+    let segment = [];
+    sortedPoints.forEach(point => {
+      const previous = segment[segment.length - 1];
+      if (previous && point.day !== previous.day + 1) {
+        segments.push(segment);
+        segment = [];
+      }
+      segment.push(point);
+    });
+    if (segment.length) segments.push(segment);
+    return segments
+      .filter(segmentPoints => segmentPoints.length > 1)
+      .map(segmentPoints => {
+        const pathPoints = segmentPoints.map(point => {
+          const pos = pointPosition(point);
+          return `${pos.left.toFixed(2)},${pos.top.toFixed(2)}`;
+        }).join(' ');
+        return `<polyline points="${pathPoints}" fill="none" stroke="${color}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" opacity=".9" vector-effect="non-scaling-stroke"/>`;
+      });
+  }).join('');
+  const markerHtml = points.map(point => {
+    const pos = pointPosition(point);
+    const color = colorOf(point.name);
+    return `<a class="closeness-marker" href="#history-${encodeURIComponent(point.date)}" data-closeness-date="${esc(point.date)}" style="left:${pos.left.toFixed(2)}%; top:${pos.top.toFixed(2)}%;" title="${esc(point.name)} - ${esc(formatBoardExactCompactGap(point.gap))} off on ${esc(displayDayLabel(point.day + 1))}" aria-label="Open ${esc(displayDayLabel(point.day + 1))} in history">
+      <span class="closeness-dot" style="background:${color};"></span>
+    </a>`;
+  }).join('');
+  const yTicks = [
+    { value: maxGap, top: 10 },
+    { value: maxGap / 2, top: 49 },
+    { value: 0, top: 88 },
+  ].map(tick =>
+    `<div class="closeness-y-tick" style="top:${tick.top}%"><span>${esc(formatBoardCompactGap(tick.value))}</span></div>`
+  ).join('');
+  const dayTicks = completed.map((_, idx) => {
+    const left = maxDay ? (idx / maxDay) * 96 : 0;
+    return `<div class="closeness-x-tick" style="left:${left.toFixed(2)}%;"><span>${esc(displayDayNumber(idx + 1))}</span></div>`;
+  }).join('');
+
+  const legendHtml = stats.map(item => {
+    const color = colorOf(item.name);
+    const avg = item.avgGap === null ? '--' : formatBoardCompactGap(item.avgGap);
+    const meta = item.avgGap === null
+      ? 'No completed bets'
+      : `${avg} avg · ${item.count} ${countWord(item.count, 'bet', 'bets')}`;
+    return `
+    <button class="legend-item closeness-legend-item${activePlayer === item.name ? ' on' : ''}" type="button" data-closeness-player="${esc(item.name)}">
+      <div class="legend-swatch" style="background:${color};"></div>
+      <div class="legend-name">${esc(item.name)}</div>
+      <div class="legend-meta">${esc(meta)}</div>
+    </button>`;
+  }).join('');
+
+  return `
+  <div class="closeness-wrap">
+    <div class="closeness-graph">
+      <div class="closeness-y-axis"></div>
+      <div class="closeness-x-axis"></div>
+      <div class="closeness-y-label">Distance from wrap</div>
+      ${yTicks}
+      ${dayTicks}
+      <div class="closeness-x-label">Days</div>
+      <svg class="closeness-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lineSvg}</svg>
+      ${markerHtml}
+    </div>
+    <div class="board-legend">${legendHtml}</div>
+  </div>`;
+}
+
 function renderBoard(view=_boardView) {
   const pl = getSortedPlayerRoster();
   if (!pl.length) return '<div class="empty">No players yet</div>';
+  if (!getBoardViews().includes(view)) view = 'list';
+  const distanceToggle = getBoardViews().includes('closeness')
+    ? `<button class="board-toggle${view === 'closeness' ? ' on' : ''}" type="button" data-board-view="closeness">Accuracy Graph</button>`
+    : '';
   const toolbar = `
     <div class="board-toolbar">
       <button class="board-toggle${view === 'list' ? ' on' : ''}" type="button" data-board-view="list">Standings</button>
       <button class="board-toggle${view === 'pie' ? ' on' : ''}" type="button" data-board-view="pie">Pie Chart</button>
+      ${distanceToggle}
     </div>`;
+  if (view === 'closeness') {
+    return `<div class="card">${toolbar}${renderBoardCloseness(pl)}</div>`;
+  }
   if (view === 'pie') {
     return `<div class="card">${toolbar}${renderBoardPie(pl)}</div>`;
   }
@@ -1979,6 +2164,18 @@ function formatBoardCompactGap(totalSec) {
   return `${hour}h${min ? `${pad(min)}m` : ''}`;
 }
 
+function formatBoardExactCompactGap(totalSec) {
+  const sec = Math.max(0, Math.round(totalSec));
+  const hour = Math.floor(sec / 3600);
+  const min = Math.floor((sec % 3600) / 60);
+  const rest = sec % 60;
+  const parts = [];
+  if (hour) parts.push(`${hour}h`);
+  if (min) parts.push(`${hour ? pad(min) : min}m`);
+  if (rest || !parts.length) parts.push(`${hour || min ? pad(rest) : rest}s`);
+  return parts.join('');
+}
+
 function wrongTerritoryGap(name, day) {
   if (!day?.wrapTime || !day.guesses?.length) return null;
   const wrapSec = normalizeGameSec(day.wrapTime, day);
@@ -1988,17 +2185,30 @@ function wrongTerritoryGap(name, day) {
 }
 
 function openHistoryDay(date) {
-  const row = [...document.querySelectorAll('[data-history-row]')].find(el => el.dataset.historyDate === date);
-  if (!row) return;
-  row.classList.add('open');
-  setMainTab('history');
-  requestAnimationFrame(() => {
-    const history = row.closest('.sec[data-view="history"]');
-    if (!history) return;
+  const isoDate = displayToISO(date);
+  const row = [...document.querySelectorAll('[data-history-row]')].find(el => displayToISO(el.dataset.historyDate) === isoDate);
+  if (!row) return false;
+  setTimeout(() => {
     row.classList.add('open');
-    const rowTop = row.offsetTop - history.offsetTop;
-    history.scrollTo({ top: Math.max(0, rowTop - 12), behavior: 'smooth' });
-  });
+    setMainTab('history');
+    requestAnimationFrame(() => {
+      const history = row.closest('.sec[data-view="history"]');
+      if (!history) return;
+      row.classList.add('open');
+      const rowTop = row.offsetTop - history.offsetTop;
+      history.scrollTo({ top: Math.max(0, rowTop - 12), behavior: 'smooth' });
+    });
+  }, 0);
+  return true;
+}
+
+function openHistoryHash() {
+  const prefix = '#history-';
+  if (!location.hash.startsWith(prefix)) return;
+  const date = decodeURIComponent(location.hash.slice(prefix.length));
+  if (openHistoryDay(date)) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
 }
 
 function getBoardPlayerStats(name) {
