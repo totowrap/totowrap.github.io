@@ -1081,8 +1081,18 @@ function toast(msg,type='') {
   _toastTO=setTimeout(()=>el.className='',3000);
 }
 
+function themeVar(name, fallback) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
 function confetti() {
-  const colors = ['#f0b428', '#ffd04d', '#eec763', '#8fdf6a', '#d65656'];
+  const colors = [
+    themeVar('--accent', '#f0b428'),
+    themeVar('--green', '#8fdf6a'),
+    themeVar('--red', '#d65656'),
+    themeVar('--neutral', '#b8c9a8')
+  ];
   const count = 150;
   
   for (let i = 0; i < count; i++) {
@@ -1531,6 +1541,13 @@ async function renderShareResultBlob() {
   if (!S.today?.wrapTime) throw new Error('No completed result');
   const info = getShareResultInfo(S.today);
   if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
+  const yellow = themeVar('--accent', '#f0b428');
+  const red = themeVar('--red', '#d65656');
+  const greenRgb = themeVar('--green-rgb', '143,223,106');
+  const redRgb = themeVar('--red-rgb', '214,86,86');
+  const yellowRgb = themeVar('--yellow-rgb', '240,180,40');
+  const neutral = themeVar('--neutral', '#b8c9a8');
+  const neutralRgb = themeVar('--neutral-rgb', '184,201,168');
   const canvas = document.createElement('canvas');
   const imageSize = 1080;
   const exportScale = 2;
@@ -1553,7 +1570,7 @@ async function renderShareResultBlob() {
     ctx.restore();
   }
 
-  ctx.strokeStyle = 'rgba(238,199,99,.22)';
+  ctx.strokeStyle = `rgba(${yellowRgb},.22)`;
   ctx.lineWidth = 3;
   canvasRoundRect(ctx, 20, 20, 1040, 1040, 22);
   ctx.stroke();
@@ -1563,12 +1580,12 @@ async function renderShareResultBlob() {
   if (logoImg) {
     ctx.drawImage(logoImg, 80, 84, 220, 69);
   } else {
-    ctx.fillStyle = '#ffd04d';
+    ctx.fillStyle = yellow;
     ctx.textAlign = 'left';
     ctx.font = "bold 50px 'Alte Haas Grotesk', sans-serif";
     ctx.fillText('TotoWrap', 80, 116);
   }
-  ctx.fillStyle = '#b8c9a8';
+  ctx.fillStyle = neutral;
   ctx.textAlign = 'right';
   ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
   ctx.fillText(`${info.dayLabel} - Estimated Wrap ${info.estWrap}`, 1000, 116);
@@ -1582,17 +1599,17 @@ async function renderShareResultBlob() {
 
   const shareMainY = 22;
   canvasRoundRect(ctx, 80, 238 + shareMainY, 920, 300, 20);
-  ctx.fillStyle = info.noWinner ? 'rgba(217,85,85,.14)' : 'rgba(106,191,106,.12)';
+  ctx.fillStyle = info.noWinner ? `rgba(${redRgb},.14)` : `rgba(${greenRgb},.12)`;
   ctx.fill();
-  ctx.strokeStyle = info.noWinner ? 'rgba(217,85,85,.56)' : 'rgba(106,191,106,.56)';
+  ctx.strokeStyle = info.noWinner ? `rgba(${redRgb},.56)` : `rgba(${greenRgb},.56)`;
   ctx.lineWidth = 3;
   ctx.stroke();
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#b8c9a8';
+  ctx.fillStyle = neutral;
   ctx.font = "bold 25px 'Alte Haas Grotesk', sans-serif";
   ctx.fillText(info.kicker.toUpperCase(), 540, 335 + shareMainY);
-  ctx.fillStyle = info.noWinner ? '#d65656' : '#ffd04d';
+  ctx.fillStyle = info.noWinner ? red : yellow;
   drawShareText(ctx, info.name, 540, 415 + shareMainY, 800, info.name.length > 20 ? 72 : 98, 48);
 
   const times = [
@@ -1604,14 +1621,14 @@ async function renderShareResultBlob() {
     canvasRoundRect(ctx, x, 578 + shareMainY, 452, 172, 18);
     ctx.fillStyle = 'rgba(38,55,89,.58)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(184,201,168,.14)';
+    ctx.strokeStyle = `rgba(${neutralRgb},.14)`;
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#b8c9a8';
+    ctx.fillStyle = neutral;
     ctx.font = "bold 22px 'Alte Haas Grotesk', sans-serif";
     ctx.fillText(item.label, x + 226, 632 + shareMainY);
-    ctx.fillStyle = '#eec763';
+    ctx.fillStyle = yellow;
     ctx.font = "bold 54px 'Alte Haas Grotesk', sans-serif";
     ctx.fillText(item.value, x + 226, 696 + shareMainY);
   });
@@ -1623,11 +1640,11 @@ async function renderShareResultBlob() {
   ctx.stroke();
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#ffd04d';
+  ctx.fillStyle = yellow;
   ctx.font = "bold 54px 'Alte Haas Grotesk', sans-serif";
   ctx.fillText(info.pointsText, 80, 974);
   ctx.textAlign = 'right';
-  ctx.fillStyle = '#b8c9a8';
+  ctx.fillStyle = neutral;
   ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
   ctx.fillText(info.detail.toUpperCase(), 1000, 974);
 
@@ -2020,6 +2037,12 @@ function boardClosenessGap(guess, day) {
   return Math.abs(guessGameSec(guess, day) - normalizeGameSec(day.wrapTime, day));
 }
 
+function didPlayerWinDay(name, day) {
+  if (!name || day?.noWinner) return false;
+  const winners = day?.winners ? day.winners.map(w => w.name) : (day?.winner ? [day.winner] : []);
+  return winners.some(winnerName => nameKey(winnerName) === nameKey(name));
+}
+
 function renderBoardCloseness(pl) {
   const COLORS = [
     '#e3b74f', '#6dd87a', '#e06c6c', '#5bc8f5', '#f07dba',
@@ -2047,7 +2070,8 @@ function renderBoardCloseness(pl) {
         name: player.name,
         day: dayIdx,
         date: displayToISO(day.date),
-        gap: boardClosenessGap(guess, day)
+        gap: boardClosenessGap(guess, day),
+        won: didPlayerWinDay(player.name, day)
       });
     });
   });
@@ -2092,9 +2116,11 @@ function renderBoardCloseness(pl) {
   }).join('');
   const markerHtml = points.map(point => {
     const pos = pointPosition(point);
-    const color = colorOf(point.name);
+    const marker = point.won
+      ? '<img class="closeness-win-marker" src="imgs/tuna.png" alt="" aria-hidden="true">'
+      : `<span class="closeness-dot" style="background:${colorOf(point.name)};"></span>`;
     return `<a class="closeness-marker" href="#history-${encodeURIComponent(point.date)}" data-closeness-date="${esc(point.date)}" style="left:${pos.left.toFixed(2)}%; top:${pos.top.toFixed(2)}%;" title="${esc(point.name)} - ${esc(formatBoardExactCompactGap(point.gap))} off on ${esc(displayDayLabel(point.day + 1))}" aria-label="Open ${esc(displayDayLabel(point.day + 1))} in history">
-      <span class="closeness-dot" style="background:${color};"></span>
+      ${marker}
     </a>`;
   }).join('');
   const yTicks = [
@@ -3083,7 +3109,7 @@ function showPreview() {
   const savedWrapDate = S.today?.estWrapDate || S.today?.date || localDateISO();
   
   const errorWarning = formatErrors.length > 0
-    ? `<div class="card" style="border: 1px solid var(--red); background: rgba(214, 86, 86, 0.1); margin-bottom: 12px;">
+    ? `<div class="card" style="border: 1px solid var(--red); background: rgba(var(--red-rgb), 0.1); margin-bottom: 12px;">
          <p class="red" style="font-weight:bold; font-size:0.8rem; text-align:center;">
            ⚠️ TYPO DETECTED (Invalid Time Format):<br>
            ${formatErrors.map(e => `${esc(e.name)}: &quot;${esc(e.rawTime)}&quot;`).join('<br>')}
@@ -3097,7 +3123,7 @@ function showPreview() {
   const duplicates = getDuplicateNameKeys(parsed.map(g => g.name));
   
   const duplicateWarning = duplicates.length > 0 
-    ? `<div class="card" style="border: 1px solid var(--red); background: rgba(214, 86, 86, 0.1); margin-bottom: 12px;">
+    ? `<div class="card" style="border: 1px solid var(--red); background: rgba(var(--red-rgb), 0.1); margin-bottom: 12px;">
          <p class="red" style="font-weight:bold; font-size:0.8rem; text-align:center;">
            ⚠️ DUPLICATE NAMES DETECTED:<br>${duplicates.map(esc).join(', ')}
          </p>
