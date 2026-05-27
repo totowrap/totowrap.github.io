@@ -1118,44 +1118,41 @@ function themeVar(name, fallback) {
 }
 
 function confetti() {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
   const colors = [
     themeVar('--accent', '#f0b428'),
     themeVar('--green', '#8fdf6a'),
     themeVar('--red', '#d65656'),
     themeVar('--neutral', '#b8c9a8')
   ];
-  const count = 150;
+  const isMobile = window.matchMedia?.('(max-width: 700px)').matches;
+  const count = isMobile ? 90 : 150;
+  const fragment = document.createDocumentFragment();
+  const pieces = [];
+  let maxLife = 0;
   
   for (let i = 0; i < count; i++) {
-    setTimeout(() => {
-      const confettiEl = document.createElement('div');
-      confettiEl.className = 'confetti';
-      
-      // Random starting position across the top
-      confettiEl.style.left = Math.random() * 100 + 'vw';
-      confettiEl.style.top = '-10px';
-      
-      // Random color
-      confettiEl.style.background = colors[Math.floor(Math.random() * colors.length)];
-      
-      // Random size
-      const size = Math.random() * 8 + 5;
-      confettiEl.style.width = size + 'px';
-      confettiEl.style.height = size + 'px';
-      
-      // Random duration for fall speed, with each particle lasting at least 4 seconds.
-      const duration = Math.random() * 1.5 + 4;
-      confettiEl.style.animationDuration = duration + 's';
-      
-      // Random delay for staggered effect
-      confettiEl.style.animationDelay = (Math.random() * 0.5) + 's';
-      
-      document.body.appendChild(confettiEl);
-      
-      // Remove element after animation
-      setTimeout(() => confettiEl.remove(), (duration + 0.5) * 1000);
-    }, i * 8); // Stagger creation
+    const confettiEl = document.createElement('div');
+    confettiEl.className = 'confetti';
+
+    const size = Math.random() * 8 + 5;
+    const duration = Math.random() * 1.5 + 4;
+    const delay = (i / count) * 0.8 + Math.random() * 0.25;
+
+    confettiEl.style.setProperty('--confetti-left', Math.random() * 100 + 'vw');
+    confettiEl.style.setProperty('--confetti-color', colors[Math.floor(Math.random() * colors.length)]);
+    confettiEl.style.setProperty('--confetti-size', size + 'px');
+    confettiEl.style.setProperty('--confetti-duration', duration + 's');
+    confettiEl.style.setProperty('--confetti-delay', delay + 's');
+
+    maxLife = Math.max(maxLife, duration + delay);
+    pieces.push(confettiEl);
+    fragment.appendChild(confettiEl);
   }
+
+  document.body.appendChild(fragment);
+  setTimeout(() => pieces.forEach(piece => piece.remove()), (maxLife + 0.2) * 1000);
 }
 
 function captureUIState() {

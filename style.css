@@ -581,21 +581,25 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 /* Confetti Animation */
 .confetti {
   position: fixed;
-  width: 10px;
-  height: 10px;
-  background: var(--accent);
-  animation: confetti-fall linear forwards;
+  left: var(--confetti-left, 0);
+  top: -10px;
+  width: var(--confetti-size, 10px);
+  height: var(--confetti-size, 10px);
+  background: var(--confetti-color, var(--accent));
+  animation: confetti-fall var(--confetti-duration, 4s) linear var(--confetti-delay, 0s) forwards;
+  opacity: 0;
   pointer-events: none;
   z-index: 9999;
+  will-change: transform, opacity;
 }
 
 @keyframes confetti-fall {
   0% {
-    transform: translateY(0) rotateZ(0deg);
+    transform: translate3d(0,0,0) rotateZ(0deg);
     opacity: 1;
   }
   100% {
-    transform: translateY(100vh) rotateZ(720deg);
+    transform: translate3d(0,100vh,0) rotateZ(720deg);
     opacity: 0;
   }
 }
