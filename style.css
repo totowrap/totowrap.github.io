@@ -282,7 +282,8 @@ body::before {
 .bet-close-card .card-lbl { margin-bottom: 2px; }
 .bet-close-card p { font-size: .66rem; line-height: 1; margin-top: 20px; }
 .bet-close-time { color: var(--accent); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 2.4rem; font-weight: bold; line-height: 1; margin: 0; font-variant-numeric: tabular-nums; }
-.bet-close-countdown { color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.14rem; font-weight: bold; line-height: 1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.bet-close-countdown { color: var(--red); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.14rem; font-weight: bold; line-height: 1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+[data-bet-close-countdown] { color: var(--red) !important; }
 .waiting-guesses-card { display: grid; place-items: center; min-height: 74px; text-align: center; }
 .waiting-guesses-card p { margin: 0; }
 .inp-wrap { margin-bottom: 12px; }
