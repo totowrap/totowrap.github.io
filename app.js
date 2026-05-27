@@ -1121,13 +1121,13 @@ function confetti() {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
 
   const colors = [
-    themeVar('--accent', '#f0b428'),
+    themeVar('--yellow', '#f0b428'),
     themeVar('--green', '#8fdf6a'),
     themeVar('--red', '#d65656'),
     themeVar('--neutral', '#b8c9a8')
   ];
   const isMobile = window.matchMedia?.('(max-width: 700px)').matches;
-  const count = isMobile ? 90 : 150;
+  const count = isMobile ? 64 : 120;
   const fragment = document.createDocumentFragment();
   const pieces = [];
   let maxLife = 0;
@@ -1141,6 +1141,7 @@ function confetti() {
     const delay = (i / count) * 0.8 + Math.random() * 0.25;
 
     confettiEl.style.setProperty('--confetti-left', Math.random() * 100 + 'vw');
+    confettiEl.style.setProperty('--confetti-drift', (Math.random() * 42 - 21) + 'px');
     confettiEl.style.setProperty('--confetti-color', colors[Math.floor(Math.random() * colors.length)]);
     confettiEl.style.setProperty('--confetti-size', size + 'px');
     confettiEl.style.setProperty('--confetti-duration', duration + 's');
