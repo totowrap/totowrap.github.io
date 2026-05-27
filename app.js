@@ -384,6 +384,12 @@ document.addEventListener('click', e => {
     return;
   }
 
+  const liveTimeShareBtn = e.target.closest?.('[data-live-time-share]');
+  if (liveTimeShareBtn && !liveTimeShareBtn.disabled) {
+    openLiveTimeShare();
+    return;
+  }
+
   const shareCloseBtn = e.target.closest?.('[data-share-close]');
   if (shareCloseBtn || e.target.id === 'share-result-modal') {
     closeShareResult();
@@ -394,6 +400,19 @@ document.addEventListener('click', e => {
   if (shareActionBtn) {
     if (shareActionBtn.dataset.shareAction === 'download') downloadShareResult();
     if (shareActionBtn.dataset.shareAction === 'share') shareResultImage();
+    return;
+  }
+
+  const liveTimeShareCloseBtn = e.target.closest?.('[data-live-time-share-close]');
+  if (liveTimeShareCloseBtn || e.target.id === 'live-time-share-modal') {
+    closeLiveTimeShare();
+    return;
+  }
+
+  const liveTimeShareActionBtn = e.target.closest?.('[data-live-time-share-action]');
+  if (liveTimeShareActionBtn) {
+    if (liveTimeShareActionBtn.dataset.liveTimeShareAction === 'download') downloadLiveTimeShare();
+    if (liveTimeShareActionBtn.dataset.liveTimeShareAction === 'share') shareLiveTimeImage(false);
     return;
   }
 
@@ -1002,6 +1021,17 @@ function updateBetCloseCountdown() {
   });
 }
 
+function updateLiveTimeShareState() {
+  const ready = isLiveTimeShareReady();
+  document.querySelectorAll('[data-live-time-share]').forEach(btn => {
+    btn.disabled = !ready;
+    btn.classList.toggle('is-share-ready', ready);
+  });
+  document.querySelectorAll('.player-clock-share-hint').forEach(hint => {
+    hint.classList.toggle('on', ready);
+  });
+}
+
 function tickClock() {
   const t = nowHMS();
   const cur = gameNowSec();
@@ -1009,6 +1039,7 @@ function tickClock() {
   // Update all clocks on the page
   document.querySelectorAll('.js-clock').forEach(el => el.textContent = t);
   updateBetCloseCountdown();
+  updateLiveTimeShareState();
   
   const countdownEl = document.getElementById('next-out-countdown');
   if (!countdownEl || !S.today || !S.today.guesses || S.today.wrapTime) {
@@ -1480,6 +1511,18 @@ function renderShareResultCard(info) {
   </article>`;
 }
 
+function firstTerritoryStartSec(day=S.today) {
+  const slices = boundaries(day?.guesses || [], day);
+  if (!slices.length) return null;
+  return Math.min(...slices.map(slice => slice.start));
+}
+
+function isLiveTimeShareReady(day=S.today) {
+  if (IS_ADMIN || !day || day.wrapTime || !Array.isArray(day.guesses)) return false;
+  const start = firstTerritoryStartSec(day);
+  return start !== null && gameNowSec(day) >= start;
+}
+
 function openShareResult() {
   if (!IS_ADMIN || !S.today?.wrapTime) return;
   closeShareResult();
@@ -1501,6 +1544,14 @@ function openShareResult() {
 
 function closeShareResult() {
   document.getElementById('share-result-modal')?.remove();
+}
+
+function closeLiveTimeShare() {
+  document.getElementById('live-time-share-modal')?.remove();
+}
+
+function liveTimeShareFilename(timeText) {
+  return `totowrap-live-time-${String(timeText || nowHMS()).replace(/:/g, '-')}.png`;
 }
 
 function shareImageFilename(info) {
@@ -1535,6 +1586,188 @@ function loadShareImage(src) {
     img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+
+async function renderLiveTimeShareBlob(timeText) {
+  if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
+  const yellow = themeVar('--accent', '#f0b428');
+  const yellowRgb = themeVar('--yellow-rgb', '240,180,40');
+  const neutral = themeVar('--neutral', '#b8c9a8');
+  const imageSize = 1080;
+  const exportScale = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = imageSize * exportScale;
+  canvas.height = imageSize * exportScale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(exportScale, exportScale);
+
+  const bg = ctx.createLinearGradient(0, 0, imageSize, imageSize);
+  bg.addColorStop(0, '#3d4e6f');
+  bg.addColorStop(1, '#1f2f4d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, imageSize, imageSize);
+
+  const canImg = await loadShareImage('imgs/tunacan.png');
+  if (canImg) {
+    ctx.save();
+    ctx.globalAlpha = .14;
+    ctx.drawImage(canImg, 230, 235, 620, 620);
+    ctx.restore();
+  }
+
+  ctx.strokeStyle = `rgba(${yellowRgb},.22)`;
+  ctx.lineWidth = 3;
+  canvasRoundRect(ctx, 20, 20, 1040, 1040, 22);
+  ctx.stroke();
+
+  ctx.textBaseline = 'middle';
+  const logoImg = await loadShareImage('imgs/totowrap.png');
+  if (logoImg) {
+    ctx.drawImage(logoImg, 80, 84, 220, 69);
+  } else {
+    ctx.fillStyle = yellow;
+    ctx.textAlign = 'left';
+    ctx.font = "bold 50px 'Alte Haas Grotesk', sans-serif";
+    ctx.fillText('TotoWrap', 80, 116);
+  }
+
+  ctx.fillStyle = neutral;
+  ctx.textAlign = 'right';
+  ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText(`Official Live Time - ${displayDate(localDateISO())}`, 1000, 116);
+
+  ctx.strokeStyle = 'rgba(61,84,51,.72)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(80, 168);
+  ctx.lineTo(1000, 168);
+  ctx.stroke();
+
+  canvasRoundRect(ctx, 96, 252, 888, 630, 22);
+  ctx.fillStyle = 'rgba(46,60,87,.50)';
+  ctx.fill();
+  const frost = ctx.createLinearGradient(96, 252, 984, 882);
+  frost.addColorStop(0, 'rgba(255,255,255,.12)');
+  frost.addColorStop(.45, 'rgba(255,255,255,.035)');
+  frost.addColorStop(1, 'rgba(0,0,0,.08)');
+  ctx.fillStyle = frost;
+  ctx.fill();
+  ctx.strokeStyle = `rgba(${yellowRgb},.24)`;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.10)';
+  ctx.lineWidth = 2;
+  canvasRoundRect(ctx, 104, 260, 872, 614, 18);
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = neutral;
+  ctx.font = "bold 34px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText('OFFICIAL LIVE TIME', 540, 430);
+
+  ctx.fillStyle = yellow;
+  ctx.font = "bold 142px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText(timeText, 540, 560);
+
+  ctx.fillStyle = neutral;
+  ctx.font = "bold 30px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText('Saved from the player clock', 540, 690);
+
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('Could not create image');
+  return { blob, timeText };
+}
+
+function openLiveTimeShare() {
+  if (!isLiveTimeShareReady()) return;
+  closeLiveTimeShare();
+  const timeText = nowHMS();
+  const modal = document.createElement('div');
+  modal.id = 'live-time-share-modal';
+  modal.className = 'result-share-modal';
+  modal.innerHTML = `<div class="result-share-panel" role="dialog" aria-modal="true" aria-label="Share official live time">
+    <button class="result-share-close" type="button" aria-label="Close" data-live-time-share-close>×</button>
+    <div class="result-share-preview live-time-share-preview">
+      <img class="live-time-share-preview-img" data-live-time-share-preview alt="Generated TotoWrap live time preview">
+    </div>
+    <div class="live-time-share-status" data-live-time-share-status>Preparing share image...</div>
+    <div class="result-share-actions">
+      <button class="btn btn-s" type="button" data-live-time-share-action="download">Download</button>
+      <button class="btn btn-p" type="button" data-live-time-share-action="share">Share</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  prepareLiveTimeShare(timeText, true);
+}
+
+async function prepareLiveTimeShare(timeText, autoShare=false) {
+  const modal = document.getElementById('live-time-share-modal');
+  if (!modal) return null;
+  const status = modal.querySelector('[data-live-time-share-status]');
+  const preview = modal.querySelector('[data-live-time-share-preview]');
+  try {
+    const result = await renderLiveTimeShareBlob(timeText);
+    modal._liveTimeShare = result;
+    preview.src = URL.createObjectURL(result.blob);
+    status.textContent = autoShare ? 'Opening share menu...' : '';
+    if (autoShare) {
+      const didShare = await shareLiveTimeImage(true);
+      status.textContent = didShare ? 'Share menu opened' : 'Use Share or Download';
+    }
+    return result;
+  } catch(e) {
+    console.error('Live time image failed:', e);
+    status.textContent = 'Use Share or Download';
+    toast('Could not create live time image', 'err');
+    return null;
+  }
+}
+
+async function getLiveTimeShareResult() {
+  const modal = document.getElementById('live-time-share-modal');
+  if (modal?._liveTimeShare) return modal._liveTimeShare;
+  return prepareLiveTimeShare(nowHMS(), false);
+}
+
+async function downloadLiveTimeShare() {
+  try {
+    const result = await getLiveTimeShareResult();
+    if (!result) return;
+    const url = URL.createObjectURL(result.blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = liveTimeShareFilename(result.timeText);
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch(e) {
+    console.error('Live time download failed:', e);
+    toast('Could not download live time image', 'err');
+  }
+}
+
+async function shareLiveTimeImage(isAutomatic=false) {
+  try {
+    const result = await getLiveTimeShareResult();
+    if (!result) return false;
+    const file = new File([result.blob], liveTimeShareFilename(result.timeText), { type: 'image/png' });
+    const shareTitle = `TotoWrap live time - ${result.timeText}`;
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: shareTitle, text: shareTitle });
+      return true;
+    }
+    if (navigator.share) {
+      await navigator.share({ title: shareTitle, text: shareTitle });
+      return true;
+    }
+    if (!isAutomatic) toast('Image sharing is not available here - download instead', 'err');
+    return false;
+  } catch(e) {
+    if (e?.name !== 'AbortError') {
+      console.error('Live time share failed:', e);
+      if (!isAutomatic) toast('Could not share live time image', 'err');
+    }
+    return false;
+  }
 }
 
 async function renderShareResultBlob() {
@@ -1753,13 +1986,14 @@ function renderPlayerToday() {
   const cur = gameNowSec(t);
   const out = eliminated(t.guesses, cur, t);
   const slices = boundaries(t.guesses, t);
+  const liveTimeShareReady = isLiveTimeShareReady(t);
 
   return `
   <div class="card">
     <div style="display: flex; align-items: center; justify-content: center;">
-      <div class="big-clock js-clock">--:--:--</div>
+      <button class="big-clock js-clock player-clock-trigger${liveTimeShareReady ? ' is-share-ready' : ''}" type="button" data-live-time-share ${liveTimeShareReady ? '' : 'disabled'} aria-label="Share official live time">--:--:--</button>
     </div>
-    <div class="big-clock-lbl">Live Time</div>
+    <div class="big-clock-lbl">Live Time<span class="player-clock-share-hint${liveTimeShareReady ? ' on' : ''}"> · Tap to Share</span></div>
     <div id="next-out-countdown" class="countdown-txt"></div>
   </div>
   <div class="card"><div class="card-lbl">${statusHeader}</div>
