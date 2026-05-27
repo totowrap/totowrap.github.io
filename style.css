@@ -578,31 +578,12 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   .admin-dialog-panel { background: linear-gradient(135deg, rgba(46,60,87,.76), rgba(38,55,89,.9)); -webkit-backdrop-filter: blur(14px) saturate(135%); backdrop-filter: blur(14px) saturate(135%); }
 }
 
-/* Confetti Animation */
-.confetti {
+.confetti-canvas {
   position: fixed;
-  left: var(--confetti-left, 0);
-  top: -10px;
-  width: var(--confetti-size, 10px);
-  height: var(--confetti-size, 10px);
-  background: var(--confetti-color, var(--accent));
-  border-radius: 999px;
-  animation: confetti-fall var(--confetti-duration, 4s) linear var(--confetti-delay, 0s) forwards;
-  opacity: 0;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   pointer-events: none;
   z-index: 9999;
-  contain: layout style paint;
-  backface-visibility: hidden;
-  will-change: transform, opacity;
-}
-
-@keyframes confetti-fall {
-  0% {
-    transform: translate3d(0,0,0) rotateZ(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translate3d(var(--confetti-drift, 0),100vh,0) rotateZ(720deg);
-    opacity: 0;
-  }
+  contain: strict;
 }

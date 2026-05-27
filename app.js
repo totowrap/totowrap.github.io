@@ -1127,33 +1127,92 @@ function confetti() {
     themeVar('--neutral', '#b8c9a8')
   ];
   const isMobile = window.matchMedia?.('(max-width: 700px)').matches;
-  const count = isMobile ? 64 : 120;
-  const fragment = document.createDocumentFragment();
-  const pieces = [];
+  const count = isMobile ? 54 : 96;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const resize = () => {
+    canvas.width = Math.ceil(window.innerWidth * dpr);
+    canvas.height = Math.ceil(window.innerHeight * dpr);
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  canvas.className = 'confetti-canvas';
+  resize();
+  document.body.appendChild(canvas);
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const stars = [];
   let maxLife = 0;
-  
+
   for (let i = 0; i < count; i++) {
-    const confettiEl = document.createElement('div');
-    confettiEl.className = 'confetti';
-
-    const size = Math.random() * 8 + 5;
-    const duration = Math.random() * 1.5 + 4;
+    const size = Math.random() * 5 + (isMobile ? 5 : 6);
+    const duration = Math.random() * 1.25 + 4;
     const delay = (i / count) * 0.8 + Math.random() * 0.25;
-
-    confettiEl.style.setProperty('--confetti-left', Math.random() * 100 + 'vw');
-    confettiEl.style.setProperty('--confetti-drift', (Math.random() * 42 - 21) + 'px');
-    confettiEl.style.setProperty('--confetti-color', colors[Math.floor(Math.random() * colors.length)]);
-    confettiEl.style.setProperty('--confetti-size', size + 'px');
-    confettiEl.style.setProperty('--confetti-duration', duration + 's');
-    confettiEl.style.setProperty('--confetti-delay', delay + 's');
-
+    stars.push({
+      x: Math.random() * width,
+      yStart: -size * 3,
+      yEnd: height + size * 3,
+      drift: Math.random() * 52 - 26,
+      size,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      duration,
+      delay,
+      spin: (Math.random() > 0.5 ? 1 : -1) * (Math.random() * Math.PI * 1.6 + Math.PI * 1.2),
+      wobble: Math.random() * Math.PI * 2
+    });
     maxLife = Math.max(maxLife, duration + delay);
-    pieces.push(confettiEl);
-    fragment.appendChild(confettiEl);
   }
 
-  document.body.appendChild(fragment);
-  setTimeout(() => pieces.forEach(piece => piece.remove()), (maxLife + 0.2) * 1000);
+  const startedAt = performance.now();
+  const drawStar = (star, x, y, rotation, opacity) => {
+    const outer = star.size;
+    const inner = outer * 0.45;
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const radius = i % 2 === 0 ? outer : inner;
+      const angle = -Math.PI / 2 + i * Math.PI / 5;
+      const px = Math.cos(angle) * radius;
+      const py = Math.sin(angle) * radius;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = star.color;
+    ctx.fill();
+    ctx.restore();
+  };
+
+  const animate = now => {
+    const elapsed = (now - startedAt) / 1000;
+    ctx.clearRect(0, 0, width, height);
+    let active = false;
+
+    stars.forEach(star => {
+      const local = (elapsed - star.delay) / star.duration;
+      if (local < 0 || local > 1) return;
+      active = true;
+      const x = star.x + star.drift * local + Math.sin(star.wobble + elapsed * 3.2) * 5;
+      const y = star.yStart + (star.yEnd - star.yStart) * local;
+      const opacity = local < 0.85 ? 1 : Math.max(0, 1 - (local - 0.85) / 0.15);
+      drawStar(star, x, y, star.spin * local, opacity);
+    });
+
+    if (active || elapsed < maxLife + 0.1) {
+      requestAnimationFrame(animate);
+    } else {
+      canvas.remove();
+    }
+  };
+
+  requestAnimationFrame(animate);
 }
 
 function getWinnerConfettiKey() {
