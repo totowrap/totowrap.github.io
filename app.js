@@ -169,7 +169,7 @@ function normalizeActiveTab() {
 }
 
 function getBoardViews() {
-  return IS_ADMIN && currentUser ? ['list', 'pie', 'closeness'] : ['list', 'pie'];
+  return ['list', 'pie', 'closeness'];
 }
 
 function setMainTab(tab) {
