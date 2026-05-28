@@ -411,9 +411,9 @@ document.addEventListener('click', e => {
     return;
   }
 
-  const liveTimeShareBtn = e.target.closest?.('[data-live-time-share]');
-  if (liveTimeShareBtn && !liveTimeShareBtn.disabled) {
-    openLiveTimeShare();
+  const playerWrapSuggestionBtn = e.target.closest?.('[data-player-wrap-suggest]');
+  if (playerWrapSuggestionBtn && !playerWrapSuggestionBtn.disabled) {
+    openPlayerWrapSuggestionDialog();
     return;
   }
 
@@ -427,19 +427,6 @@ document.addEventListener('click', e => {
   if (shareActionBtn) {
     if (shareActionBtn.dataset.shareAction === 'download') downloadShareResult();
     if (shareActionBtn.dataset.shareAction === 'share') shareResultImage();
-    return;
-  }
-
-  const liveTimeShareCloseBtn = e.target.closest?.('[data-live-time-share-close]');
-  if (liveTimeShareCloseBtn || e.target.id === 'live-time-share-modal') {
-    closeLiveTimeShare();
-    return;
-  }
-
-  const liveTimeShareActionBtn = e.target.closest?.('[data-live-time-share-action]');
-  if (liveTimeShareActionBtn) {
-    if (liveTimeShareActionBtn.dataset.liveTimeShareAction === 'download') downloadLiveTimeShare();
-    if (liveTimeShareActionBtn.dataset.liveTimeShareAction === 'share') shareLiveTimeImage(false);
     return;
   }
 
@@ -1048,13 +1035,13 @@ function updateBetCloseCountdown() {
   });
 }
 
-function updateLiveTimeShareState() {
-  const ready = isLiveTimeShareReady();
-  document.querySelectorAll('[data-live-time-share]').forEach(btn => {
+function updatePlayerWrapSuggestionState() {
+  const ready = isPlayerWrapSuggestionReady();
+  document.querySelectorAll('[data-player-wrap-suggest]').forEach(btn => {
     btn.disabled = !ready;
-    btn.classList.toggle('is-share-ready', ready);
+    btn.classList.toggle('is-suggestion-ready', ready);
   });
-  document.querySelectorAll('.player-clock-share-hint').forEach(hint => {
+  document.querySelectorAll('.player-wrap-suggestion-hint').forEach(hint => {
     hint.classList.toggle('on', ready);
   });
 }
@@ -1066,7 +1053,7 @@ function tickClock() {
   // Update all clocks on the page
   document.querySelectorAll('.js-clock').forEach(el => el.textContent = t);
   updateBetCloseCountdown();
-  updateLiveTimeShareState();
+  updatePlayerWrapSuggestionState();
   
   const countdownEl = document.getElementById('next-out-countdown');
   if (!countdownEl || !S.today || !S.today.guesses || S.today.wrapTime) {
@@ -1610,10 +1597,136 @@ function firstTerritoryStartSec(day=S.today) {
   return Math.min(...slices.map(slice => slice.start));
 }
 
-function isLiveTimeShareReady(day=S.today) {
+function isPlayerWrapSuggestionReady(day=S.today) {
   if (IS_ADMIN || !day || day.wrapTime || !Array.isArray(day.guesses)) return false;
   const start = firstTerritoryStartSec(day);
   return start !== null && gameNowSec(day) >= start;
+}
+
+function getPendingWrapSuggestion(day=S.today) {
+  if (!day || day.wrapTime || !day.wrapSuggestion?.time) return null;
+  return day.wrapSuggestion;
+}
+
+function formatSuggestionAge(sentAt) {
+  const stamp = Number(sentAt) || 0;
+  if (!stamp) return 'just now';
+  const diff = Math.max(0, Math.floor((Date.now() - stamp) / 1000));
+  if (diff < 60) return `${diff}s ago`;
+  const min = Math.floor(diff / 60);
+  if (min < 60) return `${min}m ago`;
+  return `${Math.floor(min / 60)}h ago`;
+}
+
+function openPlayerWrapSuggestionDialog() {
+  if (!isPlayerWrapSuggestionReady()) return;
+  const capturedWrap = nowHMS();
+  openAdminDialog({
+    title: 'Suggest Wrap Time',
+    copy: 'Send this live time to admin for approval?',
+    body: `<div class="suggest-card">
+      <div class="suggest-preview">
+        <div class="card-lbl">Your Suggested Time</div>
+        <div class="suggest-time">${esc(capturedWrap)}</div>
+        <div class="suggest-age">Admin must approve before the result changes</div>
+      </div>
+      <div class="admin-dialog-split">
+        <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Ignore</button>
+        <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="player-wrap-suggestion-send" data-wrap-time="${esc(capturedWrap)}">Send</button>
+      </div>
+    </div>`
+  });
+}
+
+async function submitPlayerWrapSuggestion(wrapTime) {
+  const normalizedWrap = String(wrapTime || '').trim();
+  if (!isValidHMS(normalizedWrap)) {
+    toast('Use a valid wrap time', 'err');
+    return false;
+  }
+  if (!isPlayerWrapSuggestionReady()) {
+    toast('Wrap suggestion is not available yet', 'err');
+    return false;
+  }
+
+  try {
+    let committedState = null;
+    await runTransaction(db, async transaction => {
+      const snap = await transaction.get(STATE_REF);
+      const nextState = normalizeState(snap.exists() ? snap.data() : {});
+      if (!nextState.today || nextState.today.wrapTime || !Array.isArray(nextState.today.guesses)) {
+        throw new Error('Wrap suggestion is not available');
+      }
+      const start = firstTerritoryStartSec(nextState.today);
+      if (start === null || gameNowSec(nextState.today) < start) {
+        throw new Error('Wrap suggestion is not available yet');
+      }
+      nextState.today.wrapSuggestion = {
+        time: normalizedWrap,
+        sentAt: Date.now(),
+        date: nextState.today.date || localDateISO(),
+        source: 'player-clock'
+      };
+      nextState._version = (Number(nextState._version) || 0) + 1;
+      transaction.set(STATE_REF, nextState);
+      committedState = nextState;
+    });
+    if (committedState) S = committedState;
+    closeAdminDialog();
+    toast('Suggestion sent to admin', 'ok');
+    render();
+    return true;
+  } catch(e) {
+    console.error('Wrap suggestion error:', e);
+    const permission = e?.code === 'permission-denied';
+    toast(permission ? 'Suggestion blocked by Firebase rules' : (e?.message || 'Could not send suggestion'), 'err');
+    return false;
+  }
+}
+
+function openSuggestedWrapDialog() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
+  const suggestion = getPendingWrapSuggestion();
+  if (!suggestion) return;
+  const preview = calcWinner(S.today.guesses || [], suggestion.time, S.today);
+  const winnerNames = preview.noWinner
+    ? []
+    : preview.winners?.map(w => w.name).filter(Boolean) || (preview.winner ? [preview.winner] : []);
+  const winnerLabel = preview.noWinner ? 'No Winner' : formatNames(winnerNames);
+  const winnerGuess = preview.noWinner ? null : (S.today.guesses || []).find(g => winnerNames.includes(g.name) && g.time);
+  const gap = winnerGuess ? Math.abs(guessGameSec(winnerGuess, S.today) - normalizeGameSec(suggestion.time, S.today)) : null;
+
+  openAdminDialog({
+    title: 'Suggested Wrap Time',
+    copy: 'A player tapped the live clock and sent this time for admin approval.',
+    body: `<div class="suggest-card">
+      <div class="suggest-preview">
+        <div class="card-lbl">Player Suggested</div>
+        <div class="suggest-time">${esc(suggestion.time)}</div>
+        <div class="suggest-age">Sent ${esc(formatSuggestionAge(suggestion.sentAt))}</div>
+      </div>
+      <div class="mini-grid">
+        <div class="mini"><strong>${esc(winnerLabel)}</strong><span>Preview Winner</span></div>
+        <div class="mini"><strong>+${Number(preview.points) || 0}</strong><span>Preview Points</span></div>
+        <div class="mini"><strong>${gap === null ? '--' : esc(formatBoardGap(gap))}</strong><span>Distance</span></div>
+      </div>
+      <div class="admin-dialog-split">
+        <button class="admin-dialog-action undo" type="button" data-admin-dialog-action="today-wrap-suggestion-ignore">Ignore</button>
+        <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-suggestion-approve">Approve</button>
+      </div>
+    </div>`
+  });
+}
+
+async function clearWrapSuggestion() {
+  if (!IS_ADMIN || !S.today?.wrapSuggestion) return false;
+  const prevS = cloneState();
+  delete S.today.wrapSuggestion;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Suggestion ignored', 'ok');
+  render();
+  return true;
 }
 
 function openShareResult() {
@@ -1637,14 +1750,6 @@ function openShareResult() {
 
 function closeShareResult() {
   document.getElementById('share-result-modal')?.remove();
-}
-
-function closeLiveTimeShare() {
-  document.getElementById('live-time-share-modal')?.remove();
-}
-
-function liveTimeShareFilename(timeText) {
-  return `totowrap-live-time-${String(timeText || nowHMS()).replace(/:/g, '-')}.png`;
 }
 
 function shareImageFilename(info) {
@@ -1679,188 +1784,6 @@ function loadShareImage(src) {
     img.onerror = () => resolve(null);
     img.src = src;
   });
-}
-
-async function renderLiveTimeShareBlob(timeText) {
-  if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
-  const yellow = themeVar('--accent', '#f0b428');
-  const yellowRgb = themeVar('--yellow-rgb', '240,180,40');
-  const neutral = themeVar('--neutral', '#b8c9a8');
-  const imageSize = 1080;
-  const exportScale = 2;
-  const canvas = document.createElement('canvas');
-  canvas.width = imageSize * exportScale;
-  canvas.height = imageSize * exportScale;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(exportScale, exportScale);
-
-  const bg = ctx.createLinearGradient(0, 0, imageSize, imageSize);
-  bg.addColorStop(0, '#3d4e6f');
-  bg.addColorStop(1, '#1f2f4d');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, imageSize, imageSize);
-
-  const canImg = await loadShareImage('imgs/tunacan.png');
-  if (canImg) {
-    ctx.save();
-    ctx.globalAlpha = .14;
-    ctx.drawImage(canImg, 230, 235, 620, 620);
-    ctx.restore();
-  }
-
-  ctx.strokeStyle = `rgba(${yellowRgb},.22)`;
-  ctx.lineWidth = 3;
-  canvasRoundRect(ctx, 20, 20, 1040, 1040, 22);
-  ctx.stroke();
-
-  ctx.textBaseline = 'middle';
-  const logoImg = await loadShareImage('imgs/totowrap.png');
-  if (logoImg) {
-    ctx.drawImage(logoImg, 80, 84, 220, 69);
-  } else {
-    ctx.fillStyle = yellow;
-    ctx.textAlign = 'left';
-    ctx.font = "bold 50px 'Alte Haas Grotesk', sans-serif";
-    ctx.fillText('TotoWrap', 80, 116);
-  }
-
-  ctx.fillStyle = neutral;
-  ctx.textAlign = 'right';
-  ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
-  ctx.fillText(`Official Live Time - ${displayDate(localDateISO())}`, 1000, 116);
-
-  ctx.strokeStyle = 'rgba(61,84,51,.72)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(80, 168);
-  ctx.lineTo(1000, 168);
-  ctx.stroke();
-
-  canvasRoundRect(ctx, 96, 252, 888, 630, 22);
-  ctx.fillStyle = 'rgba(46,60,87,.50)';
-  ctx.fill();
-  const frost = ctx.createLinearGradient(96, 252, 984, 882);
-  frost.addColorStop(0, 'rgba(255,255,255,.12)');
-  frost.addColorStop(.45, 'rgba(255,255,255,.035)');
-  frost.addColorStop(1, 'rgba(0,0,0,.08)');
-  ctx.fillStyle = frost;
-  ctx.fill();
-  ctx.strokeStyle = `rgba(${yellowRgb},.24)`;
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,255,255,.10)';
-  ctx.lineWidth = 2;
-  canvasRoundRect(ctx, 104, 260, 872, 614, 18);
-  ctx.stroke();
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = neutral;
-  ctx.font = "bold 34px 'Alte Haas Grotesk', sans-serif";
-  ctx.fillText('OFFICIAL LIVE TIME', 540, 430);
-
-  ctx.fillStyle = yellow;
-  ctx.font = "bold 142px 'Alte Haas Grotesk', sans-serif";
-  ctx.fillText(timeText, 540, 560);
-
-  ctx.fillStyle = neutral;
-  ctx.font = "bold 30px 'Alte Haas Grotesk', sans-serif";
-  ctx.fillText('Saved from the player clock', 540, 690);
-
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-  if (!blob) throw new Error('Could not create image');
-  return { blob, timeText };
-}
-
-function openLiveTimeShare() {
-  if (!isLiveTimeShareReady()) return;
-  closeLiveTimeShare();
-  const timeText = nowHMS();
-  const modal = document.createElement('div');
-  modal.id = 'live-time-share-modal';
-  modal.className = 'result-share-modal';
-  modal.innerHTML = `<div class="result-share-panel" role="dialog" aria-modal="true" aria-label="Share official live time">
-    <button class="result-share-close" type="button" aria-label="Close" data-live-time-share-close>×</button>
-    <div class="result-share-preview live-time-share-preview">
-      <img class="live-time-share-preview-img" data-live-time-share-preview alt="Generated TotoWrap live time preview">
-    </div>
-    <div class="live-time-share-status" data-live-time-share-status>Preparing share image...</div>
-    <div class="result-share-actions">
-      <button class="btn btn-s" type="button" data-live-time-share-action="download">Download</button>
-      <button class="btn btn-p" type="button" data-live-time-share-action="share">Share</button>
-    </div>
-  </div>`;
-  document.body.appendChild(modal);
-  prepareLiveTimeShare(timeText, true);
-}
-
-async function prepareLiveTimeShare(timeText, autoShare=false) {
-  const modal = document.getElementById('live-time-share-modal');
-  if (!modal) return null;
-  const status = modal.querySelector('[data-live-time-share-status]');
-  const preview = modal.querySelector('[data-live-time-share-preview]');
-  try {
-    const result = await renderLiveTimeShareBlob(timeText);
-    modal._liveTimeShare = result;
-    preview.src = URL.createObjectURL(result.blob);
-    status.textContent = autoShare ? 'Opening share menu...' : '';
-    if (autoShare) {
-      const didShare = await shareLiveTimeImage(true);
-      status.textContent = didShare ? 'Share menu opened' : 'Use Share or Download';
-    }
-    return result;
-  } catch(e) {
-    console.error('Live time image failed:', e);
-    status.textContent = 'Use Share or Download';
-    toast('Could not create live time image', 'err');
-    return null;
-  }
-}
-
-async function getLiveTimeShareResult() {
-  const modal = document.getElementById('live-time-share-modal');
-  if (modal?._liveTimeShare) return modal._liveTimeShare;
-  return prepareLiveTimeShare(nowHMS(), false);
-}
-
-async function downloadLiveTimeShare() {
-  try {
-    const result = await getLiveTimeShareResult();
-    if (!result) return;
-    const url = URL.createObjectURL(result.blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = liveTimeShareFilename(result.timeText);
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch(e) {
-    console.error('Live time download failed:', e);
-    toast('Could not download live time image', 'err');
-  }
-}
-
-async function shareLiveTimeImage(isAutomatic=false) {
-  try {
-    const result = await getLiveTimeShareResult();
-    if (!result) return false;
-    const file = new File([result.blob], liveTimeShareFilename(result.timeText), { type: 'image/png' });
-    const shareTitle = `TotoWrap live time - ${result.timeText}`;
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: shareTitle, text: shareTitle });
-      return true;
-    }
-    if (navigator.share) {
-      await navigator.share({ title: shareTitle, text: shareTitle });
-      return true;
-    }
-    if (!isAutomatic) toast('Image sharing is not available here - download instead', 'err');
-    return false;
-  } catch(e) {
-    if (e?.name !== 'AbortError') {
-      console.error('Live time share failed:', e);
-      if (!isAutomatic) toast('Could not share live time image', 'err');
-    }
-    return false;
-  }
 }
 
 async function renderShareResultBlob() {
@@ -2079,14 +2002,14 @@ function renderPlayerToday() {
   const cur = gameNowSec(t);
   const out = eliminated(t.guesses, cur, t);
   const slices = boundaries(t.guesses, t);
-  const liveTimeShareReady = isLiveTimeShareReady(t);
+  const wrapSuggestionReady = isPlayerWrapSuggestionReady(t);
 
   return `
   <div class="card">
     <div style="display: flex; align-items: center; justify-content: center;">
-      <button class="big-clock js-clock player-clock-trigger${liveTimeShareReady ? ' is-share-ready' : ''}" type="button" data-live-time-share ${liveTimeShareReady ? '' : 'disabled'} aria-label="Share official live time">--:--:--</button>
+      <button class="big-clock js-clock player-clock-trigger${wrapSuggestionReady ? ' is-suggestion-ready' : ''}" type="button" data-player-wrap-suggest ${wrapSuggestionReady ? '' : 'disabled'} aria-label="Suggest official wrap time">--:--:--</button>
     </div>
-    <div class="big-clock-lbl">Live Time<span class="player-clock-share-hint${liveTimeShareReady ? ' on' : ''}"> · Tap to Share</span></div>
+    <div class="big-clock-lbl">Live Time<span class="player-wrap-suggestion-hint${wrapSuggestionReady ? ' on' : ''}"> · Tap to Suggest</span></div>
     <div id="next-out-countdown" class="countdown-txt"></div>
   </div>
   <div class="card"><div class="card-lbl">${statusHeader}</div>
@@ -2143,12 +2066,16 @@ function renderToday() {
     </div>`;
   }
 
+  const pendingSuggestion = getPendingWrapSuggestion(t);
+  const adminClockLabel = pendingSuggestion
+    ? 'Live Time · Tap to Wrap · <span class="wrap-suggestion-pending">Suggestion Pending</span>'
+    : 'Live Time · Tap to Wrap';
   const clockCard = `
     <div class="card">
       <div style="display: flex; align-items: center; justify-content: center;">
         <button class="big-clock js-clock admin-clock-trigger" id="admin-clock" type="button" title="Tap to set wrap time">--:--:--</button>
       </div>
-      <div class="big-clock-lbl">Live Time · Tap to Wrap</div>
+      <div class="big-clock-lbl">${adminClockLabel}</div>
       <div id="next-out-countdown" class="countdown-txt"></div>
     </div>`;
 
@@ -2933,10 +2860,12 @@ async function addHistoryPlayerBet(date, name, betTime, betDate='') {
 function openLiveWrapActions(wrapTime) {
   if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
   const capturedWrap = String(wrapTime || nowHMS());
+  const hasSuggestion = Boolean(getPendingWrapSuggestion());
   openAdminDialog({
     title: 'Set Official Wrap',
     copy: `Time captured from the clock: ${capturedWrap}`,
     body: `<div class="admin-dialog-actions">
+      ${hasSuggestion ? '<button class="admin-dialog-action edit" type="button" data-admin-dialog-action="today-wrap-suggestion-open">Read Suggested Wrap Time</button>' : ''}
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-approve" data-wrap-time="${esc(capturedWrap)}">Approve ${esc(capturedWrap)}</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="today-wrap-manual">Manual</button>
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Undo</button>
@@ -3013,6 +2942,7 @@ async function confirmTodayWrap(wrapTime) {
   S.today.winners = winners;
   S.today.points = points;
   S.today.noWinner = noWinner;
+  delete S.today.wrapSuggestion;
 
   if (!noWinner) {
     winners.forEach(w => { S.scores[w.name] = (S.scores[w.name] || 0) + points; });
@@ -3146,6 +3076,31 @@ async function handleAdminDialogAction(btn) {
   }
   if (action === 'today-wrap-manual') {
     openManualTodayWrapDialog();
+    return;
+  }
+  if (action === 'player-wrap-suggestion-send') {
+    const sent = await submitPlayerWrapSuggestion(btn.dataset.wrapTime);
+    if (sent) closeAdminDialog();
+    return;
+  }
+  if (action === 'today-wrap-suggestion-open') {
+    openSuggestedWrapDialog();
+    return;
+  }
+  if (action === 'today-wrap-suggestion-ignore') {
+    const cleared = await clearWrapSuggestion();
+    if (cleared) closeAdminDialog();
+    return;
+  }
+  if (action === 'today-wrap-suggestion-approve') {
+    const suggestion = getPendingWrapSuggestion();
+    if (!suggestion) {
+      toast('No suggestion pending', 'err');
+      closeAdminDialog();
+      return;
+    }
+    const saved = await confirmTodayWrap(suggestion.time);
+    if (saved) closeAdminDialog();
     return;
   }
   if (action === 'roster-player-open') {
