@@ -29,7 +29,7 @@
     },
     () => {
       const name = storedNames[Math.floor(Math.random() * storedNames.length)];
-      return name ? `Tonight’s forecast: 100% chance of ${nameTag(name)} blaming lag.` : '';
+      return name ? `Today’s forecast: 100% chance of ${nameTag(name)} blaming lag.` : '';
     },
     () => {
       const name = storedNames[Math.floor(Math.random() * storedNames.length)];
