@@ -262,7 +262,7 @@ body::before {
 .compact-preview-row { grid-template-columns: minmax(0, 1fr) 76px 118px; column-gap: 8px; min-height: 40px; padding: 6px 0; }
 .compact-preview-row .row-name { color: var(--accent); font-size: .82rem; line-height: 1.05; }
 .bet-time-input,
-.compact-preview-row .bet-date-input { display: block; width: 100%; min-width: 0; height: 32px; padding: 6px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg4); font-size: .84rem; text-align: center; color: var(--accent); font-variant-numeric: tabular-nums; }
+.compact-preview-row .bet-date-input { display: block; width: 100%; min-width: 0; height: 32px; min-height: 32px; max-height: 32px; padding: 6px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg4); font-size: .84rem; line-height: 1; text-align: center; color: var(--accent); font-variant-numeric: tabular-nums; appearance: none; -webkit-appearance: none; }
 .compact-preview-row .bet-date-input { max-width: none; color: var(--text); }
 .compact-preview-row .b-missing { grid-column: 2 / -1; justify-self: stretch; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .admin-time-save-row { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }

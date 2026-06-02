@@ -3720,8 +3720,8 @@ function showPreview() {
             ${esc(g.name)} ${isDup ? '<span class="red" style="font-size:0.5rem; font-weight:bold;">(DUPLICATE)</span>' : ''}
           </div>
           ${g.time ? `
-            <input type="time" class="bet-time-input" id="bet-time-${g._previewIdx}" value="${esc(g.time)}" aria-label="${esc(g.name)} bet time">
-            <input type="date" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${esc(g.date)}" aria-label="${esc(g.name)} bet date">
+            <input type="text" class="bet-time-input" id="bet-time-${g._previewIdx}" value="${esc(g.time)}" placeholder="HH:MM" inputmode="text" maxlength="5" aria-label="${esc(g.name)} bet time">
+            <input type="text" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${esc(displayDate(g.date) || g.date)}" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10" aria-label="${esc(g.name)} bet date">
           ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
         </div>`;
       }).join('')}
@@ -3754,7 +3754,13 @@ function showPreview() {
 	          return null;
 	        }
 	        nextGuess.time = editedTime;
-	        nextGuess.date = document.getElementById(`bet-date-${nextGuess._previewIdx}`)?.value || nextGuess.date;
+	        const editedDateValue = document.getElementById(`bet-date-${nextGuess._previewIdx}`)?.value || nextGuess.date;
+	        const editedDate = parseDateInput(editedDateValue);
+	        if (!editedDate) {
+	          toast(`Check ${nextGuess.name}'s bet date`, 'err');
+	          return null;
+	        }
+	        nextGuess.date = editedDate;
 	      }
 	      delete nextGuess._previewIdx;
 	      return nextGuess;
