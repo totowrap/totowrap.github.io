@@ -372,12 +372,14 @@ function updatePullRefreshIndicator(distance=0, armed=false) {
   const indicator = pullRefreshIndicator();
   const progress = Math.max(0, Math.min(1, distance / PULL_REFRESH_DISTANCE));
   const eased = 1 - Math.pow(1 - progress, 2);
-  const y = -54 + eased * 72;
+  const y = -8 + eased * 18;
+  const contentY = eased * 42;
   const rotation = progress * 220;
   indicator.classList.toggle('show', distance > 8 || armed);
   indicator.classList.toggle('armed', armed);
   indicator.style.setProperty('--pull-y', `${y.toFixed(1)}px`);
   indicator.style.setProperty('--pull-rotate', `${rotation.toFixed(1)}deg`);
+  document.documentElement.style.setProperty('--pull-content-y', `${contentY.toFixed(1)}px`);
 }
 
 function resetPullRefreshIndicator() {
@@ -385,8 +387,9 @@ function resetPullRefreshIndicator() {
   const indicator = document.getElementById('pull-refresh-indicator');
   if (!indicator) return;
   indicator.classList.remove('show', 'armed', 'loading');
-  indicator.style.setProperty('--pull-y', '-54px');
+  indicator.style.setProperty('--pull-y', '-8px');
   indicator.style.setProperty('--pull-rotate', '0deg');
+  document.documentElement.style.setProperty('--pull-content-y', '0px');
 }
 
 document.addEventListener('touchstart', e => {
@@ -428,7 +431,8 @@ document.addEventListener('touchend', () => {
     const indicator = pullRefreshIndicator();
     indicator.classList.add('show', 'loading');
     indicator.classList.remove('armed');
-    indicator.style.setProperty('--pull-y', '18px');
+    indicator.style.setProperty('--pull-y', '10px');
+    document.documentElement.style.setProperty('--pull-content-y', '42px');
     setTimeout(() => location.reload(), 220);
     return;
   }

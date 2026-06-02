@@ -73,7 +73,7 @@ body::before {
 
 #app {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: 480px;
   margin: 0 auto;
   height: 100vh;
@@ -82,6 +82,8 @@ body::before {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transform: translate3d(0, var(--pull-content-y, 0px), 0);
+  transition: transform .24s cubic-bezier(.2,.9,.2,1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -606,12 +608,12 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 }
 
 .pull-refresh-indicator {
-  --pull-y: -54px;
+  --pull-y: -8px;
   --pull-rotate: 0deg;
   position: fixed;
   top: env(safe-area-inset-top, 0);
   left: 50%;
-  z-index: 9998;
+  z-index: 1;
   width: 42px;
   height: 42px;
   display: grid;
@@ -634,7 +636,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 }
 .pull-refresh-indicator.loading {
   opacity: 1;
-  transform: translate3d(-50%, 18px, 0);
+  transform: translate3d(-50%, 10px, 0);
 }
 .pull-refresh-indicator.loading img {
   animation: pull-refresh-spin .55s linear infinite;
