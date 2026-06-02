@@ -49,7 +49,9 @@ let _closenessArrowTurns = 0;
 let _swipeStart = null;
 let _suppressNextClick = false;
 let _dragState = null;
+let _pullRefreshState = null;
 let _inactiveAt = document.hidden ? Date.now() : null;
+let _inactivityTimer = null;
 let _stateReady = false;
 let _stateLoadFailed = false;
 let _lastSaveWasConflict = false;
@@ -58,8 +60,9 @@ let _bootHiddenPromise = null;
 let _bootFadeStartedPromise = null;
 let _territoryRuleMigrationPending = false;
 let _territoryRuleMigrationSaving = false;
-const INACTIVITY_REFRESH_MS = 5 * 60 * 1000;
+const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
+const PULL_REFRESH_DISTANCE = 125;
 const BOOT_TOTAL_MS = 4500;
 const BOOT_FADE_MS = 1500;
 const BOOT_PLAYER_NAMES_STORAGE_KEY = 'totowrap-boot-player-names';
@@ -187,14 +190,47 @@ function refreshAfterInactivity() {
   setStoredInactiveAt(null);
 }
 
+function scheduleVisibleInactivityRefresh() {
+  if (_inactivityTimer) clearTimeout(_inactivityTimer);
+  if (document.hidden) return;
+  _inactivityTimer = setTimeout(() => {
+    location.reload();
+  }, INACTIVITY_REFRESH_MS);
+}
+
+function recordActivity() {
+  _inactiveAt = null;
+  setStoredInactiveAt(null);
+  scheduleVisibleInactivityRefresh();
+}
+
+['pointerdown', 'keydown', 'click', 'scroll'].forEach(eventName => {
+  document.addEventListener(eventName, recordActivity, { passive: true, capture: true });
+});
+
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) markInactive();
-  else refreshAfterInactivity();
+  if (document.hidden) {
+    if (_inactivityTimer) clearTimeout(_inactivityTimer);
+    markInactive();
+  } else {
+    refreshAfterInactivity();
+    scheduleVisibleInactivityRefresh();
+  }
 }, { passive: true });
 window.addEventListener('pagehide', markInactive);
-window.addEventListener('pageshow', refreshAfterInactivity);
-window.addEventListener('focus', refreshAfterInactivity);
-document.addEventListener('resume', refreshAfterInactivity, false);
+window.addEventListener('pageshow', () => {
+  refreshAfterInactivity();
+  scheduleVisibleInactivityRefresh();
+});
+window.addEventListener('focus', () => {
+  refreshAfterInactivity();
+  scheduleVisibleInactivityRefresh();
+});
+document.addEventListener('resume', () => {
+  refreshAfterInactivity();
+  scheduleVisibleInactivityRefresh();
+}, false);
+scheduleVisibleInactivityRefresh();
 
 function getMainTabs() {
   if (IS_ADMIN && currentUser) return ['today', 'board', 'history', 'settings'];
@@ -305,6 +341,57 @@ function isSwipeIgnoredTarget(target) {
 function isMobileSwipeSurface() {
   return matchMedia('(pointer: coarse), (max-width: 700px)').matches;
 }
+
+function activePullRefreshScroller() {
+  const standalone = document.querySelector('.standalone-scroll');
+  if (standalone) return standalone;
+  return document.querySelector('.sec.on') || document.querySelector('.sec[data-view="' + _tab + '"]');
+}
+
+function canStartPullRefresh(target) {
+  if (!isMobileSwipeSurface() || isSwipeIgnoredTarget(target)) return false;
+  const scroller = activePullRefreshScroller();
+  if (!scroller) return false;
+  return scroller.scrollTop <= 0;
+}
+
+document.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1 || !canStartPullRefresh(e.target)) {
+    _pullRefreshState = null;
+    return;
+  }
+  _pullRefreshState = {
+    startX: e.touches[0].clientX,
+    startY: e.touches[0].clientY,
+    armed: false
+  };
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!_pullRefreshState || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - _pullRefreshState.startX;
+  const dy = e.touches[0].clientY - _pullRefreshState.startY;
+  if (dy <= 0 || Math.abs(dx) > dy * 0.75) {
+    _pullRefreshState = null;
+    return;
+  }
+  if (activePullRefreshScroller()?.scrollTop > 0) {
+    _pullRefreshState = null;
+    return;
+  }
+  if (dy > 16) e.preventDefault();
+  _pullRefreshState.armed = dy >= PULL_REFRESH_DISTANCE;
+}, { passive: false });
+
+document.addEventListener('touchend', () => {
+  const shouldRefresh = _pullRefreshState?.armed;
+  _pullRefreshState = null;
+  if (shouldRefresh) location.reload();
+}, { passive: true });
+
+document.addEventListener('touchcancel', () => {
+  _pullRefreshState = null;
+}, { passive: true });
 
 document.addEventListener('touchstart', e => {
   if (!isMobileSwipeSurface() || e.touches.length !== 1 || isSwipeIgnoredTarget(e.target)) {
