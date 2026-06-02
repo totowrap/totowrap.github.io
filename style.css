@@ -245,7 +245,6 @@ body::before {
 .row-name-main { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
 .row-boundary { color: var(--dim); font-size: .62rem; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .row-time { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .88rem; color: var(--accent); min-width: auto; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.row-pts { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 1.25rem; min-width: 28px; text-align: right; }
 .badge { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .50rem; letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; border-radius: 20px; white-space: nowrap; font-weight: bold; }
 .b-in, .b-out, .b-win { min-width: 36px; text-align: center; }
 .b-in { background: rgba(var(--green-rgb), .12); color: var(--green); }
@@ -266,7 +265,6 @@ body::before {
 .compact-preview-row .bet-date-input { display: block; width: 100%; min-width: 0; height: 32px; padding: 6px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg4); font-size: .84rem; text-align: center; color: var(--accent); font-variant-numeric: tabular-nums; }
 .compact-preview-row .bet-date-input { max-width: none; color: var(--text); }
 .compact-preview-row .b-missing { grid-column: 2 / -1; justify-self: stretch; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
-.admin-bet-close-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; }
 .admin-time-save-row { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }
 .admin-close-save-row { position: relative; min-height: 32px; display: block; width: 100%; }
 .admin-close-save-row .admin-time-input { position: absolute; left: 50%; top: 50%; display: block; margin: 0; transform: translate(-50%,-50%); }
@@ -299,6 +297,10 @@ input[type=number] { background: var(--bg3); border: 1px solid var(--border); bo
 textarea { resize: vertical; min-height: 140px; font-size: .85rem; line-height: 1.6; }
 input:focus, textarea:focus { border-color: var(--accent); }
 input::placeholder, textarea::placeholder { color: var(--dim); }
+.chat-upload-wrap { margin-top: 10px; }
+.chat-upload-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.chat-upload-btn { text-align: center; }
+.chat-upload-note { margin-top: 7px; font-size: .62rem; line-height: 1.25; text-align: center; }
 .btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 7px; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: background .15s, opacity .15s; }
 .btn + .btn { margin-top: 8px; }
 .btn:disabled { opacity: .4; cursor: default; }
@@ -307,7 +309,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .btn-s { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
 .btn-s:hover { background: var(--bg4); }
 .btn-d { background: rgba(var(--red-rgb), .12); color: var(--red); border: 1px solid rgba(var(--red-rgb), .25); }
-.btn-sm { width: auto; padding: 8px 14px; font-size: .65rem; }
 .settings-row { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .settings-row:last-of-type { border-bottom: none; }
 .settings-name-input { flex: 1 1 auto; min-width: 0; height: 32px; padding: 6px 9px; font-size: .84rem; background: var(--bg4); }
@@ -323,12 +324,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .settings-add-player { margin-top: 12px; }
 .big-clock { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 3.8rem; letter-spacing: .04em; color: var(--accent); text-align: center; line-height: 1; }
 .admin-clock-trigger { appearance: none; display: block; width: 100%; border: 0; background: none; padding: 0; cursor: pointer; user-select: none; }
-.player-clock-trigger { appearance: none; display: block; width: 100%; border: 0; background: none; padding: 0; cursor: pointer; user-select: none; }
-.player-clock-trigger:disabled { color: var(--accent); cursor: default; opacity: 1; }
 .big-clock-lbl { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); text-align: center; margin-top: 4px; }
-.player-wrap-suggestion-hint { display: none; }
-.player-wrap-suggestion-hint.on { display: inline; }
-.wrap-suggestion-pending { color: var(--green); }
 .countdown-txt {
   font-family: 'Alte Haas Grotesk', sans-serif;
   font-size: 0.85rem;
@@ -379,8 +375,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .winner-sub { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
 .winner-name { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 2.8rem; color: var(--accent); letter-spacing: .04em; line-height: 1; }
 .winner-pts { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .7rem; color: var(--dim); margin-top: 4px; }
-.lb-rank { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 1.8rem; min-width: 32px; color: var(--dim); }
-.lb-rank.first { color: var(--accent); }
 .day-footer { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .67rem; color: var(--dim); margin-top: 8px; }
 .bnd-duration { color: inherit; margin-left: 8px; }
 #toast { position: fixed; bottom: 125px; left: 50%; transform: translateX(-50%) translateY(12px); background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 18px; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .72rem; white-space: nowrap; max-width: 90vw; opacity: 0; transition: opacity .25s, transform .25s; z-index: 9000; }
@@ -571,14 +565,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .admin-dialog-input-wrap { margin-bottom: 10px; border: 1px solid rgba(var(--neutral-rgb), .14); border-radius: 8px; padding: 12px; background: rgba(38,55,89,.48); }
 .admin-dialog-input-wrap .inp-lbl { margin-bottom: 7px; }
 .admin-dialog-wrap-input { min-height: 44px; color: var(--accent); text-align: center; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
-.suggest-card { display: grid; gap: 12px; }
-.suggest-preview { padding: 13px; border: 1px solid rgba(var(--neutral-rgb), .12); border-radius: 8px; background: rgba(38,55,89,.48); }
-.suggest-time { margin-top: 8px; color: var(--accent); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 2.35rem; line-height: .9; text-align: center; font-variant-numeric: tabular-nums; }
-.suggest-age { margin-top: 9px; color: var(--dim); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .68rem; line-height: 1.2; text-align: center; }
-.mini-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
-.mini { display: grid; align-content: center; justify-items: center; min-height: 70px; padding: 8px; border: 1px solid rgba(var(--yellow-rgb), .13); border-radius: 8px; background: rgba(38,55,89,.42); text-align: center; }
-.mini strong { max-width: 100%; color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .98rem; line-height: 1; overflow-wrap: anywhere; }
-.mini span { color: var(--dim); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .48rem; line-height: 1; text-transform: uppercase; margin-top: 6px; }
 @supports (-webkit-backdrop-filter: blur(1px)) {
   .admin-dialog-modal { -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
   .admin-dialog-panel { background: linear-gradient(135deg, rgba(46,60,87,.76), rgba(38,55,89,.9)); -webkit-backdrop-filter: blur(14px) saturate(135%); backdrop-filter: blur(14px) saturate(135%); }

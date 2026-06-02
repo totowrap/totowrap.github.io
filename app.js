@@ -411,12 +411,6 @@ document.addEventListener('click', e => {
     return;
   }
 
-  const playerWrapSuggestionBtn = e.target.closest?.('[data-player-wrap-suggest]');
-  if (playerWrapSuggestionBtn && !playerWrapSuggestionBtn.disabled) {
-    openPlayerWrapSuggestionDialog();
-    return;
-  }
-
   const shareCloseBtn = e.target.closest?.('[data-share-close]');
   if (shareCloseBtn || e.target.id === 'share-result-modal') {
     closeShareResult();
@@ -779,6 +773,319 @@ function gameNowSec(day=S.today) {
   return normalizeGameSec(sec, day, localDateISO());
 }
 
+const CHAT_ALIASES = {
+  bea: 'Beatrice M.',
+  ric: 'Riccardo',
+  franci: 'Francesca',
+  edo: 'Edoardo'
+};
+const CHAT_INVISIBLE_RE = /[\u200e\u200f\ufeff\u2066\u2067\u2068\u2069]/g;
+const CHAT_EDITED_RE = /\s*(?:<Questo messaggio è stato modificato>|This message was edited)\s*/gi;
+const CHAT_DATE_RE = '\\d{1,2}\\/\\d{1,2}\\/\\d{2}';
+const CHAT_CLOCK_RE = '\\d{1,2}:\\d{2}:\\d{2}';
+const CHAT_BET_TIME_RE = '\\d{1,2}[:.,]\\d{2}';
+const CHAT_HEADER_RE = new RegExp(`^[\\u200e\\u200f\\ufeff\\u2066\\u2067\\u2068\\u2069\\s]*\\[(${CHAT_DATE_RE}),\\s*(${CHAT_CLOCK_RE})\\]\\s*(.+?):\\s?(.*)$`);
+const CHAT_SERVICE_HEADER_RE = new RegExp(`^[\\u200e\\u200f\\ufeff\\u2066\\u2067\\u2068\\u2069\\s]*\\[(${CHAT_DATE_RE}),\\s*(${CHAT_CLOCK_RE})\\]\\s*(.*)$`);
+const CHAT_EXPLICIT_BET_RE = new RegExp(`^\\s*([A-Za-zÀ-ÖØ-öø-ÿ .'’~\\-]+)\\s*[-–—]\\s*(${CHAT_BET_TIME_RE})\\s*[.!]*\\s*$`, 'i');
+const CHAT_TIME_FINDER_RE = new RegExp(`(?<!\\d)(${CHAT_BET_TIME_RE})(?!\\d)`, 'g');
+const CHAT_SENDER_ONLY_RE = new RegExp(`^\\s*(?:cambio\\s*[:,]?\\s*)?(${CHAT_BET_TIME_RE})(.*)$`, 'i');
+const CHAT_SENTENCE_CONTEXT_WORDS = new Set(['al','alla','alle','andare','barca','chi','dovrebbe','le','mancano','minuti','minuto','oltre','ora','ore','per','quando']);
+const CHAT_ALLOWED_SHORT_TRAILING_WORDS = new Set(['dai','su','circa','credo','direi','forse','boh','va','vai']);
+
+function stripChatInvisible(text) {
+  return String(text || '').replace(CHAT_INVISIBLE_RE, '');
+}
+
+function cleanChatBody(body) {
+  return stripChatInvisible(body).replace(CHAT_EDITED_RE, ' ').replace(/[\u00a0\u202f]/g, ' ').trim();
+}
+
+function cleanChatName(raw) {
+  return stripChatInvisible(raw).replace(/[\u00a0\u202f]/g, ' ').replace(/^[\s~\-–—]+/, '').trim().split(/\s+/).join(' ');
+}
+
+function chatNameTokens(raw) {
+  return cleanChatName(raw).match(/[A-Za-zÀ-ÖØ-öø-ÿ]+\.?/g) || [];
+}
+
+function chatAliasKey(raw) {
+  return chatNameTokens(raw).map(token => token.replace(/\.$/, '').toLocaleLowerCase()).join(' ');
+}
+
+function prettyChatWord(word) {
+  const cleaned = String(word || '').trim().replace(/\.$/, '');
+  return cleaned ? cleaned.slice(0, 1).toLocaleUpperCase() + cleaned.slice(1).toLocaleLowerCase() : cleaned;
+}
+
+function chatSenderCoreName(raw) {
+  return chatNameTokens(raw).map(token => token.replace(/\.$/, '')).join(' ').toLocaleLowerCase();
+}
+
+function isLuigiVacchelli(sender) {
+  return chatSenderCoreName(sender) === 'luigi vacchelli';
+}
+
+function parseChatDate(dateText) {
+  const parts = String(dateText || '').split('/').map(Number);
+  if (parts.length !== 3 || parts.some(part => !Number.isFinite(part))) return null;
+  return new Date(2000 + parts[2], parts[1] - 1, parts[0]);
+}
+
+function parseChatDateTime(dateText, timeText) {
+  const d = parseChatDate(dateText);
+  if (!d) return null;
+  const parts = String(timeText || '').split(':').map(Number);
+  if (parts.length !== 3 || parts.some(part => !Number.isFinite(part))) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), parts[0], parts[1], parts[2]);
+}
+
+function chatDateISO(d) {
+  return d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : '';
+}
+
+function chatCompactText(text) {
+  return cleanChatBody(text).split(/\s+/).filter(Boolean).join(' ');
+}
+
+function chatBodyFirstLine(body) {
+  return cleanChatBody(body).split(/\r?\n/)[0]?.trim() || '';
+}
+
+function parseWhatsAppMessages(text) {
+  const messages = [];
+  let current = null;
+  let index = 0;
+  const flush = () => {
+    if (current) {
+      messages.push(current);
+      current = null;
+    }
+  };
+
+  String(text || '').split(/\r?\n/).forEach(rawLine => {
+    const line = rawLine.replace(/\r$/, '');
+    const header = line.match(CHAT_HEADER_RE);
+    if (header) {
+      flush();
+      const dt = parseChatDateTime(header[1], header[2]);
+      if (!dt) return;
+      current = {
+        dateText: header[1],
+        timeText: header[2],
+        sender: stripChatInvisible(header[3]).trim(),
+        body: stripChatInvisible(header[4]),
+        dt,
+        index: index++
+      };
+      return;
+    }
+
+    if (line.match(CHAT_SERVICE_HEADER_RE)) {
+      flush();
+      return;
+    }
+
+    if (current) current.body += `\n${stripChatInvisible(line)}`;
+  });
+
+  flush();
+  return messages;
+}
+
+function chatAliasResolvedTokens(rawName) {
+  const key = chatAliasKey(rawName);
+  return chatNameTokens(CHAT_ALIASES[key] || rawName);
+}
+
+function duplicateChatFirstNames(messages) {
+  const firstToSignatures = new Map();
+  messages.forEach(msg => {
+    const tokens = chatAliasResolvedTokens(msg.sender);
+    if (!tokens.length) return;
+    const first = tokens[0].replace(/\.$/, '').toLocaleLowerCase();
+    const signature = tokens.map(token => token.replace(/\.$/, '').toLocaleLowerCase()).join(' ');
+    if (!firstToSignatures.has(first)) firstToSignatures.set(first, new Set());
+    firstToSignatures.get(first).add(signature);
+  });
+  return new Set([...firstToSignatures.entries()].filter(([, signatures]) => signatures.size >= 2).map(([first]) => first));
+}
+
+function normalizeChatName(rawName, duplicateFirstNames) {
+  const cleaned = cleanChatName(rawName);
+  const key = chatAliasKey(cleaned);
+  if (CHAT_ALIASES[key]) return CHAT_ALIASES[key];
+  const tokens = chatNameTokens(cleaned);
+  if (!tokens.length) return cleaned || 'Unknown';
+
+  const first = prettyChatWord(tokens[0]);
+  const firstKey = tokens[0].replace(/\.$/, '').toLocaleLowerCase();
+  if (tokens.length >= 2) {
+    const second = tokens[1].replace(/\.$/, '');
+    if (second.length === 1) return `${first} ${second.toLocaleUpperCase()}.`;
+    if (duplicateFirstNames.has(firstKey)) return `${first} ${second.slice(0, 1).toLocaleUpperCase()}.`;
+  }
+  return first;
+}
+
+function normalizeChatBetTime(rawTime) {
+  const match = String(rawTime || '').match(/^\s*(\d{1,2})[:.,](\d{2})\s*$/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!(hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59)) return null;
+  return `${pad(hour)}:${pad(minute)}`;
+}
+
+function chatWords(text) {
+  return (String(text || '').match(/[A-Za-zÀ-ÖØ-öø-ÿ]+/g) || []).map(word => word.toLocaleLowerCase());
+}
+
+function chatBodyIsResultBoundary(body) {
+  return /^TotoWrap result\s*-\s*Day\s+\d+\b/i.test(chatBodyFirstLine(body));
+}
+
+function chatBodyIsStopBoundary(body) {
+  return /^Stop\b/i.test(chatBodyFirstLine(body));
+}
+
+function chatBodyIsRecapList(body) {
+  const lines = cleanChatBody(body).split(/\r?\n/).map(line => chatCompactText(line).replace(/^[ _*~]+|[ _*~]+$/g, '')).filter(Boolean);
+  return lines.length >= 2
+    && /^TonnoWrap\s*-\s*Day\s+\d+\b/i.test(lines[0])
+    && new RegExp(`^Wrap\\s+${CHAT_BET_TIME_RE}\\b`, 'i').test(lines[1]);
+}
+
+function chatCurrentDayStop(messages, targetISO) {
+  const candidates = messages
+    .filter(msg => chatDateISO(msg.dt) === targetISO && isLuigiVacchelli(msg.sender) && chatBodyIsStopBoundary(msg.body))
+    .map(msg => msg.dt.getTime());
+  return candidates.length ? new Date(Math.min(...candidates)) : null;
+}
+
+function chatPreviousBoundary(messages, targetISO) {
+  const previousISO = addDaysISO(targetISO, -1);
+  const candidates = messages
+    .filter(msg => chatDateISO(msg.dt) === previousISO && isLuigiVacchelli(msg.sender) && chatBodyIsResultBoundary(msg.body))
+    .map(msg => msg.dt.getTime());
+  return candidates.length ? new Date(Math.max(...candidates)) : null;
+}
+
+function chatMessageInsideWindow(msg, targetISO, previousBoundary, stop) {
+  const previousISO = addDaysISO(targetISO, -1);
+  const msgISO = chatDateISO(msg.dt);
+  if (msgISO === previousISO) return Boolean(previousBoundary) && msg.dt > previousBoundary;
+  if (msgISO === targetISO) return !stop || msg.dt < stop;
+  return false;
+}
+
+function chatExplicitNameIsPlausible(rawName) {
+  if (/\d/.test(rawName)) return false;
+  const tokens = chatNameTokens(rawName).map(token => token.replace(/\.$/, ''));
+  return tokens.length >= 1 && tokens.length <= 3;
+}
+
+function extractSenderOnlyChatBet(body, sender, duplicateFirstNames) {
+  const text = chatCompactText(body);
+  if (!text || text.includes('?')) return null;
+  const timeMatches = [...text.matchAll(CHAT_TIME_FINDER_RE)];
+  if (timeMatches.length !== 1) return null;
+  const match = text.match(CHAT_SENDER_ONLY_RE);
+  if (!match) return null;
+
+  const trailing = match[2].trim().replace(/[.!…]+$/, '').trim();
+  const trailingWords = chatWords(trailing);
+  if (trailingWords.length > 3) return null;
+  if (trailingWords.some(word => CHAT_SENTENCE_CONTEXT_WORDS.has(word))) return null;
+  if (trailingWords.length && !trailingWords.every(word => CHAT_ALLOWED_SHORT_TRAILING_WORDS.has(word))) return null;
+
+  const betTime = normalizeChatBetTime(match[1]);
+  return betTime ? [normalizeChatName(sender, duplicateFirstNames), betTime] : null;
+}
+
+function extractExplicitChatBets(body, duplicateFirstNames) {
+  const bets = [];
+  cleanChatBody(body).split(/\r?\n/).forEach(rawLine => {
+    const line = chatCompactText(rawLine);
+    if (!line) return;
+    const match = line.match(CHAT_EXPLICIT_BET_RE);
+    if (!match || !chatExplicitNameIsPlausible(match[1])) return;
+    const betTime = normalizeChatBetTime(match[2]);
+    if (betTime) bets.push([normalizeChatName(match[1], duplicateFirstNames), betTime]);
+  });
+  return bets;
+}
+
+function extractChatBetsFromBody(body, sender, duplicateFirstNames) {
+  const senderOnly = extractSenderOnlyChatBet(body, sender, duplicateFirstNames);
+  return senderOnly ? [senderOnly] : extractExplicitChatBets(body, duplicateFirstNames);
+}
+
+function chatBodyIsExactTime(body) {
+  return new RegExp(`^${CHAT_BET_TIME_RE}$`).test(chatCompactText(body));
+}
+
+function chatLuigiAnnouncementIndexes(messages) {
+  const sorted = [...messages].sort((a, b) => a.dt - b.dt || a.index - b.index);
+  const ignore = new Set();
+  sorted.forEach((msg, pos) => {
+    if (!isLuigiVacchelli(msg.sender) || !chatBodyIsExactTime(msg.body)) return;
+    const beforeText = sorted.slice(Math.max(0, pos - 4), pos)
+      .filter(other => msg.dt - other.dt >= 0 && msg.dt - other.dt <= 180000)
+      .map(other => cleanChatBody(other.body).toLocaleLowerCase()).join(' ');
+    const afterText = sorted.slice(pos + 1, pos + 5)
+      .filter(other => other.dt - msg.dt >= 0 && other.dt - msg.dt <= 180000)
+      .map(other => cleanChatBody(other.body).toLocaleLowerCase()).join(' ');
+    if (beforeText.includes('last bet') || beforeText.includes('chius') || afterText.includes('countdown') || afterText.includes('conto alla rovescia')) {
+      ignore.add(msg.index);
+    }
+  });
+  return ignore;
+}
+
+function extractBetsFromChatText(chatText, targetISO) {
+  const messages = parseWhatsAppMessages(chatText);
+  const duplicateFirstNames = duplicateChatFirstNames(messages);
+  const previousBoundary = chatPreviousBoundary(messages, targetISO);
+  const stop = chatCurrentDayStop(messages, targetISO);
+  const ignoredIndexes = chatLuigiAnnouncementIndexes(messages);
+  const bets = new Map();
+
+  [...messages].sort((a, b) => a.dt - b.dt || a.index - b.index).forEach(msg => {
+    if (ignoredIndexes.has(msg.index)) return;
+    if (!chatMessageInsideWindow(msg, targetISO, previousBoundary, stop)) return;
+    if (chatBodyIsRecapList(msg.body)) return;
+    extractChatBetsFromBody(msg.body, msg.sender, duplicateFirstNames).forEach(([name, betTime]) => {
+      bets.set(name, betTime);
+    });
+  });
+
+  return [...bets.entries()]
+    .sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]))
+    .map(([name, betTime]) => `${name} - ${betTime}`)
+    .join('\n');
+}
+
+async function handleChatUpload(file) {
+  if (!file) return;
+  const targetISO = S.today?.date || localDateISO();
+  try {
+    const text = await file.text();
+    const extracted = extractBetsFromChatText(text, targetISO);
+    const textarea = document.getElementById('paste-inp');
+    if (!textarea) return;
+    if (!extracted.trim()) {
+      toast('No bets found in chat file', 'err');
+      return;
+    }
+    textarea.value = extracted;
+    const count = extracted.split('\n').filter(Boolean).length;
+    toast(`Loaded ${count} bets from chat`, 'ok');
+  } catch(e) {
+    console.error('Chat upload error:', e);
+    toast('Could not read chat file', 'err');
+  }
+}
+
 function parsePaste(text) {
   const lines = text.trim().split('\n').filter(l => l.trim());
   const guesses = [];
@@ -1035,17 +1342,6 @@ function updateBetCloseCountdown() {
   });
 }
 
-function updatePlayerWrapSuggestionState() {
-  const ready = isPlayerWrapSuggestionReady();
-  document.querySelectorAll('[data-player-wrap-suggest]').forEach(btn => {
-    btn.disabled = !ready;
-    btn.classList.toggle('is-suggestion-ready', ready);
-  });
-  document.querySelectorAll('.player-wrap-suggestion-hint').forEach(hint => {
-    hint.classList.toggle('on', ready);
-  });
-}
-
 function tickClock() {
   const t = nowHMS();
   const cur = gameNowSec();
@@ -1053,7 +1349,6 @@ function tickClock() {
   // Update all clocks on the page
   document.querySelectorAll('.js-clock').forEach(el => el.textContent = t);
   updateBetCloseCountdown();
-  updatePlayerWrapSuggestionState();
   
   const countdownEl = document.getElementById('next-out-countdown');
   if (!countdownEl || !S.today || !S.today.guesses || S.today.wrapTime) {
@@ -1591,144 +1886,6 @@ function renderShareResultCard(info) {
   </article>`;
 }
 
-function firstTerritoryStartSec(day=S.today) {
-  const slices = boundaries(day?.guesses || [], day);
-  if (!slices.length) return null;
-  return Math.min(...slices.map(slice => slice.start));
-}
-
-function isPlayerWrapSuggestionReady(day=S.today) {
-  if (IS_ADMIN || !day || day.wrapTime || !Array.isArray(day.guesses)) return false;
-  const start = firstTerritoryStartSec(day);
-  return start !== null && gameNowSec(day) >= start;
-}
-
-function getPendingWrapSuggestion(day=S.today) {
-  if (!day || day.wrapTime || !day.wrapSuggestion?.time) return null;
-  return day.wrapSuggestion;
-}
-
-function formatSuggestionAge(sentAt) {
-  const stamp = Number(sentAt) || 0;
-  if (!stamp) return 'just now';
-  const diff = Math.max(0, Math.floor((Date.now() - stamp) / 1000));
-  if (diff < 60) return `${diff}s ago`;
-  const min = Math.floor(diff / 60);
-  if (min < 60) return `${min}m ago`;
-  return `${Math.floor(min / 60)}h ago`;
-}
-
-function openPlayerWrapSuggestionDialog() {
-  if (!isPlayerWrapSuggestionReady()) return;
-  const capturedWrap = nowHMS();
-  openAdminDialog({
-    title: 'Suggest Wrap Time',
-    copy: 'Send this live time to admin for approval?',
-    body: `<div class="suggest-card">
-      <div class="suggest-preview">
-        <div class="card-lbl">Your Suggested Time</div>
-        <div class="suggest-time">${esc(capturedWrap)}</div>
-        <div class="suggest-age">Admin must approve before the result changes</div>
-      </div>
-      <div class="admin-dialog-split">
-        <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Ignore</button>
-        <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="player-wrap-suggestion-send" data-wrap-time="${esc(capturedWrap)}">Send</button>
-      </div>
-    </div>`
-  });
-}
-
-async function submitPlayerWrapSuggestion(wrapTime) {
-  const normalizedWrap = String(wrapTime || '').trim();
-  if (!isValidHMS(normalizedWrap)) {
-    toast('Use a valid wrap time', 'err');
-    return false;
-  }
-  if (!isPlayerWrapSuggestionReady()) {
-    toast('Wrap suggestion is not available yet', 'err');
-    return false;
-  }
-
-  try {
-    let committedState = null;
-    await runTransaction(db, async transaction => {
-      const snap = await transaction.get(STATE_REF);
-      const nextState = normalizeState(snap.exists() ? snap.data() : {});
-      if (!nextState.today || nextState.today.wrapTime || !Array.isArray(nextState.today.guesses)) {
-        throw new Error('Wrap suggestion is not available');
-      }
-      const start = firstTerritoryStartSec(nextState.today);
-      if (start === null || gameNowSec(nextState.today) < start) {
-        throw new Error('Wrap suggestion is not available yet');
-      }
-      nextState.today.wrapSuggestion = {
-        time: normalizedWrap,
-        sentAt: Date.now(),
-        date: nextState.today.date || localDateISO(),
-        source: 'player-clock'
-      };
-      nextState._version = (Number(nextState._version) || 0) + 1;
-      transaction.set(STATE_REF, nextState);
-      committedState = nextState;
-    });
-    if (committedState) S = committedState;
-    closeAdminDialog();
-    toast('Suggestion sent to admin', 'ok');
-    render();
-    return true;
-  } catch(e) {
-    console.error('Wrap suggestion error:', e);
-    const permission = e?.code === 'permission-denied';
-    toast(permission ? 'Suggestion blocked by Firebase rules' : (e?.message || 'Could not send suggestion'), 'err');
-    return false;
-  }
-}
-
-function openSuggestedWrapDialog() {
-  if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
-  const suggestion = getPendingWrapSuggestion();
-  if (!suggestion) return;
-  const preview = calcWinner(S.today.guesses || [], suggestion.time, S.today);
-  const winnerNames = preview.noWinner
-    ? []
-    : preview.winners?.map(w => w.name).filter(Boolean) || (preview.winner ? [preview.winner] : []);
-  const winnerLabel = preview.noWinner ? 'No Winner' : formatNames(winnerNames);
-  const winnerGuess = preview.noWinner ? null : (S.today.guesses || []).find(g => winnerNames.includes(g.name) && g.time);
-  const gap = winnerGuess ? Math.abs(guessGameSec(winnerGuess, S.today) - normalizeGameSec(suggestion.time, S.today)) : null;
-
-  openAdminDialog({
-    title: 'Suggested Wrap Time',
-    copy: 'A player tapped the live clock and sent this time for admin approval.',
-    body: `<div class="suggest-card">
-      <div class="suggest-preview">
-        <div class="card-lbl">Player Suggested</div>
-        <div class="suggest-time">${esc(suggestion.time)}</div>
-        <div class="suggest-age">Sent ${esc(formatSuggestionAge(suggestion.sentAt))}</div>
-      </div>
-      <div class="mini-grid">
-        <div class="mini"><strong>${esc(winnerLabel)}</strong><span>Preview Winner</span></div>
-        <div class="mini"><strong>+${Number(preview.points) || 0}</strong><span>Preview Points</span></div>
-        <div class="mini"><strong>${gap === null ? '--' : esc(formatBoardGap(gap))}</strong><span>Distance</span></div>
-      </div>
-      <div class="admin-dialog-split">
-        <button class="admin-dialog-action undo" type="button" data-admin-dialog-action="today-wrap-suggestion-ignore">Ignore</button>
-        <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-suggestion-approve">Approve</button>
-      </div>
-    </div>`
-  });
-}
-
-async function clearWrapSuggestion() {
-  if (!IS_ADMIN || !S.today?.wrapSuggestion) return false;
-  const prevS = cloneState();
-  delete S.today.wrapSuggestion;
-  const saved = await saveS();
-  if (!saved) { restoreAfterFailedSave(prevS); return false; }
-  toast('Suggestion ignored', 'ok');
-  render();
-  return true;
-}
-
 function openShareResult() {
   if (!IS_ADMIN || !S.today?.wrapTime) return;
   closeShareResult();
@@ -2002,14 +2159,13 @@ function renderPlayerToday() {
   const cur = gameNowSec(t);
   const out = eliminated(t.guesses, cur, t);
   const slices = boundaries(t.guesses, t);
-  const wrapSuggestionReady = isPlayerWrapSuggestionReady(t);
 
   return `
   <div class="card">
     <div style="display: flex; align-items: center; justify-content: center;">
-      <button class="big-clock js-clock player-clock-trigger${wrapSuggestionReady ? ' is-suggestion-ready' : ''}" type="button" data-player-wrap-suggest ${wrapSuggestionReady ? '' : 'disabled'} aria-label="Suggest official wrap time">--:--:--</button>
+      <div class="big-clock js-clock">--:--:--</div>
     </div>
-    <div class="big-clock-lbl">Live Time<span class="player-wrap-suggestion-hint${wrapSuggestionReady ? ' on' : ''}"> · Tap to Suggest</span></div>
+    <div class="big-clock-lbl">Live Time</div>
     <div id="next-out-countdown" class="countdown-txt"></div>
   </div>
   <div class="card"><div class="card-lbl">${statusHeader}</div>
@@ -2066,16 +2222,12 @@ function renderToday() {
     </div>`;
   }
 
-  const pendingSuggestion = getPendingWrapSuggestion(t);
-  const adminClockLabel = pendingSuggestion
-    ? 'Live Time · Tap to Wrap · <span class="wrap-suggestion-pending">Suggestion Pending</span>'
-    : 'Live Time · Tap to Wrap';
   const clockCard = `
     <div class="card">
       <div style="display: flex; align-items: center; justify-content: center;">
         <button class="big-clock js-clock admin-clock-trigger" id="admin-clock" type="button" title="Tap to set wrap time">--:--:--</button>
       </div>
-      <div class="big-clock-lbl">${adminClockLabel}</div>
+      <div class="big-clock-lbl">Live Time · Tap to Wrap</div>
       <div id="next-out-countdown" class="countdown-txt"></div>
     </div>`;
 
@@ -2122,6 +2274,11 @@ function renderToday() {
 Luigi - 18:30
 Daniela - 19:15
 Marco - 17:45"></textarea>
+      <div class="chat-upload-wrap">
+        <label class="btn btn-s chat-upload-btn" for="chat-upload-input">Upload _chat.txt</label>
+        <input class="chat-upload-input" id="chat-upload-input" type="file" accept=".txt,text/plain">
+        <p class="mono dim chat-upload-note">Or upload a WhatsApp chat export and review the extracted bets below.</p>
+      </div>
       <button class="btn btn-p mt12" id="parse-btn">Preview Guesses →</button>
     </div>
   `;
@@ -2860,12 +3017,10 @@ async function addHistoryPlayerBet(date, name, betTime, betDate='') {
 function openLiveWrapActions(wrapTime) {
   if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
   const capturedWrap = String(wrapTime || nowHMS());
-  const hasSuggestion = Boolean(getPendingWrapSuggestion());
   openAdminDialog({
     title: 'Set Official Wrap',
     copy: `Time captured from the clock: ${capturedWrap}`,
     body: `<div class="admin-dialog-actions">
-      ${hasSuggestion ? '<button class="admin-dialog-action edit" type="button" data-admin-dialog-action="today-wrap-suggestion-open">Read Suggested Wrap Time</button>' : ''}
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-approve" data-wrap-time="${esc(capturedWrap)}">Approve ${esc(capturedWrap)}</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="today-wrap-manual">Manual</button>
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Undo</button>
@@ -2942,7 +3097,6 @@ async function confirmTodayWrap(wrapTime) {
   S.today.winners = winners;
   S.today.points = points;
   S.today.noWinner = noWinner;
-  delete S.today.wrapSuggestion;
 
   if (!noWinner) {
     winners.forEach(w => { S.scores[w.name] = (S.scores[w.name] || 0) + points; });
@@ -3076,31 +3230,6 @@ async function handleAdminDialogAction(btn) {
   }
   if (action === 'today-wrap-manual') {
     openManualTodayWrapDialog();
-    return;
-  }
-  if (action === 'player-wrap-suggestion-send') {
-    const sent = await submitPlayerWrapSuggestion(btn.dataset.wrapTime);
-    if (sent) closeAdminDialog();
-    return;
-  }
-  if (action === 'today-wrap-suggestion-open') {
-    openSuggestedWrapDialog();
-    return;
-  }
-  if (action === 'today-wrap-suggestion-ignore') {
-    const cleared = await clearWrapSuggestion();
-    if (cleared) closeAdminDialog();
-    return;
-  }
-  if (action === 'today-wrap-suggestion-approve') {
-    const suggestion = getPendingWrapSuggestion();
-    if (!suggestion) {
-      toast('No suggestion pending', 'err');
-      closeAdminDialog();
-      return;
-    }
-    const saved = await confirmTodayWrap(suggestion.time);
-    if (saved) closeAdminDialog();
     return;
   }
   if (action === 'roster-player-open') {
@@ -3617,6 +3746,9 @@ function bindMain() {
     render();
   });
   document.getElementById('parse-btn')?.addEventListener('click', showPreview);
+  document.getElementById('chat-upload-input')?.addEventListener('change', e => {
+    handleChatUpload(e.target.files?.[0]);
+  });
   document.getElementById('save-est-wrap-btn')?.addEventListener('click', saveEstimatedWrapTime);
   document.getElementById('clear-est-wrap-btn')?.addEventListener('click', clearEstimatedWrapTime);
   document.getElementById('save-bet-close-btn')?.addEventListener('click', saveBetCloseTime);
