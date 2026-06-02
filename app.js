@@ -2368,6 +2368,20 @@ function scrollAccuracyGraphIntoViewIfNeeded() {
   });
 }
 
+function contrastTextForHex(hex) {
+  const match = String(hex || '').trim().match(/^#?([0-9a-f]{6})$/i);
+  if (!match) return '#ffffff';
+  const value = match[1];
+  const channels = [0, 2, 4].map(pos => {
+    const raw = parseInt(value.slice(pos, pos + 2), 16) / 255;
+    return raw <= 0.03928 ? raw / 12.92 : Math.pow((raw + 0.055) / 1.055, 2.4);
+  });
+  const luminance = channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+  const blackContrast = (luminance + 0.05) / 0.05;
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  return blackContrast > whiteContrast ? '#111827' : '#ffffff';
+}
+
 function renderBoardPie(pl) {
   const COLORS = [
     '#e3b74f', '#6dd87a', '#e06c6c', '#5bc8f5', '#f07dba',
@@ -2431,7 +2445,8 @@ function renderBoardPie(pl) {
       const rotation = ((((mid + Math.PI) * 180 / Math.PI) % 360 + 360) % 360).toFixed(1);
       const transform = rotateLabel ? ` transform="rotate(${rotation} ${lx.toFixed(1)} ${ly.toFixed(1)})"` : '';
       const anchor = rotateLabel ? 'start' : 'middle';
-      labelSVG += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}"${transform} text-anchor="${anchor}" dominant-baseline="middle" font-family="'Alte Haas Grotesk',sans-serif" font-size="${fs}" font-style="italic" fill="#ffffff" style="pointer-events:none;">${esc(p.name)}</text>`;
+      const labelColor = contrastTextForHex(color);
+      labelSVG += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}"${transform} text-anchor="${anchor}" dominant-baseline="middle" font-family="'Alte Haas Grotesk',sans-serif" font-size="${fs}" font-style="italic" fill="${labelColor}" style="pointer-events:none;">${esc(p.name)}</text>`;
     }
 
     angle = end;
