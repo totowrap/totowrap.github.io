@@ -1481,7 +1481,7 @@ function confetti() {
     themeVar('--neutral', '#b8c9a8')
   ];
   const isMobile = window.matchMedia?.('(max-width: 700px)').matches;
-  const count = isMobile ? 54 : 96;
+  const count = isMobile ? 108 : 192;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -1501,11 +1501,14 @@ function confetti() {
   const height = window.innerHeight;
   const stars = [];
   let maxLife = 0;
+  const firstWaveCount = Math.max(12, Math.floor(count * 0.18));
 
   for (let i = 0; i < count; i++) {
     const size = Math.random() * 5 + (isMobile ? 5 : 6);
     const duration = Math.random() * 1.25 + 4;
-    const delay = (i / count) * 0.8 + Math.random() * 0.25;
+    const delay = i < firstWaveCount
+      ? Math.random() * 0.03
+      : ((i - firstWaveCount) / (count - firstWaveCount)) * 0.65 + Math.random() * 0.18;
     stars.push({
       x: Math.random() * width,
       yStart: -size * 3,
@@ -1578,13 +1581,13 @@ function getWinnerConfettiKey() {
 }
 
 function scheduleWinnerConfetti() {
-  setTimeout(async () => {
+  (async () => {
     await waitForBootLoaderGone();
     const winnerKey = getWinnerConfettiKey();
     if (!winnerKey || _lastConfettiWinner === winnerKey) return;
     _lastConfettiWinner = winnerKey;
     confetti();
-  }, 300);
+  })();
 }
 
 function captureUIState() {
