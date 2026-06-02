@@ -42,6 +42,10 @@ let _lastConfettiWinner = null;
 let _boardView = 'list';
 let _openBoardPlayer = null;
 let _closenessPlayer = null;
+let _closenessOrder = 'accuracy';
+let _closenessOrderDir = 'asc';
+let _closenessSortFlash = null;
+let _closenessArrowTurns = 0;
 let _swipeStart = null;
 let _suppressNextClick = false;
 let _dragState = null;
@@ -466,6 +470,33 @@ document.addEventListener('click', e => {
     const board = document.querySelector('.sec[data-view="board"]');
     if (board) board.innerHTML = renderBoard(_boardView);
     scrollAccuracyGraphIntoViewIfNeeded();
+    return;
+  }
+
+  const closenessOrderBtn = e.target.closest?.('[data-closeness-order]');
+  if (closenessOrderBtn) {
+    _closenessOrder = closenessOrderBtn.dataset.closenessOrder === 'bets' ? 'bets' : 'accuracy';
+    _closenessSortFlash = 'order';
+    const board = document.querySelector('.sec[data-view="board"]');
+    if (board) board.innerHTML = renderBoard(_boardView);
+    setTimeout(() => {
+      document.querySelector('.accuracy-sort-select.flash')?.classList.remove('flash');
+      if (_closenessSortFlash === 'order') _closenessSortFlash = null;
+    }, 750);
+    return;
+  }
+
+  const closenessDirectionBtn = e.target.closest?.('[data-closeness-order-dir]');
+  if (closenessDirectionBtn) {
+    _closenessOrderDir = _closenessOrderDir === 'asc' ? 'desc' : 'asc';
+    _closenessArrowTurns += 1;
+    _closenessSortFlash = 'dir';
+    const board = document.querySelector('.sec[data-view="board"]');
+    if (board) board.innerHTML = renderBoard(_boardView);
+    setTimeout(() => {
+      document.querySelector('.accuracy-sort-dir.flash')?.classList.remove('flash');
+      if (_closenessSortFlash === 'dir') _closenessSortFlash = null;
+    }, 750);
     return;
   }
 
@@ -2633,7 +2664,40 @@ function renderBoardCloseness(pl) {
     return `<div class="closeness-x-tick" style="left:${left.toFixed(2)}%;"><span>${esc(displayDayNumber(idx + 1))}</span></div>`;
   }).join('');
 
-  const legendHtml = stats.map(item => {
+  const compareAccuracyStats = (a, b) => {
+    if (_closenessOrder === 'bets') {
+      if (a.count !== b.count) return a.count - b.count;
+      if (a.avgGap === null && b.avgGap === null) return a.name.localeCompare(b.name);
+      if (a.avgGap === null) return 1;
+      if (b.avgGap === null) return -1;
+      if (a.avgGap !== b.avgGap) return a.avgGap - b.avgGap;
+      return a.name.localeCompare(b.name);
+    }
+    if (a.avgGap === null && b.avgGap === null) return a.name.localeCompare(b.name);
+    if (a.avgGap === null) return 1;
+    if (b.avgGap === null) return -1;
+    if (a.avgGap !== b.avgGap) return a.avgGap - b.avgGap;
+    if (b.count !== a.count) return b.count - a.count;
+    return a.name.localeCompare(b.name);
+  };
+  const sortedStats = [...stats].sort((a, b) => {
+    const result = compareAccuracyStats(a, b);
+    return _closenessOrderDir === 'desc' ? -result : result;
+  });
+
+  const orderControl = `
+    <div class="accuracy-sort">
+      <div class="accuracy-sort-controls">
+        <button class="accuracy-sort-select${_closenessSortFlash === 'order' ? ' flash' : ''}" type="button" data-closeness-order="${_closenessOrder === 'accuracy' ? 'bets' : 'accuracy'}">
+          ${_closenessOrder === 'accuracy' ? 'Time' : 'Bet'}
+        </button>
+        <button class="accuracy-sort-dir${_closenessSortFlash === 'dir' ? ' flash' : ''}" type="button" data-closeness-order-dir="${_closenessOrderDir}" aria-label="Reverse order" style="--arrow-from:${Math.max(0, _closenessArrowTurns - 1) * 180}deg; --arrow-rotation:${_closenessArrowTurns * 180}deg">
+          ↑
+        </button>
+      </div>
+    </div>`;
+
+  const legendHtml = sortedStats.map(item => {
     const color = colorOf(item.name);
     const avg = item.avgGap === null ? '--' : formatBoardCompactGap(item.avgGap);
     const meta = item.avgGap === null
@@ -2650,6 +2714,7 @@ function renderBoardCloseness(pl) {
   return `
   <div class="closeness-wrap">
     <div class="closeness-graph">
+      <div class="accuracy-active-name">${esc(activePlayer)}</div>
       <div class="closeness-y-axis"></div>
       <div class="closeness-x-axis"></div>
       <div class="closeness-y-label">Distance from wrap</div>
@@ -2659,6 +2724,7 @@ function renderBoardCloseness(pl) {
       <svg class="closeness-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lineSvg}</svg>
       ${markerHtml}
     </div>
+    ${orderControl}
     <div class="board-legend">${legendHtml}</div>
   </div>`;
 }
