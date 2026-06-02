@@ -531,7 +531,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .board-legend { width:100%; display:flex; flex-direction:column; gap:8px; }
 .legend-item { display:grid; grid-template-columns:12px minmax(0,1fr) auto; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.05); }
 .legend-swatch { width:12px; height:12px; border-radius:999px; flex-shrink:0; }
-.legend-name { font-family:'Alte Haas Grotesk', sans-serif; font-size:.82rem; color:var(--accent); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.legend-name { font-family:'Alte Haas Grotesk', sans-serif; font-size:.82rem; color:var(--dim); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .legend-meta { font-family:'Alte Haas Grotesk', sans-serif; font-size:.7rem; color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums; }
 
 /* History Accordion Styles */
