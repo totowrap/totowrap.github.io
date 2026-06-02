@@ -51,6 +51,8 @@ let _stateLoadFailed = false;
 let _lastSaveWasConflict = false;
 let _skipNextUIRestore = false;
 let _bootHiddenPromise = null;
+let _territoryRuleMigrationPending = false;
+let _territoryRuleMigrationSaving = false;
 const INACTIVITY_REFRESH_MS = 5 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
@@ -1164,7 +1166,9 @@ function buildFullGuessList(parsed) {
   return result;
 }
 
-function midSec(a,b) { return Math.floor((a+b)/2); }
+function betBlockBoundarySec(prevSec, nextSec) {
+  return Math.floor((prevSec + 60 + nextSec) / 2);
+}
 function sortedGuesses(guesses, day=S.today) {
   // 1. Filter and sort players who DID bet
   const withTime = guesses.filter(g => g.time).sort((a, b) => {
@@ -1235,21 +1239,24 @@ function boundaries(guesses, day=S.today) {
     let endSec = start === null ? DAY_SEC - 1 : start + DAY_SEC;
 
     if (i > 0) {
-        const prevMid = midSec(groups[i-1].sec, groups[i].sec);
+        const prevMid = betBlockBoundarySec(groups[i-1].sec, groups[i].sec);
         startSec = prevMid;
     } else {
         startSec = groups[0].sec - 1800;
     }
     
     if (i < groups.length - 1) {
-        const nextMid = midSec(groups[i].sec, groups[i+1].sec);
+        const nextMid = betBlockBoundarySec(groups[i].sec, groups[i+1].sec);
         endSec = nextMid - 1;
     } else {
-        endSec = groups[groups.length - 1].sec + 1800;
+        endSec = groups[groups.length - 1].sec + 59 + 1800;
     }
 
     slices.push({
       names: groups[i].names,
+      sec: groups[i].sec,
+      exactStart: groups[i].sec,
+      exactEnd: groups[i].sec + 59,
       start: startSec,
       end: endSec,
       startStr: secToClock(startSec),
@@ -3328,6 +3335,25 @@ function adjustCompletedDayScores(day, direction) {
   });
 }
 
+function completedDayOutcome(day) {
+  return {
+    winner: day?.winner || '',
+    winners: Array.isArray(day?.winners) ? day.winners.map(w => w.name).filter(Boolean) : (day?.winner ? [day.winner] : []),
+    points: Number(day?.points) || 0,
+    noWinner: Boolean(day?.noWinner)
+  };
+}
+
+function outcomesMatch(a, b) {
+  const aWinners = [...(a?.winners || [])].sort();
+  const bWinners = [...(b?.winners || [])].sort();
+  return Boolean(a?.noWinner) === Boolean(b?.noWinner)
+    && Number(a?.points || 0) === Number(b?.points || 0)
+    && String(a?.winner || '') === String(b?.winner || '')
+    && aWinners.length === bWinners.length
+    && aWinners.every((name, idx) => name === bWinners[idx]);
+}
+
 function recalculateCompletedDay(day) {
   if (!day?.wrapTime) return;
   const { winner, winners, points, noWinner } = calcWinner(day.guesses || [], day.wrapTime, day);
@@ -3335,6 +3361,47 @@ function recalculateCompletedDay(day) {
   day.winners = winners;
   day.points = points;
   day.noWinner = noWinner;
+}
+
+function recalculateCompletedResultsForCurrentBoundaryRule() {
+  let changed = false;
+  const completedDays = [...(S.days || [])];
+  if (S.today?.wrapTime) completedDays.push(S.today);
+
+  completedDays.forEach(day => {
+    if (!day?.wrapTime) return;
+    const previous = completedDayOutcome(day);
+    const next = calcWinner(day.guesses || [], day.wrapTime, day);
+    const nextOutcome = {
+      winner: next.winner,
+      winners: next.winners.map(w => w.name),
+      points: next.points,
+      noWinner: next.noWinner
+    };
+    if (outcomesMatch(previous, nextOutcome)) return;
+
+    adjustCompletedDayScores(day, -1);
+    day.winner = next.winner;
+    day.winners = next.winners;
+    day.points = next.points;
+    day.noWinner = next.noWinner;
+    adjustCompletedDayScores(day, 1);
+    changed = true;
+  });
+
+  return changed;
+}
+
+async function maybeSaveTerritoryRuleMigration() {
+  if (!_territoryRuleMigrationPending || _territoryRuleMigrationSaving || !IS_ADMIN || !currentUser) return;
+  _territoryRuleMigrationSaving = true;
+  const saved = await saveS();
+  _territoryRuleMigrationSaving = false;
+  if (saved) {
+    _territoryRuleMigrationPending = false;
+    toast('Territories recalculated', 'ok');
+    render();
+  }
 }
 
 function removeAutoAddedPlayersFromDeletedDays(deletedDays) {
@@ -3844,6 +3911,7 @@ onAuthStateChanged(auth, user => {
   currentUser = user;
   authReady = true;
   render();
+  maybeSaveTerritoryRuleMigration();
 });
 
 onSnapshot(STATE_REF, (snap) => {
@@ -3853,9 +3921,13 @@ onSnapshot(STATE_REF, (snap) => {
   } else {
     S = normalizeState({});
   }
+  if (recalculateCompletedResultsForCurrentBoundaryRule()) {
+    _territoryRuleMigrationPending = true;
+  }
   storeBootPlayerNames();
   _stateReady = true;
   render();
+  maybeSaveTerritoryRuleMigration();
   
   // Update all dots
   document.querySelectorAll('.js-sync-dot').forEach(dot => {
