@@ -51,6 +51,7 @@ let _stateLoadFailed = false;
 let _lastSaveWasConflict = false;
 let _skipNextUIRestore = false;
 let _bootHiddenPromise = null;
+let _bootFadeStartedPromise = null;
 let _territoryRuleMigrationPending = false;
 let _territoryRuleMigrationSaving = false;
 const INACTIVITY_REFRESH_MS = 5 * 60 * 1000;
@@ -109,7 +110,20 @@ async function scheduleBootLoaderHide() {
   const loader = document.getElementById('boot-loader');
   if (!loader) return;
   loader.classList.add('done');
+  document.dispatchEvent(new CustomEvent('totowrap:boot-fade-started'));
   setTimeout(() => loader.remove(), BOOT_FADE_MS + 100);
+}
+
+function waitForBootFadeStarted() {
+  const loader = document.getElementById('boot-loader');
+  if (!loader || loader.classList.contains('done')) return Promise.resolve();
+  if (_bootFadeStartedPromise) return _bootFadeStartedPromise;
+  _bootFadeStartedPromise = new Promise(resolve => {
+    document.addEventListener('totowrap:boot-fade-started', () => {
+      requestAnimationFrame(resolve);
+    }, { once: true });
+  });
+  return _bootFadeStartedPromise;
 }
 
 function waitForBootLoaderGone() {
@@ -1582,7 +1596,7 @@ function getWinnerConfettiKey() {
 
 function scheduleWinnerConfetti() {
   (async () => {
-    await waitForBootLoaderGone();
+    await waitForBootFadeStarted();
     const winnerKey = getWinnerConfettiKey();
     if (!winnerKey || _lastConfettiWinner === winnerKey) return;
     _lastConfettiWinner = winnerKey;
