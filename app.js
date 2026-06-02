@@ -49,6 +49,7 @@ let _closenessArrowTurns = 0;
 let _swipeStart = null;
 let _suppressNextClick = false;
 let _dragState = null;
+let _navIndicatorHideTO = null;
 let _pullRefreshState = null;
 let _pullRefreshReloading = false;
 let _inactiveAt = document.hidden ? Date.now() : null;
@@ -305,22 +306,20 @@ function updateActiveClasses() {
   });
 }
 
-function syncTabUI(animate=false) {
+function syncTabUI(animate=false, showIndicator=animate) {
   normalizeActiveTab();
   updateActiveClasses();
-  injectNavIndicator(animate);
+  injectNavIndicator(animate, showIndicator);
 
   const idx = getCurrentSwipeIndex();
   if (idx === -1) return;
   setStripX(-idx * currentStripWidth(), animate);
 }
 
-function injectNavIndicator(animate=false) {
+function setNavIndicatorPosition(position, animate=false) {
   const nav = document.querySelector('.nav');
-  if (!nav) return;
+  if (!nav) return null;
   const tabs = getMainTabs();
-  const activeIdx = tabs.indexOf(_tab);
-  if (activeIdx === -1) return;
 
   let indicator = nav.querySelector('.nav-indicator');
   if (!indicator) {
@@ -331,8 +330,30 @@ function injectNavIndicator(animate=false) {
 
   const width = 100 / tabs.length;
   indicator.style.width = width + '%';
-  indicator.style.transition = animate ? 'transform .32s cubic-bezier(.2,.9,.2,1)' : 'none';
-  indicator.style.transform = `translateX(${activeIdx * 100}%)`;
+  indicator.style.transition = animate
+    ? 'opacity .45s ease, transform .32s cubic-bezier(.2,.9,.2,1)'
+    : 'opacity .45s ease';
+  indicator.style.transform = `translateX(${position * 100}%)`;
+  return indicator;
+}
+
+function revealNavIndicator(duration=900) {
+  const indicator = document.querySelector('.nav-indicator');
+  if (!indicator) return;
+  clearTimeout(_navIndicatorHideTO);
+  indicator.classList.add('show');
+  if (duration > 0) {
+    _navIndicatorHideTO = setTimeout(() => {
+      indicator.classList.remove('show');
+    }, duration);
+  }
+}
+
+function injectNavIndicator(animate=false, showIndicator=false) {
+  const activeIdx = getMainTabs().indexOf(_tab);
+  if (activeIdx === -1) return;
+  const indicator = setNavIndicatorPosition(activeIdx, animate);
+  if (indicator && showIndicator) revealNavIndicator(animate ? 900 : 0);
 }
 
 function isSwipeIgnoredTarget(target) {
@@ -504,6 +525,8 @@ document.addEventListener('touchmove', e => {
   const atLast = _dragState.idx === seq.length - 1 && dx < 0;
   const offset = (atFirst || atLast) ? rubberBand(dx, width) : dx;
   setStripX(-_dragState.idx * width + offset, false);
+  setNavIndicatorPosition(_dragState.idx - offset / width, false);
+  revealNavIndicator(0);
 }, { passive: false });
 
 document.addEventListener('touchend', e => {
@@ -517,7 +540,7 @@ document.addEventListener('touchend', e => {
   _dragState = null;
 
   if (!wasDragging || Math.abs(dx) < Math.abs(dy) * 1.15) {
-    syncTabUI(true);
+    syncTabUI(true, false);
     return;
   }
 
@@ -534,7 +557,7 @@ document.addEventListener('touchend', e => {
 document.addEventListener('touchcancel', () => {
   _swipeStart = null;
   _dragState = null;
-  syncTabUI(true);
+  syncTabUI(true, false);
 }, { passive: true });
 
 window.addEventListener('resize', () => syncTabUI(false));
