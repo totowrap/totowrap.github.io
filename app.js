@@ -358,13 +358,15 @@ function canStartPullRefresh(target) {
 
 function pullRefreshIndicator() {
   let indicator = document.getElementById('pull-refresh-indicator');
-  if (indicator) return indicator;
-  indicator = document.createElement('div');
-  indicator.id = 'pull-refresh-indicator';
-  indicator.className = 'pull-refresh-indicator';
-  indicator.setAttribute('aria-hidden', 'true');
-  indicator.innerHTML = '<img src="imgs/tunacan.png" alt="">';
-  document.body.appendChild(indicator);
+  const host = document.querySelector('.tab-viewport') || document.getElementById('app') || document.body;
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'pull-refresh-indicator';
+    indicator.className = 'pull-refresh-indicator';
+    indicator.setAttribute('aria-hidden', 'true');
+    indicator.innerHTML = '<img src="imgs/tunacan.png" alt="">';
+  }
+  if (indicator.parentElement !== host) host.appendChild(indicator);
   return indicator;
 }
 
