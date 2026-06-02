@@ -2300,7 +2300,7 @@ function renderToday() {
         <button class="settings-delete admin-time-delete-btn" id="clear-est-wrap-btn" type="button" title="Clear wrap time" aria-label="Clear wrap time">×</button>
         <button class="settings-save admin-time-save-btn" id="save-est-wrap-btn" type="button" title="Save wrap time" aria-label="Save wrap time">✓</button>
       </div>
-      ${t.estWrap && t.estWrap !== '--:--' ? `<p class="mono dim center mt8">Players see: <span class="accent">Wrap ${esc(t.estWrap)}</span></p>` : ''}
+      <p class="mono dim center mt8">Live time: <span class="accent js-clock">${esc(nowHMS())}</span></p>
     </div>
     <div class="card">
       <div class="card-lbl">Closing Bet Time</div>
@@ -2534,7 +2534,8 @@ function renderBoardCloseness(pl) {
   const stats = getBoardClosenessStats(pl);
   const completed = getHistoryEntries().filter(day => day?.wrapTime && Array.isArray(day.guesses));
   const selectablePlayers = stats.filter(item => item.avgGap !== null).map(item => item.name);
-  const activePlayer = selectablePlayers.includes(_closenessPlayer)
+  const allStatPlayers = stats.map(item => item.name);
+  const activePlayer = allStatPlayers.includes(_closenessPlayer)
     ? _closenessPlayer
     : (selectablePlayers[0] || null);
   const points = [];
@@ -2555,12 +2556,12 @@ function renderBoardCloseness(pl) {
       });
     });
   });
-  if (!points.length) {
-    return '<div class="empty" style="padding:20px 0;">No completed bets yet</div>';
-  }
 
   const maxDay = Math.max(0, completed.length - 1);
-  const maxGap = Math.max(...points.map(point => point.gap), 1);
+  const allGaps = completed.flatMap(day => (day.guesses || [])
+    .filter(guess => guess?.time)
+    .map(guess => boardClosenessGap(guess, day)));
+  const maxGap = points.length ? Math.max(...points.map(point => point.gap), 1) : Math.max(...allGaps, 1);
   const pointPosition = point => ({
     left: maxDay ? (point.day / maxDay) * 96 : 0,
     top: 88 - (point.gap / maxGap) * 78
