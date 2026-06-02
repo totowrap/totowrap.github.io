@@ -50,6 +50,7 @@ let _swipeStart = null;
 let _suppressNextClick = false;
 let _dragState = null;
 let _pullRefreshState = null;
+let _pullRefreshReloading = false;
 let _inactiveAt = document.hidden ? Date.now() : null;
 let _inactivityTimer = null;
 let _stateReady = false;
@@ -355,8 +356,41 @@ function canStartPullRefresh(target) {
   return scroller.scrollTop <= 0;
 }
 
+function pullRefreshIndicator() {
+  let indicator = document.getElementById('pull-refresh-indicator');
+  if (indicator) return indicator;
+  indicator = document.createElement('div');
+  indicator.id = 'pull-refresh-indicator';
+  indicator.className = 'pull-refresh-indicator';
+  indicator.setAttribute('aria-hidden', 'true');
+  indicator.innerHTML = '<img src="imgs/tunacan.png" alt="">';
+  document.body.appendChild(indicator);
+  return indicator;
+}
+
+function updatePullRefreshIndicator(distance=0, armed=false) {
+  const indicator = pullRefreshIndicator();
+  const progress = Math.max(0, Math.min(1, distance / PULL_REFRESH_DISTANCE));
+  const eased = 1 - Math.pow(1 - progress, 2);
+  const y = -54 + eased * 72;
+  const rotation = progress * 220;
+  indicator.classList.toggle('show', distance > 8 || armed);
+  indicator.classList.toggle('armed', armed);
+  indicator.style.setProperty('--pull-y', `${y.toFixed(1)}px`);
+  indicator.style.setProperty('--pull-rotate', `${rotation.toFixed(1)}deg`);
+}
+
+function resetPullRefreshIndicator() {
+  if (_pullRefreshReloading) return;
+  const indicator = document.getElementById('pull-refresh-indicator');
+  if (!indicator) return;
+  indicator.classList.remove('show', 'armed', 'loading');
+  indicator.style.setProperty('--pull-y', '-54px');
+  indicator.style.setProperty('--pull-rotate', '0deg');
+}
+
 document.addEventListener('touchstart', e => {
-  if (e.touches.length !== 1 || !canStartPullRefresh(e.target)) {
+  if (_pullRefreshReloading || e.touches.length !== 1 || !canStartPullRefresh(e.target)) {
     _pullRefreshState = null;
     return;
   }
@@ -373,24 +407,37 @@ document.addEventListener('touchmove', e => {
   const dy = e.touches[0].clientY - _pullRefreshState.startY;
   if (dy <= 0 || Math.abs(dx) > dy * 0.75) {
     _pullRefreshState = null;
+    resetPullRefreshIndicator();
     return;
   }
   if (activePullRefreshScroller()?.scrollTop > 0) {
     _pullRefreshState = null;
+    resetPullRefreshIndicator();
     return;
   }
   if (dy > 16) e.preventDefault();
   _pullRefreshState.armed = dy >= PULL_REFRESH_DISTANCE;
+  updatePullRefreshIndicator(dy, _pullRefreshState.armed);
 }, { passive: false });
 
 document.addEventListener('touchend', () => {
   const shouldRefresh = _pullRefreshState?.armed;
   _pullRefreshState = null;
-  if (shouldRefresh) location.reload();
+  if (shouldRefresh) {
+    _pullRefreshReloading = true;
+    const indicator = pullRefreshIndicator();
+    indicator.classList.add('show', 'loading');
+    indicator.classList.remove('armed');
+    indicator.style.setProperty('--pull-y', '18px');
+    setTimeout(() => location.reload(), 220);
+    return;
+  }
+  resetPullRefreshIndicator();
 }, { passive: true });
 
 document.addEventListener('touchcancel', () => {
   _pullRefreshState = null;
+  resetPullRefreshIndicator();
 }, { passive: true });
 
 document.addEventListener('touchstart', e => {
@@ -2801,7 +2848,7 @@ function renderBoardCloseness(pl) {
   return `
   <div class="closeness-wrap">
     <div class="closeness-graph">
-      <div class="accuracy-active-name">${esc(activePlayer)}</div>
+      <div class="accuracy-active-name" style="color:${colorOf(activePlayer)};">${esc(activePlayer)}</div>
       <div class="closeness-y-axis"></div>
       <div class="closeness-x-axis"></div>
       <div class="closeness-y-label">Distance from wrap</div>
