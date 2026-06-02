@@ -956,26 +956,23 @@ function chatBodyIsRecapList(body) {
 }
 
 function chatCurrentDayStop(messages, targetISO) {
-  const candidates = messages
-    .filter(msg => chatDateISO(msg.dt) === targetISO && isLuigiVacchelli(msg.sender) && chatBodyIsStopBoundary(msg.body))
-    .map(msg => msg.dt.getTime());
-  return candidates.length ? new Date(Math.min(...candidates)) : null;
+  return [...messages]
+    .sort((a, b) => a.dt - b.dt || a.index - b.index)
+    .find(msg => chatDateISO(msg.dt) === targetISO && isLuigiVacchelli(msg.sender) && chatBodyIsStopBoundary(msg.body)) || null;
 }
 
-function chatPreviousBoundary(messages, targetISO) {
-  const previousISO = addDaysISO(targetISO, -1);
-  const candidates = messages
-    .filter(msg => chatDateISO(msg.dt) === previousISO && isLuigiVacchelli(msg.sender) && chatBodyIsResultBoundary(msg.body))
-    .map(msg => msg.dt.getTime());
-  return candidates.length ? new Date(Math.max(...candidates)) : null;
+function chatLatestResultBeforeStop(messages, stop) {
+  if (!stop) return null;
+  return [...messages]
+    .filter(msg => (msg.dt < stop.dt || (msg.dt.getTime() === stop.dt.getTime() && msg.index < stop.index)) && isLuigiVacchelli(msg.sender) && chatBodyIsResultBoundary(msg.body))
+    .sort((a, b) => b.dt - a.dt || b.index - a.index)[0] || null;
 }
 
-function chatMessageInsideWindow(msg, targetISO, previousBoundary, stop) {
-  const previousISO = addDaysISO(targetISO, -1);
-  const msgISO = chatDateISO(msg.dt);
-  if (msgISO === previousISO) return Boolean(previousBoundary) && msg.dt > previousBoundary;
-  if (msgISO === targetISO) return !stop || msg.dt < stop;
-  return false;
+function chatMessageInsideWindow(msg, start, stop) {
+  if (!start || !stop) return false;
+  const afterStart = msg.dt > start.dt || (msg.dt.getTime() === start.dt.getTime() && msg.index > start.index);
+  const beforeStop = msg.dt < stop.dt || (msg.dt.getTime() === stop.dt.getTime() && msg.index < stop.index);
+  return afterStart && beforeStop;
 }
 
 function chatExplicitNameIsPlausible(rawName) {
@@ -1045,14 +1042,14 @@ function chatLuigiAnnouncementIndexes(messages) {
 function extractBetsFromChatText(chatText, targetISO) {
   const messages = parseWhatsAppMessages(chatText);
   const duplicateFirstNames = duplicateChatFirstNames(messages);
-  const previousBoundary = chatPreviousBoundary(messages, targetISO);
   const stop = chatCurrentDayStop(messages, targetISO);
+  const start = chatLatestResultBeforeStop(messages, stop);
   const ignoredIndexes = chatLuigiAnnouncementIndexes(messages);
   const bets = new Map();
 
   [...messages].sort((a, b) => a.dt - b.dt || a.index - b.index).forEach(msg => {
     if (ignoredIndexes.has(msg.index)) return;
-    if (!chatMessageInsideWindow(msg, targetISO, previousBoundary, stop)) return;
+    if (!chatMessageInsideWindow(msg, start, stop)) return;
     if (chatBodyIsRecapList(msg.body)) return;
     extractChatBetsFromBody(msg.body, msg.sender, duplicateFirstNames).forEach(([name, betTime]) => {
       bets.set(name, betTime);
@@ -1114,6 +1111,41 @@ function parsePaste(text) {
     }
   }
   return { guesses, formatErrors };
+}
+
+function formatConfirmedBetsClipboard(dayNumber, wrapTime, guesses, dayContext) {
+  const rows = sortedGuesses(guesses.filter(g => g.time), dayContext)
+    .map(g => `${g.name} - ${g.time}`);
+  return [`_TonnoWrap - ${displayDayLabel(dayNumber)}_`, `*Wrap ${wrapTime}*`, '', ...rows].join('\n');
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch(e) {
+      console.warn('Clipboard API failed:', e);
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+  try {
+    return document.execCommand?.('copy') === true;
+  } catch(e) {
+    console.warn('Clipboard fallback failed:', e);
+    return false;
+  } finally {
+    textarea.remove();
+  }
 }
 
 function buildFullGuessList(parsed) {
@@ -1361,6 +1393,13 @@ function tickClock() {
 
   // Find the current/upcoming boundary
   const nextBoundary = slices.find(s => s.end >= cur);
+  const firstTerritoryStart = slices[0]?.start;
+  if (Number.isFinite(firstTerritoryStart) && cur < firstTerritoryStart) {
+    countdownEl.innerHTML = `Ouch! Everybody will lose if we wrap before ${secToClock(firstTerritoryStart)}`;
+    countdownEl.style.display = 'block';
+    refreshStatusBadges();
+    return;
+  }
   
   // THE FIX: Check if this boundary is actually the final territory
   const isFinalTerritory = (nextBoundary === slices[slices.length - 1]);
@@ -1369,10 +1408,9 @@ function tickClock() {
   if (nextBoundary && cur <= nextBoundary.end && !isFinalTerritory) {
     const diff = (nextBoundary.end + 1) - cur;
     
-    // Wrap ONLY the individual names in the uppercase span
-    const styledNames = nextBoundary.names.map(name => `<span class="countdown-name">${esc(name)}</span>`);
+    const styledNames = nextBoundary.names.map(name => `<span class="countdown-elimination-name">${esc(name)}</span>`);
     
-    countdownEl.innerHTML = `Next elimination ${formatNames(styledNames)} in: ${secToHMS(diff)}`;
+    countdownEl.innerHTML = `Next elimination ${formatNames(styledNames)} in ${secToHMS(diff)}`;
     countdownEl.style.display = 'block';
   } else if (isFinalTerritory) {
   // PHASE 2: Everyone else is out - The "Lucky Day"
@@ -3636,6 +3674,14 @@ function showPreview() {
 	      return nextGuess;
 	    });
 	    if (editedFullList.some(g => !g)) return;
+	    const confirmDayContext = {
+	      approvedAt: previewApprovedAt,
+	      approvedDate: previewApprovedDate,
+	      estWrap: finalWrap,
+	      estWrapDate: savedWrapDate
+	    };
+	    const clipboardText = formatConfirmedBetsClipboard(totalDays, finalWrap, editedFullList, confirmDayContext);
+	    const copiedBets = await copyTextToClipboard(clipboardText);
 	    
 	    const prevS = cloneState();
 	    newPlayers.forEach(name => {
@@ -3652,7 +3698,7 @@ function showPreview() {
 	    S.today.addedPlayers = newPlayers;
 	    const saved = await saveS();
 		    if (!saved) { restoreAfterFailedSave(prevS); return; }
-	    toast('Day started!', 'ok');
+	    toast(copiedBets ? 'Day started! Bets copied' : 'Day started! Could not copy bets', copiedBets ? 'ok' : 'err');
 	    render();
 	  });
 

@@ -335,9 +335,12 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   font-weight: bold;
   padding: 0 10px;
 }
-.countdown-name {
-  text-transform: uppercase;
-    }
+.countdown-name,
+.countdown-elimination-name {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
 .prev-winner-tag {
   flex: 1;
   margin-left: 10px;
