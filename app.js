@@ -1676,9 +1676,9 @@ function tickClock() {
     const diff = Math.max(0, (nextBoundary.end + 1) - cur);
     
     countdownEl.innerHTML = `
-      <div style="line-height: 1;">
-        C'mon ${formatNames(styledWinners)}!<br>
-        <span style="font-size: 0.75rem; opacity: 1;">It's not over until it's over, just keep swimming little tuna you have ${secToHMS(diff)} left!</span>
+      <div>
+        C'mon ${formatNames(styledWinners)}, it's not over until it's over!<br>
+        Just keep swimming little tuna, you have ${secToHMS(diff)} left!
       </div>
     `;
     countdownEl.style.display = 'block';
