@@ -1641,8 +1641,8 @@ function tickClock() {
     `;
     countdownEl.style.display = 'block';
   } else {
-    countdownEl.style.display = 'none';
-    countdownEl.innerHTML = '';
+    countdownEl.innerHTML = 'Well, that was awkward...';
+    countdownEl.style.display = 'block';
   }
   
   refreshStatusBadges();
