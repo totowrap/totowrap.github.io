@@ -2829,7 +2829,9 @@ function renderBoardCloseness(pl) {
 
   const compareAccuracyStats = (a, b) => {
     if (_closenessOrder === 'bets') {
-      if (a.count !== b.count) return a.count - b.count;
+      if (a.count !== b.count) {
+        return _closenessOrderDir === 'desc' ? b.count - a.count : a.count - b.count;
+      }
       if (a.avgGap === null && b.avgGap === null) return a.name.localeCompare(b.name);
       if (a.avgGap === null) return 1;
       if (b.avgGap === null) return -1;
@@ -2845,6 +2847,7 @@ function renderBoardCloseness(pl) {
   };
   const sortedStats = [...stats].sort((a, b) => {
     const result = compareAccuracyStats(a, b);
+    if (_closenessOrder === 'bets') return result;
     return _closenessOrderDir === 'desc' ? -result : result;
   });
 

@@ -349,7 +349,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   white-space: nowrap;
   display: flex;
   min-width: 0;
-  text-shadow: 0 0 8px rgba(var(--yellow-rgb), .28);
 }
 .prev-winner-track {
   display: flex;
