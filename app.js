@@ -782,6 +782,48 @@ function cloneState() {
   return JSON.parse(JSON.stringify(S));
 }
 
+function buildProjectBackup() {
+  return {
+    type: 'totowrap-project-backup',
+    backupVersion: 1,
+    exportedAt: new Date().toISOString(),
+    source: {
+      origin: location.origin,
+      path: location.pathname,
+      appMode: APP_MODE,
+      totalDaysDisplay: DISPLAY_TOTAL_DAYS
+    },
+    codeSnapshotNote: 'This backup stores Firestore game data only. Exact colors, phrases, layout, images, and future features require the matching website files, Git commit, Git tag, or zipped website snapshot.',
+    appData: cloneState()
+  };
+}
+
+function exportProjectBackup() {
+  if (!IS_ADMIN || !currentUser) {
+    toast('Admin only', 'err');
+    return;
+  }
+
+  try {
+    const backup = buildProjectBackup();
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const stamp = backup.exportedAt.replace(/[:.]/g, '-');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `totowrap-backup-${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Backup exported', 'ok');
+  } catch (e) {
+    console.error('Backup export failed:', e);
+    toast('Backup export failed', 'err');
+  }
+}
+
 const DISPLAY_TOTAL_DAYS = 50;
 
 function displayDayNumber(internalDayNumber) {
@@ -3888,6 +3930,10 @@ ${pl.map((p, idx)=> {
 <button class="btn btn-s" id="admin-logout-btn">Sign out</button>
 <button class="btn btn-s mt8" id="player-version-btn">Open player version</button>
 </div>
+<div class="card"><div class="card-lbl">Offline Backup</div>
+<p class="mono dim mt8" style="margin-bottom:12px">Download the current Firestore game data as a JSON backup.</p>
+<button class="btn btn-s" id="export-backup-btn">Export Backup</button>
+</div>
 <div class="card"><div class="card-lbl">Danger Zone</div>
 ${hasCurrentDay ? `
 <p class="mono dim" style="font-size:.7rem;margin-bottom:12px">Delete today's game, matching history, and scores for that day</p>
@@ -4146,6 +4192,7 @@ function bindMain() {
     }
   });
   document.getElementById('player-version-btn')?.addEventListener('click', openPlayerVersion);
+  document.getElementById('export-backup-btn')?.addEventListener('click', exportProjectBackup);
   document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>setMainTab(btn.dataset.tab)));
   document.getElementById('new-day-btn')?.addEventListener('click', async () => {
     const prevS = cloneState();
