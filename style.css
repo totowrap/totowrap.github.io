@@ -328,7 +328,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .big-clock-lbl { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); text-align: center; margin-top: 4px; }
 .countdown-txt {
   font-family: 'Alte Haas Grotesk', sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--red);
   text-align: center;
   margin-top: 8px;
@@ -336,7 +336,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   font-weight: bold;
   padding: 0 10px;
 }
-.countdown-single-line { display: inline-block; max-width: 100%; white-space: nowrap; }
 .countdown-name,
 .countdown-elimination-name {
   text-decoration: underline;
