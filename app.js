@@ -1610,7 +1610,7 @@ function tickClock() {
   const nextBoundary = slices.find(s => s.end >= cur);
   const firstTerritoryStart = slices[0]?.start;
   if (Number.isFinite(firstTerritoryStart) && cur < firstTerritoryStart) {
-    countdownEl.innerHTML = `Ouch! Everybody will lose if we wrap before ${secToClock(firstTerritoryStart)}`;
+    countdownEl.innerHTML = `Ouch!<br>Everybody will lose if we wrap before ${secToHMS(firstTerritoryStart - cur)}`;
     countdownEl.style.display = 'block';
     refreshStatusBadges();
     return;
