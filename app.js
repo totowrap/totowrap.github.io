@@ -809,10 +809,10 @@ function exportProjectBackup() {
     const json = JSON.stringify(backup, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const stamp = backup.exportedAt.replace(/[:.]/g, '-');
+    const stamp = new Date(backup.exportedAt).toISOString().slice(0, 10).replace(/-/g, '');
     const link = document.createElement('a');
     link.href = url;
-    link.download = `totowrap-backup-${stamp}.json`;
+    link.download = `totowrapdatabackup_${stamp}.json`;
     document.body.appendChild(link);
     link.click();
     link.remove();
