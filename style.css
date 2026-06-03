@@ -336,6 +336,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   font-weight: bold;
   padding: 0 10px;
 }
+.countdown-single-line { display: inline-block; max-width: 100%; white-space: nowrap; }
 .countdown-name,
 .countdown-elimination-name {
   text-decoration: underline;

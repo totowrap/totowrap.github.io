@@ -1589,6 +1589,22 @@ function updateBetCloseCountdown() {
   });
 }
 
+function fitCountdownSingleLine(countdownEl) {
+  const line = countdownEl?.querySelector?.('.countdown-single-line');
+  if (!line) return;
+  line.style.fontSize = '';
+
+  const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const basePx = parseFloat(getComputedStyle(line).fontSize) || rootFontSize * 0.85;
+  const targetWidth = Math.max(0, countdownEl.clientWidth - 16);
+  let sizeRem = basePx / rootFontSize;
+
+  while (line.scrollWidth > targetWidth && sizeRem > 0.55) {
+    sizeRem = Math.max(0.55, Math.round((sizeRem - 0.1) * 10) / 10);
+    line.style.fontSize = `${sizeRem}rem`;
+  }
+}
+
 function tickClock() {
   const t = nowHMS();
   const cur = gameNowSec();
@@ -1610,8 +1626,9 @@ function tickClock() {
   const nextBoundary = slices.find(s => s.end >= cur);
   const firstTerritoryStart = slices[0]?.start;
   if (Number.isFinite(firstTerritoryStart) && cur < firstTerritoryStart) {
-    countdownEl.innerHTML = `Ouch!<br>Everyone will lose if we wrap before ${secToHMS(firstTerritoryStart - cur)}`;
+    countdownEl.innerHTML = `Ouch!<br><span class="countdown-single-line">Everyone will lose if we wrap before ${secToHMS(firstTerritoryStart - cur)}</span>`;
     countdownEl.style.display = 'block';
+    fitCountdownSingleLine(countdownEl);
     refreshStatusBadges();
     return;
   }
