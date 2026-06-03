@@ -2647,6 +2647,9 @@ function renderBoardPie(pl) {
     '#e3b74f', '#6dd87a', '#e06c6c', '#5bc8f5', '#f07dba',
     '#a374f7', '#fb8c5f', '#40e4e4', '#f9a8a8', '#7ede8a',
     '#8faeff', '#ffd166', '#d98ef5', '#6fecb5', '#ffb347',
+    '#c9dc5a', '#ff9f7a', '#76d6ff', '#b6a0ff', '#f6d365',
+    '#84e3c8', '#ff7f8f', '#a7c957', '#c77dff', '#64dfdf',
+    '#f4a261', '#90be6d', '#4cc9f0', '#f28482', '#bde0fe',
   ];
 
   // Assign color by position in full roster so colors stay stable
@@ -2781,6 +2784,9 @@ function renderBoardCloseness(pl) {
     '#e3b74f', '#6dd87a', '#e06c6c', '#5bc8f5', '#f07dba',
     '#a374f7', '#fb8c5f', '#40e4e4', '#f9a8a8', '#7ede8a',
     '#8faeff', '#ffd166', '#d98ef5', '#6fecb5', '#ffb347',
+    '#c9dc5a', '#ff9f7a', '#76d6ff', '#b6a0ff', '#f6d365',
+    '#84e3c8', '#ff7f8f', '#a7c957', '#c77dff', '#64dfdf',
+    '#f4a261', '#90be6d', '#4cc9f0', '#f28482', '#bde0fe',
   ];
   const allNames = S.playerRoster.map(p => p.name);
   const colorOf = name => COLORS[Math.max(0, allNames.indexOf(name)) % COLORS.length];
