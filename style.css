@@ -536,10 +536,11 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 /* History Accordion Styles */
 .hist-row { cursor: pointer; padding: 0 !important; overflow: hidden; }
 .hist-summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 16px; min-width: 0; }
-.hist-day-tag { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 0.7rem; color: var(--dim); text-transform: uppercase; flex: 0 0 auto; white-space: nowrap; display: inline-flex; align-items: center; min-height: 20px; }
-.hist-main-info { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; line-height: 1; }
-.hist-title { min-width: 0; white-space: nowrap; display: inline-flex; align-items: center; min-height: 20px; }
-.hist-bet { flex: 0 0 auto; white-space: nowrap; display: inline-flex; align-items: center; min-height: 20px; }
+.hist-summary > * { transform: translateY(4px); }
+.hist-day-tag { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 0.7rem; color: var(--dim); text-transform: uppercase; flex: 0 0 45px; width: 45px; white-space: nowrap; line-height: 1; }
+.hist-main-info { flex: 1 1 auto; min-width: 0; min-height: 20px; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; line-height: 1; }
+.hist-title { min-width: 0; white-space: nowrap; line-height: 1; }
+.hist-bet { flex: 0 0 auto; white-space: nowrap; line-height: 1; }
 .hist-meta { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; font-size: 0.8rem; white-space: nowrap; }
 .hist-wrap-time { display: inline-flex; align-items: center; min-height: 20px; font-variant-numeric: tabular-nums; }
 .hist-points { display: inline-flex; align-items: center; justify-content: flex-end; min-height: 20px; font-size: 0.7rem; text-align: right; font-variant-numeric: tabular-nums; }
