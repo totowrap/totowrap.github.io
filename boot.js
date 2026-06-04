@@ -23,6 +23,7 @@
     () => 'La ludopatia è un problema solo se perdi!',
     () => 'You miss 100% of the bets you don’t place.',
     () => 'Your strategy is so confusing that it fooled even you.',
+    () => '<span class="boot-phrase-right">"Se oggi non vinco, mi licenzio"\n- Marco Mattioli</span>',
     () => {
       const storedNames = getPlayerNames();
       const name = storedNames[randomInt(storedNames.length)];
@@ -42,6 +43,11 @@
       const storedNames = getPlayerNames();
       const name = storedNames[randomInt(storedNames.length)];
       return name ? `${nameTag(name)} continua così, il tuo talento è nascosto benissimo.` : '';
+    },
+    () => {
+      const storedNames = getPlayerNames();
+      const name = storedNames[randomInt(storedNames.length)];
+      return name ? `Anche oggi ${nameTag(name)} ha fatto un bel buco nell’acqua.` : '';
     }
   ];
 

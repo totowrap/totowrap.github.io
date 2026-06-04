@@ -5,6 +5,7 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
 .boot-can { width: 320px; height: 320px; object-fit: contain; animation: boot-spin 3.5s linear infinite; filter: drop-shadow(0 14px 32px rgba(0,0,0,.32)); }
 .boot-phrase { display: grid; place-items: center; min-height: 2.8em; width: min(100%, 360px); color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.05rem; font-weight: bold; line-height: 1.32; text-align: center; text-transform: uppercase; white-space: pre-line; opacity: 0; transition: opacity .65s ease; }
 .boot-phrase-text { display: block; max-width: 100%; }
+.boot-phrase-right { display: block; width: 100%; text-align: right; }
 .boot-player-name { display: inline-block; max-width: 100%; white-space: nowrap; }
 .boot-phrase.is-loading { opacity: 0; }
 .boot-phrase.is-ready { opacity: 1; }

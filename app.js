@@ -2029,7 +2029,7 @@ function renderAdminLogin() {
     <p class="mono dim center" style="margin:8px 0 14px">Sign in with an authorized admin account to edit the game.</p>
     <div class="inp-wrap">
       <label class="inp-lbl">Email</label>
-      <input type="text" id="admin-email" autocomplete="email" placeholder="admin@example.com">
+      <input type="text" id="admin-email" autocomplete="email" placeholder="Email">
     </div>
     <div class="inp-wrap">
       <label class="inp-lbl">Password</label>
@@ -2595,8 +2595,8 @@ function renderToday() {
       <div class="card-lbl">Set Wrap Time</div>
       <p class="mono dim" style="margin-bottom:10px">Set the estimated wrap time players see before the game starts.</p>
       <div class="admin-time-save-row admin-wrap-save-row">
-        <input type="text" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" placeholder="HH:MM" inputmode="text" maxlength="5" aria-label="Estimated wrap time">
-        <input type="text" class="admin-date-input" id="est-wrap-date-input" value="${esc(displayDate(t.estWrapDate || localDateISO()))}" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10" aria-label="Wrap date">
+        <input type="text" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" placeholder="hh:mm" inputmode="text" maxlength="5" aria-label="Estimated wrap time">
+        <input type="text" class="admin-date-input" id="est-wrap-date-input" value="${esc(displayDate(t.estWrapDate || localDateISO()))}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10" aria-label="Wrap date">
         <button class="settings-delete admin-time-delete-btn" id="clear-est-wrap-btn" type="button" title="Clear wrap time" aria-label="Clear wrap time">×</button>
         <button class="settings-save admin-time-save-btn" id="save-est-wrap-btn" type="button" title="Save wrap time" aria-label="Save wrap time">✓</button>
       </div>
@@ -2606,7 +2606,7 @@ function renderToday() {
       <div class="card-lbl">Closing Bet Time</div>
       <p class="mono dim" style="margin-bottom:10px">Set when players must stop submitting bets. Players will see a countdown until guesses are pasted.</p>
       <div class="admin-time-save-row admin-close-save-row">
-        <input type="text" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" placeholder="HH:MM" inputmode="text" maxlength="5" aria-label="Closing bet time">
+        <input type="text" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" placeholder="hh:mm" inputmode="text" maxlength="5" aria-label="Closing bet time">
         <button class="settings-delete admin-time-delete-btn" id="clear-bet-close-btn" type="button" title="Clear closing bet time" aria-label="Clear closing bet time">×</button>
         <button class="settings-save admin-time-save-btn" id="save-bet-close-btn" type="button" title="Save closing bet time" aria-label="Save closing bet time">✓</button>
       </div>
@@ -2614,11 +2614,8 @@ function renderToday() {
     </div>
     <div class="card">
       <div class="card-lbl">Paste Today's Guesses</div>
-      <p class="mono dim" style="margin-bottom:10px">Format: Name - HH:MM (one per line).</p>
-      <textarea id="paste-inp" placeholder="ES:
-Luigi - 18:30
-Daniela - 19:15
-Marco - 17:45"></textarea>
+      <p class="mono dim" style="margin-bottom:10px">Format: Name - hh:mm (one per line).</p>
+      <textarea id="paste-inp" placeholder="Name - hh:mm"></textarea>
       <div class="chat-upload-wrap">
         <p class="mono dim chat-upload-note">Or upload a WhatsApp chat export and review the extracted bets below.</p>
         <label class="btn btn-s chat-upload-btn" for="chat-upload-input">Upload _chat.txt</label>
@@ -3273,7 +3270,7 @@ function openHistoryBetTimeDialog(date, name) {
     focusSelector: '#admin-history-bet-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-history-bet-input">Bet Time (HH:MM)</label>
-      <input class="admin-dialog-wrap-input" type="text" id="admin-history-bet-input" placeholder="18:30" maxlength="5" pattern="[0-9]{2}:[0-9]{2}">
+      <input class="admin-dialog-wrap-input" type="text" id="admin-history-bet-input" placeholder="hh:mm" maxlength="5" pattern="[0-9]{2}:[0-9]{2}">
     </div>
     <div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-history-bet-date-input">Bet Date (Optional)</label>
@@ -3300,7 +3297,7 @@ function openHistoryWrapDialog(date) {
     focusSelector: '#admin-history-wrap-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-history-wrap-input">Wrap Time (HH:MM:SS)</label>
-      <input class="admin-dialog-wrap-input" type="text" id="admin-history-wrap-input" value="${esc(currentWrap)}" placeholder="18:30:45" maxlength="8" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
+      <input class="admin-dialog-wrap-input" type="text" id="admin-history-wrap-input" value="${esc(currentWrap)}" placeholder="hh:mm:ss" maxlength="8" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
     </div>
     <div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
@@ -3435,7 +3432,7 @@ function openManualTodayWrapDialog() {
     focusSelector: '#admin-today-wrap-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-today-wrap-input">Wrap Time (HH:MM:SS)</label>
-      <input class="admin-dialog-wrap-input" type="text" id="admin-today-wrap-input" placeholder="18:30:45" maxlength="8" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
+      <input class="admin-dialog-wrap-input" type="text" id="admin-today-wrap-input" placeholder="hh:mm:ss" maxlength="8" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
     </div>
     <div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Undo</button>
@@ -4047,8 +4044,8 @@ function showPreview() {
             ${esc(g.name)} ${isDup ? '<span class="red" style="font-size:0.5rem; font-weight:bold;">(DUPLICATE)</span>' : ''}
           </div>
           ${g.time ? `
-            <input type="text" class="bet-time-input" id="bet-time-${g._previewIdx}" value="${esc(g.time)}" placeholder="HH:MM" inputmode="text" maxlength="5" aria-label="${esc(g.name)} bet time">
-            <input type="text" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${esc(displayDate(g.date) || g.date)}" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10" aria-label="${esc(g.name)} bet date">
+            <input type="text" class="bet-time-input" id="bet-time-${g._previewIdx}" value="${esc(g.time)}" placeholder="hh:mm" inputmode="text" maxlength="5" aria-label="${esc(g.name)} bet time">
+            <input type="text" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${esc(displayDate(g.date) || g.date)}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10" aria-label="${esc(g.name)} bet date">
           ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
         </div>`;
       }).join('')}
