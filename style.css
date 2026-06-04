@@ -319,6 +319,35 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .btn-s.chat-upload-btn { background: rgba(var(--green-rgb), .12); color: var(--green); border-color: rgba(var(--green-rgb), .38); }
 .btn-s.chat-upload-btn:hover { background: rgba(var(--green-rgb), .2); border-color: rgba(var(--green-rgb), .55); }
 .btn-d { background: rgba(var(--red-rgb), .12); color: var(--red); border: 1px solid rgba(var(--red-rgb), .25); }
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  .board-toggle,
+  .settings-add-player,
+  #admin-logout-btn,
+  #player-version-btn,
+  #export-backup-btn {
+    background: linear-gradient(135deg, rgba(46,60,87,.52), rgba(46,60,87,.34));
+    -webkit-backdrop-filter: blur(14px) saturate(135%);
+    backdrop-filter: blur(14px) saturate(135%);
+    border-color: var(--border-glass);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 24px rgba(0,0,0,.16);
+  }
+  .board-toggle.on {
+    background: linear-gradient(135deg, rgba(var(--yellow-rgb), .78), rgba(var(--yellow-rgb), .58));
+    border-color: rgba(var(--yellow-rgb), .62);
+    color: #000;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 8px 24px rgba(0,0,0,.16);
+  }
+  .board-toggle:hover,
+  .settings-add-player:hover,
+  #admin-logout-btn:hover,
+  #player-version-btn:hover,
+  #export-backup-btn:hover {
+    background: linear-gradient(135deg, rgba(46,60,87,.62), rgba(46,60,87,.42));
+  }
+  .board-toggle.on:hover {
+    background: linear-gradient(135deg, rgba(var(--yellow-rgb), .86), rgba(var(--yellow-rgb), .66));
+  }
+}
 .settings-row { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .settings-row:last-of-type { border-bottom: none; }
 .settings-name-input { flex: 1 1 auto; min-width: 0; height: 32px; padding: 6px 9px; font-size: .84rem; background: var(--bg4); }
@@ -465,7 +494,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .board-fixed-card .accuracy-sort { flex:0 0 auto; }
 .board-fixed-card .board-legend { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:-4px; padding-top:32px; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px); }
 .accuracy-active-name { position:absolute; left:-58px; right:-4px; top:3%; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; line-height:1; text-align:center; pointer-events:none; z-index:3; }
-.closeness-graph { position:relative; height:210px; margin:2px 4px 28px 58px; overflow:visible; }
+.closeness-graph { position:relative; height:256px; margin:2px 4px 28px 58px; overflow:visible; }
 .closeness-y-axis,
 .closeness-x-axis { position:absolute; background:rgba(var(--neutral-rgb), .18); pointer-events:none; }
 .closeness-y-axis { left:0; top:10%; bottom:12%; width:1px; }

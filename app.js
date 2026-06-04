@@ -3223,7 +3223,6 @@ function openHistoryDayActions(date) {
   const safeDate = esc(date);
   openAdminDialog({
     title: getHistoryDayLabel(date),
-    copy: 'Choose what to change.',
     body: `<div class="admin-dialog-actions">
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-wrap-open" data-history-date="${safeDate}">Edit Official Wrap</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-bet-players-open" data-history-date="${safeDate}">Add Player Bet</button>
