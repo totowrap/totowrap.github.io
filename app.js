@@ -1405,7 +1405,7 @@ function parsePaste(text) {
 function formatConfirmedBetsClipboard(dayNumber, wrapTime, guesses, dayContext) {
   const rows = sortedGuesses(guesses.filter(g => g.time), dayContext)
     .map(g => `${g.name} - ${g.time}`);
-  return [`_TonnoWrap - ${displayDayLabel(dayNumber)}_`, `*Wrap ${wrapTime}*`, '', ...rows].join('\n');
+  return [`_TonnoWrap - ${displayDayLabel(dayNumber)}_`, '', `*Wrap ${wrapTime}*`, '', ...rows].join('\n');
 }
 
 async function copyTextToClipboard(text) {
@@ -3427,7 +3427,6 @@ function openLiveWrapActions(wrapTime) {
   const capturedWrap = String(wrapTime || nowHMS());
   openAdminDialog({
     title: 'Set Official Wrap',
-    copy: `Time captured from the clock: ${capturedWrap}`,
     body: `<div class="admin-dialog-actions">
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-approve" data-wrap-time="${esc(capturedWrap)}">Approve ${esc(capturedWrap)}</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="today-wrap-manual">Manual</button>

@@ -305,7 +305,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .chat-upload-wrap { margin-top: 10px; }
 .chat-upload-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .chat-upload-btn { text-align: center; }
-.chat-upload-note { margin: 0 0 7px; font-size: .62rem; line-height: 1.25; text-align: center; }
+.chat-upload-note { margin: 0 0 10px; font-size: .7rem; line-height: 1.25; text-align: left; }
 .btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 7px; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: background .15s, opacity .15s; }
 .btn + .btn { margin-top: 8px; }
 .btn:disabled { opacity: .4; cursor: default; }
@@ -334,7 +334,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .big-clock-lbl { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); text-align: center; margin-top: 4px; }
 .countdown-txt {
   font-family: 'Alte Haas Grotesk', sans-serif;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--red);
   text-align: center;
   margin-top: 8px;
