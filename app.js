@@ -840,6 +840,10 @@ function displayDayProgress(internalDayNumber) {
   return `${displayDayLabel(internalDayNumber)}/${DISPLAY_TOTAL_DAYS}`;
 }
 
+function displayDayProgressHeader(internalDayNumber) {
+  return `Day <span class="hdr-day-current">${esc(displayDayNumber(internalDayNumber))}</span>/${DISPLAY_TOTAL_DAYS}`;
+}
+
 function restoreAfterFailedSave(prevS) {
   if (_lastSaveWasConflict) return;
   S = prevS;
@@ -2060,7 +2064,7 @@ function renderPlayerMain() {
   const estWrap = S.today?.estWrap || '--:--';
   return `
 <div class="hdr">
-  <div class="hdr-day">${dayNum ? displayDayProgress(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
+  <div class="hdr-day">${dayNum ? displayDayProgressHeader(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap <span class="hdr-wrap-time ${wrapStatusClass}">${esc(estWrap)}</span></div>
@@ -2515,7 +2519,7 @@ function renderMain() {
   const wrapStatusClass = S.today&&S.today.wrapTime ? 'off' : 'live';
   return `
 <div class="hdr">
-  <div class="hdr-day">${totalDays ? displayDayProgress(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
+  <div class="hdr-day">${totalDays ? displayDayProgressHeader(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap <span class="hdr-wrap-time ${wrapStatusClass}">${esc(estWrap)}</span></div>
@@ -2603,9 +2607,9 @@ Luigi - 18:30
 Daniela - 19:15
 Marco - 17:45"></textarea>
       <div class="chat-upload-wrap">
+        <p class="mono dim chat-upload-note">Or upload a WhatsApp chat export and review the extracted bets below.</p>
         <label class="btn btn-s chat-upload-btn" for="chat-upload-input">Upload _chat.txt</label>
         <input class="chat-upload-input" id="chat-upload-input" type="file" accept=".txt,text/plain">
-        <p class="mono dim chat-upload-note">Or upload a WhatsApp chat export and review the extracted bets below.</p>
       </div>
       <button class="btn btn-p mt12" id="parse-btn">Preview Guesses →</button>
     </div>
@@ -4032,7 +4036,7 @@ function showPreview() {
   
   app.innerHTML = `
 <div class="hdr">
-  <div class="hdr-day">${displayDayProgress(totalDays)} Preview</div>
+  <div class="hdr-day">${displayDayProgressHeader(totalDays)} Preview</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap <span class="hdr-wrap-time live">${esc(savedWrap)}</span></div>
