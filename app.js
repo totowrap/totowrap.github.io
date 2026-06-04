@@ -370,10 +370,21 @@ function activePullRefreshScroller() {
   return document.querySelector('.sec.on') || document.querySelector('.sec[data-view="' + _tab + '"]');
 }
 
+function nearestScrollableParent(node) {
+  for (let el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement; el && el !== document.body; el = el.parentElement) {
+    const style = getComputedStyle(el);
+    const scrollsY = /(auto|scroll)/.test(style.overflowY);
+    if (scrollsY && el.scrollHeight > el.clientHeight + 1) return el;
+  }
+  return null;
+}
+
 function canStartPullRefresh(target) {
   if (!isMobileSwipeSurface() || isSwipeIgnoredTarget(target)) return false;
   const scroller = activePullRefreshScroller();
   if (!scroller) return false;
+  const nestedScroller = nearestScrollableParent(target);
+  if (nestedScroller && nestedScroller !== scroller) return false;
   return scroller.scrollTop <= 0;
 }
 
