@@ -2107,7 +2107,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
   const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
   const winnerCloseTag = canStartNextDay ? 'button' : 'div';
-  const nextDayBtn = canStartNextDay ? '<button class="btn btn-p" id="new-day-btn">Start Next Day →</button>' : '';
+  const nextDayBtn = canStartNextDay ? '<button class="btn btn-p next-day-btn" id="new-day-btn">Start Next Day</button>' : '';
 
   if (t.noWinner) {
     return `
@@ -2632,7 +2632,7 @@ function renderToday() {
         <label class="btn btn-s chat-upload-btn" for="chat-upload-input">Upload _chat.txt</label>
         <input class="chat-upload-input" id="chat-upload-input" type="file" accept=".txt,text/plain">
       </div>
-      <button class="btn btn-p mt12" id="parse-btn">Preview Guesses →</button>
+      <button class="btn btn-p mt12" id="parse-btn">Preview Guesses</button>
     </div>
   `;
 }
@@ -4068,7 +4068,7 @@ function showPreview() {
     </p>
   </div>
   <button class="btn btn-p" id="confirm-btn">✓ Looks Good — Start Day</button>
-  <button class="btn btn-s" id="cancel-btn">← Go Back</button>
+  <button class="btn btn-s" id="cancel-btn">Go Back</button>
 </div>`;
   
   startClock();
