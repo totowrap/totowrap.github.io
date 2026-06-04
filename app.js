@@ -916,27 +916,50 @@ async function saveS() {
 
 const DAY_SEC = 86400;
 
-function isValidHM(t) {
-  const m = String(t || '').match(/^(\d{2}):(\d{2})$/);
-  if (!m) return false;
-  const h = Number(m[1]), min = Number(m[2]);
-  return h >= 0 && h < 24 && min >= 0 && min < 60;
+function normalizeClockHour(hour) {
+  return hour === 24 ? 0 : hour;
 }
+
+function normalizeHMValue(value) {
+  const m = String(value || '').match(/^(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]), min = Number(m[2]);
+  if (!(h >= 0 && h <= 24 && min >= 0 && min < 60)) return null;
+  return `${pad(normalizeClockHour(h))}:${pad(min)}`;
+}
+
+function normalizeHMSValue(value) {
+  const m = String(value || '').match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const h = Number(m[1]), min = Number(m[2]), sec = Number(m[3] || 0);
+  if (!(h >= 0 && h <= 24 && min >= 0 && min < 60 && sec >= 0 && sec < 60)) return null;
+  const normalized = `${pad(normalizeClockHour(h))}:${pad(min)}`;
+  return m[3] === undefined ? normalized : `${normalized}:${pad(sec)}`;
+}
+
+function isValidHM(t) {
+  return normalizeHMValue(t) !== null;
+}
+
 function normalizeHMInput(value) {
   const raw = String(value || '').trim();
-  if (/^\d{2}:\d{2}$/.test(raw)) return raw;
+  const normalizedRaw = normalizeHMValue(raw);
+  if (normalizedRaw) return normalizedRaw;
   const digits = raw.replace(/\D/g, '');
-  if (digits.length === 3) return `0${digits[0]}:${digits.slice(1)}`;
-  if (digits.length === 4) return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  if (digits.length === 3) return normalizeHMValue(`0${digits[0]}:${digits.slice(1)}`) || `0${digits[0]}:${digits.slice(1)}`;
+  if (digits.length === 4) return normalizeHMValue(`${digits.slice(0, 2)}:${digits.slice(2)}`) || `${digits.slice(0, 2)}:${digits.slice(2)}`;
   return raw;
 }
-function isValidHMS(t) {
-  const m = String(t || '').match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
-  if (!m) return false;
-  const h = Number(m[1]), min = Number(m[2]), sec = Number(m[3] || 0);
-  return h >= 0 && h < 24 && min >= 0 && min < 60 && sec >= 0 && sec < 60;
+
+function normalizeHMSInput(value) {
+  const raw = String(value || '').trim();
+  return normalizeHMSValue(raw) || raw;
 }
-function toSec(t) { const p = String(t || '00:00').split(':').map(Number); return p[0]*3600 + p[1]*60 + (p[2]||0); }
+
+function isValidHMS(t) {
+  return normalizeHMSValue(t) !== null;
+}
+function toSec(t) { const p = String(t || '00:00').split(':').map(Number); return normalizeClockHour(p[0])*3600 + p[1]*60 + (p[2]||0); }
 function secToHMS(s) { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return `${pad(h)}:${pad(m)}:${pad(sec)}`; }
 function secToClock(s) { return secToHMS(((s % DAY_SEC) + DAY_SEC) % DAY_SEC); }
 function pad(n) { return String(n).padStart(2,'0'); }
@@ -1036,11 +1059,11 @@ const CHAT_INVISIBLE_RE = /[\u200e\u200f\ufeff\u2066\u2067\u2068\u2069]/g;
 const CHAT_EDITED_RE = /\s*(?:<Questo messaggio è stato modificato>|This message was edited)\s*/gi;
 const CHAT_DATE_RE = '\\d{1,2}\\/\\d{1,2}\\/\\d{2}';
 const CHAT_CLOCK_RE = '\\d{1,2}:\\d{2}:\\d{2}';
-const CHAT_BET_TIME_RE = '\\d{1,2}[:.,]\\d{2}';
+const CHAT_BET_TIME_RE = '\\d{1,2}\\s*[:.,]\\s*\\d{2}';
 const CHAT_COMPACT_BET_TIME_RE = '\\d{2}\\d{2}|\\d{2}\\s\\d{2}';
 const CHAT_HEADER_RE = new RegExp(`^[\\u200e\\u200f\\ufeff\\u2066\\u2067\\u2068\\u2069\\s]*\\[(${CHAT_DATE_RE}),\\s*(${CHAT_CLOCK_RE})\\]\\s*(.+?):\\s?(.*)$`);
 const CHAT_SERVICE_HEADER_RE = new RegExp(`^[\\u200e\\u200f\\ufeff\\u2066\\u2067\\u2068\\u2069\\s]*\\[(${CHAT_DATE_RE}),\\s*(${CHAT_CLOCK_RE})\\]\\s*(.*)$`);
-const CHAT_EXPLICIT_BET_RE = new RegExp(`^\\s*([A-Za-zÀ-ÖØ-öø-ÿ .'’~\\-]+)\\s*[-–—]\\s*(${CHAT_BET_TIME_RE})\\s*[.!]*\\s*$`, 'i');
+const CHAT_EXPLICIT_BET_RE = new RegExp(`^\\s*([A-Za-zÀ-ÖØ-öø-ÿ .'’~\\-]+)\\s*[-–—]\\s*(${CHAT_BET_TIME_RE}|${CHAT_COMPACT_BET_TIME_RE})\\s*[.!]*\\s*$`, 'i');
 const CHAT_TIME_FINDER_RE = new RegExp(`(?<!\\d)(${CHAT_BET_TIME_RE})(?!\\d)`, 'g');
 const CHAT_SENDER_ONLY_RE = new RegExp(`^\\s*(?:cambio\\s*[:,]?\\s*)?(${CHAT_BET_TIME_RE})(.*)$`, 'i');
 const CHAT_SENTENCE_CONTEXT_WORDS = new Set(['al','alla','alle','andare','barca','chi','dovrebbe','le','mancano','minuti','minuto','oltre','ora','ore','per','quando']);
@@ -1182,13 +1205,13 @@ function normalizeChatName(rawName, duplicateFirstNames) {
 }
 
 function normalizeChatBetTime(rawTime) {
-  const match = String(rawTime || '').match(/^\s*(\d{1,2})[:.,](\d{2})\s*$/)
+  const match = String(rawTime || '').match(/^\s*(\d{1,2})\s*[:.,]\s*(\d{2})\s*$/)
     || String(rawTime || '').match(/^\s*(\d{2})\s?(\d{2})\s*$/);
   if (!match) return null;
   const hour = Number(match[1]);
   const minute = Number(match[2]);
-  if (!(hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59)) return null;
-  return `${pad(hour)}:${pad(minute)}`;
+  if (!(hour >= 0 && hour <= 24 && minute >= 0 && minute <= 59)) return null;
+  return `${pad(normalizeClockHour(hour))}:${pad(minute)}`;
 }
 
 function chatWords(text) {
@@ -1355,10 +1378,11 @@ function parsePaste(text) {
     }
     
     // Check for correct format: Name - HH:MM
-    const match = line.match(/^(.+?)(?:\s*[-\s:]\s*)(\d{2}:\d{2})$/);
+    const match = line.match(new RegExp(`^(.+?)(?:\\s*[-–—:]\\s*|\\s+)(${CHAT_BET_TIME_RE}|${CHAT_COMPACT_BET_TIME_RE})$`, 'i'));
     if (match) {
-      if (isValidHM(match[2])) {
-        guesses.push({ name: match[1].trim(), time: match[2] });
+      const betTime = normalizeChatBetTime(match[2]);
+      if (betTime) {
+        guesses.push({ name: match[1].trim(), time: betTime });
       } else {
         formatErrors.push({ name: match[1].trim(), rawTime: match[2] });
       }
@@ -3318,7 +3342,7 @@ async function updateHistoryWrapTime(date, nextWrap) {
     return false;
   }
   const currentWrap = target.day.wrapTime || '';
-  const normalizedWrap = String(nextWrap || '').trim();
+  const normalizedWrap = normalizeHMSInput(nextWrap);
   if (!normalizedWrap || normalizedWrap === currentWrap) return true;
   if (!isValidHMS(normalizedWrap)) {
     toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err');
@@ -3353,7 +3377,7 @@ async function addHistoryPlayerBet(date, name, betTime, betDate='') {
     toast('Choose a roster player', 'err');
     return false;
   }
-  const normalizedBet = String(betTime || '').trim();
+  const normalizedBet = normalizeHMInput(betTime);
   if (!normalizedBet) {
     toast('Enter bet time', 'err');
     return false;
@@ -3466,7 +3490,7 @@ async function addRosterPlayer(name) {
 
 async function confirmTodayWrap(wrapTime) {
   if (!IS_ADMIN || !S.today || S.today.wrapTime) return false;
-  const normalizedWrap = String(wrapTime || '').trim();
+  const normalizedWrap = normalizeHMSInput(wrapTime);
   if (!normalizedWrap) { toast('Enter wrap time', 'err'); return false; }
   if (!isValidHMS(normalizedWrap)) { toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err'); return false; }
 
@@ -4052,13 +4076,13 @@ function showPreview() {
 		      toast('Duplicate names', 'err');
 		      return;
 		    }
-		    let finalWrap = S.today?.estWrap && S.today.estWrap !== '--:--' ? S.today.estWrap : '';
+		    let finalWrap = normalizeHMInput(S.today?.estWrap && S.today.estWrap !== '--:--' ? S.today.estWrap : '');
 	    if (!finalWrap) { toast('Set wrap time first', 'err'); return; }
 	    if (!isValidHM(finalWrap)) { toast('Use a valid wrap time (HH:MM)', 'err'); return; }
 	    const editedFullList = fullList.map(g => {
 	      const nextGuess = { ...g };
 	      if (nextGuess.time) {
-	        const editedTime = document.getElementById(`bet-time-${nextGuess._previewIdx}`)?.value || nextGuess.time;
+	        const editedTime = normalizeHMInput(document.getElementById(`bet-time-${nextGuess._previewIdx}`)?.value || nextGuess.time);
 	        if (!isValidHM(editedTime)) {
 	          toast(`Check ${nextGuess.name}'s bet time`, 'err');
 	          return null;
