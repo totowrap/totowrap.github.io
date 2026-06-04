@@ -459,7 +459,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .board-fixed-card .closeness-wrap { flex:1 1 auto; min-height:0; overflow:hidden; gap:0; }
 .board-fixed-card .board-pie-graphic,
 .board-fixed-card .closeness-graph { position:relative; z-index:2; flex:0 0 auto; }
-.board-fixed-card .board-pie-graphic { padding:2px 0 8px; background:linear-gradient(180deg, rgba(38,55,89,.52), rgba(38,55,89,.22) 72%, rgba(38,55,89,0)); pointer-events:none; }
+.board-fixed-card .board-pie-graphic { padding:2px 0 8px; pointer-events:none; }
 .board-fixed-card .accuracy-sort { flex:0 0 auto; }
 .board-fixed-card .board-legend { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:-4px; padding-top:32px; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px); }
 .accuracy-active-name { position:absolute; left:-58px; right:-4px; top:3%; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; line-height:1; text-align:center; pointer-events:none; z-index:3; }
