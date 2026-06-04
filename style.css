@@ -93,6 +93,8 @@ body::before {
 .hdr-right { font-family: 'Alte Haas Grotesk', sans-serif; text-align: right; display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-end; min-width:0; }
 .hdr-day { font-family: 'Alte Haas Grotesk', sans-serif; font-size: 0.90rem; color: var(--dim); letter-spacing: .02em; flex: 1; }
 .hdr-day-current { color: var(--green); transition: color .3s; }
+.hdr-day-current.live { color: var(--green); }
+.hdr-day-current.off { color: var(--red); }
 
 /* 3D LOGO STYLES */
 .logo-3d-container {
@@ -504,7 +506,9 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 }
 .result-share-modal { position:fixed; inset:0; z-index:9500; display:grid; place-items:center; padding:18px; background:rgba(18,28,48,.62); overflow-y:auto; }
 .result-share-panel { position:relative; width:min(100%,440px); border:1px solid var(--border-glass); border-radius:10px; padding:16px; background:linear-gradient(135deg, rgba(62,79,112,.96), rgba(38,55,89,.98)); box-shadow:0 18px 52px rgba(0,0,0,.42); }
-.result-share-close { position:absolute; top:10px; right:10px; width:27px; height:27px; display:inline-grid; place-items:center; border:1px solid rgba(var(--neutral-rgb), .16); border-radius:999px; background:rgba(38,55,89,.62); color:transparent; font-family:'Alte Haas Grotesk', sans-serif; font-size:0; line-height:1; cursor:pointer; z-index:2; overflow:hidden; }
+.result-share-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.result-share-head .card-lbl { margin:0; }
+.result-share-close { position:relative; flex:0 0 auto; width:27px; height:27px; margin-top:calc((.58rem - 27px) / 2); display:inline-grid; place-items:center; border:1px solid rgba(var(--neutral-rgb), .16); border-radius:999px; background:rgba(38,55,89,.62); color:transparent; font-family:'Alte Haas Grotesk', sans-serif; font-size:0; line-height:1; cursor:pointer; z-index:2; overflow:hidden; }
 .result-share-close::before { content:"×"; position:absolute; left:50%; top:50%; transform:translate(-50%, -60%); color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:1.15rem; line-height:1; }
 .result-share-preview { display:flex; justify-content:center; margin-bottom:12px; }
 .result-share-card { position:relative; display:flex; flex-direction:column; justify-content:space-between; width:min(100%,400px); aspect-ratio:1; overflow:hidden; border:1px solid rgba(var(--yellow-rgb), .22); border-radius:8px; padding:22px; background:radial-gradient(circle at 50% 45%, rgba(var(--yellow-rgb), .08), transparent 31%), linear-gradient(145deg, rgba(61,78,111,.94), rgba(31,47,77,.98)); box-shadow:inset 0 1px 0 rgba(255,255,255,.1), 0 18px 50px rgba(0,0,0,.33); }

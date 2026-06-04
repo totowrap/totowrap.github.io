@@ -588,6 +588,12 @@ document.addEventListener('click', e => {
     return;
   }
 
+  const todayAccuracyPlayerBtn = e.target.closest?.('[data-today-accuracy-player]');
+  if (todayAccuracyPlayerBtn) {
+    openAccuracyGraphForPlayer(todayAccuracyPlayerBtn.dataset.todayAccuracyPlayer);
+    return;
+  }
+
   const shareResultBtn = e.target.closest?.('[data-share-result]');
   if (shareResultBtn) {
     openShareResult();
@@ -631,7 +637,12 @@ document.addEventListener('click', e => {
   if (closenessPlayerBtn) {
     _closenessPlayer = closenessPlayerBtn.dataset.closenessPlayer;
     const board = document.querySelector('.sec[data-view="board"]');
-    if (board) board.innerHTML = renderBoard(_boardView);
+    const legendScrollTop = board?.querySelector('.board-legend')?.scrollTop || 0;
+    if (board) {
+      board.innerHTML = renderBoard(_boardView);
+      const nextLegend = board.querySelector('.board-legend');
+      if (nextLegend) nextLegend.scrollTop = legendScrollTop;
+    }
     return;
   }
 
@@ -839,8 +850,9 @@ function displayDayProgress(internalDayNumber) {
   return `${displayDayLabel(internalDayNumber)}/${DISPLAY_TOTAL_DAYS}`;
 }
 
-function displayDayProgressHeader(internalDayNumber) {
-  return `Day <span class="hdr-day-current">${esc(displayDayNumber(internalDayNumber))}</span>/${DISPLAY_TOTAL_DAYS}`;
+function displayDayProgressHeader(internalDayNumber, statusClass='live') {
+  const dayStatus = statusClass === 'off' ? 'off' : 'live';
+  return `Day <span class="hdr-day-current ${dayStatus}">${esc(displayDayNumber(internalDayNumber))}</span>/${DISPLAY_TOTAL_DAYS}`;
 }
 
 function restoreAfterFailedSave(prevS) {
@@ -2063,7 +2075,7 @@ function renderPlayerMain() {
   const estWrap = S.today?.estWrap || '--:--';
   return `
 <div class="hdr">
-  <div class="hdr-day">${dayNum ? displayDayProgressHeader(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
+  <div class="hdr-day">${dayNum ? displayDayProgressHeader(dayNum, wrapStatusClass) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap <span class="hdr-wrap-time ${wrapStatusClass}">${esc(estWrap)}</span></div>
@@ -2110,7 +2122,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
           const st = getPreviousStreak(g.name);
           return `
           <div class="row">
-            <div class="row-name">
+            <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
 	              <span>${esc(g.name)} ${g.time ? '🍣' : '🎣'}</span>
               ${g.time ? st.pill : ''}
             </div>
@@ -2141,7 +2153,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
 
       return `
       <div class="row">
-        <div class="row-name">
+        <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
 	          <span>${displayName}</span>
           ${g.time ? st.pill : ''}
         </div>
@@ -2225,8 +2237,10 @@ function openShareResult() {
   modal.id = 'share-result-modal';
   modal.className = 'result-share-modal';
   modal.innerHTML = `<div class="result-share-panel" role="dialog" aria-modal="true" aria-label="Share result">
-    <button class="result-share-close" type="button" aria-label="Close" data-share-close>×</button>
-    <div class="card-lbl">Share Result</div>
+    <div class="result-share-head">
+      <div class="card-lbl">Share Result</div>
+      <button class="result-share-close" type="button" aria-label="Close" data-share-close>×</button>
+    </div>
     <div class="result-share-preview">${renderShareResultCard(info)}</div>
     <div class="result-share-actions">
       <button class="btn btn-s" type="button" data-share-action="download">Download Image</button>
@@ -2436,7 +2450,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
 
     return `
     <div class="row${boundaryInfo ? ' row-with-boundary' : ''}">
-      <div class="row-name row-name-stack">
+      <div class="row-name row-name-stack" data-today-accuracy-player="${esc(g.name)}">
         <div class="row-name-main">
           <span id="name-span-${playerId}">${displayName}</span>
           ${g.time ? st.pill : ''}
@@ -2518,7 +2532,7 @@ function renderMain() {
   const wrapStatusClass = S.today&&S.today.wrapTime ? 'off' : 'live';
   return `
 <div class="hdr">
-  <div class="hdr-day">${totalDays ? displayDayProgressHeader(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
+  <div class="hdr-day">${totalDays ? displayDayProgressHeader(totalDays, wrapStatusClass) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap <span class="hdr-wrap-time ${wrapStatusClass}">${esc(estWrap)}</span></div>
@@ -2630,6 +2644,15 @@ function setBoardView(v) {
   _boardView = v;
   const board = document.querySelector('.sec[data-view="board"]');
   if (board) board.innerHTML = renderBoard(_boardView);
+}
+
+function openAccuracyGraphForPlayer(name) {
+  if (!name) return;
+  _closenessPlayer = name;
+  _boardView = 'closeness';
+  const board = document.querySelector('.sec[data-view="board"]');
+  if (board) board.innerHTML = renderBoard(_boardView);
+  setMainTab('board');
 }
 
 function contrastTextForHex(hex) {
