@@ -2978,7 +2978,7 @@ function renderBoard(view=_boardView) {
   if (!pl.length) return '<div class="empty">No players yet</div>';
   if (!getBoardViews().includes(view)) view = 'list';
   const distanceToggle = getBoardViews().includes('closeness')
-    ? `<button class="board-toggle${view === 'closeness' ? ' on' : ''}" type="button" data-board-view="closeness">Accuracy Graph</button>`
+    ? `<button class="board-toggle${view === 'closeness' ? ' on' : ''}" type="button" data-board-view="closeness">Accuracy</button>`
     : '';
   const toolbar = `
     <div class="board-toolbar">
