@@ -3479,11 +3479,9 @@ async function confirmTodayWrap(wrapTime) {
     winners.forEach(w => { S.scores[w.name] = (S.scores[w.name] || 0) + points; });
     const saved = await saveS();
     if (!saved) { restoreAfterFailedSave(prevS); return false; }
-    toast(`${formatNames(winners.map(w=>w.name))} win +${points} pt!`, 'ok');
   } else {
     const saved = await saveS();
     if (!saved) { restoreAfterFailedSave(prevS); return false; }
-    toast('No winner - wrap time outside all territories', 'err');
   }
   render();
   return true;
