@@ -1036,6 +1036,7 @@ const CHAT_EDITED_RE = /\s*(?:<Questo messaggio è stato modificato>|This messag
 const CHAT_DATE_RE = '\\d{1,2}\\/\\d{1,2}\\/\\d{2}';
 const CHAT_CLOCK_RE = '\\d{1,2}:\\d{2}:\\d{2}';
 const CHAT_BET_TIME_RE = '\\d{1,2}[:.,]\\d{2}';
+const CHAT_COMPACT_BET_TIME_RE = '\\d{2}\\d{2}|\\d{2}\\s\\d{2}';
 const CHAT_HEADER_RE = new RegExp(`^[\\u200e\\u200f\\ufeff\\u2066\\u2067\\u2068\\u2069\\s]*\\[(${CHAT_DATE_RE}),\\s*(${CHAT_CLOCK_RE})\\]\\s*(.+?):\\s?(.*)$`);
 const CHAT_SERVICE_HEADER_RE = new RegExp(`^[\\u200e\\u200f\\ufeff\\u2066\\u2067\\u2068\\u2069\\s]*\\[(${CHAT_DATE_RE}),\\s*(${CHAT_CLOCK_RE})\\]\\s*(.*)$`);
 const CHAT_EXPLICIT_BET_RE = new RegExp(`^\\s*([A-Za-zÀ-ÖØ-öø-ÿ .'’~\\-]+)\\s*[-–—]\\s*(${CHAT_BET_TIME_RE})\\s*[.!]*\\s*$`, 'i');
@@ -1180,7 +1181,8 @@ function normalizeChatName(rawName, duplicateFirstNames) {
 }
 
 function normalizeChatBetTime(rawTime) {
-  const match = String(rawTime || '').match(/^\s*(\d{1,2})[:.,](\d{2})\s*$/);
+  const match = String(rawTime || '').match(/^\s*(\d{1,2})[:.,](\d{2})\s*$/)
+    || String(rawTime || '').match(/^\s*(\d{2})\s?(\d{2})\s*$/);
   if (!match) return null;
   const hour = Number(match[1]);
   const minute = Number(match[2]);
@@ -1236,6 +1238,12 @@ function chatExplicitNameIsPlausible(rawName) {
 function extractSenderOnlyChatBet(body, sender, duplicateFirstNames) {
   const text = chatCompactText(body);
   if (!text || text.includes('?')) return null;
+  const compactOnly = text.match(new RegExp(`^(${CHAT_COMPACT_BET_TIME_RE})$`));
+  if (compactOnly) {
+    const betTime = normalizeChatBetTime(compactOnly[1]);
+    return betTime ? [normalizeChatName(sender, duplicateFirstNames), betTime] : null;
+  }
+
   const timeMatches = [...text.matchAll(CHAT_TIME_FINDER_RE)];
   if (timeMatches.length !== 1) return null;
   const match = text.match(CHAT_SENDER_ONLY_RE);
@@ -1947,7 +1955,7 @@ function renderConnectionError() {
   <div class="hdr-day">${IS_ADMIN ? 'Admin' : 'TotoWrap'}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <span class="sync-dot js-sync-dot off"></span>
+    <span class="sync-dot off" title="Connection error"></span>
   </div>
 </div>
 <div class="standalone-scroll">
@@ -1973,9 +1981,7 @@ function renderAdminLogin() {
 <div class="hdr">
   <div class="hdr-day">Admin</div>
   ${get3DLogoHTML()}
-  <div class="hdr-right">
-    <span class="sync-dot js-sync-dot live"></span>
-  </div>
+  <div class="hdr-right"></div>
 </div>
 <div class="standalone-scroll">
   <div class="card">
@@ -2025,15 +2031,14 @@ function renderPlayer(app) {
 
 function renderPlayerMain() {
   const dayNum = S.days.length + (S.today ? 1 : 0);
-  const dotClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
+  const wrapStatusClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
   const estWrap = S.today?.estWrap || '--:--';
   return `
 <div class="hdr">
   <div class="hdr-day">${dayNum ? displayDayProgress(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap">Wrap ${esc(estWrap)}</div>
-    <span class="sync-dot js-sync-dot ${dotClass}"></span>
+    <div class="hdr-wrap js-sync-dot ${wrapStatusClass}">Wrap ${esc(estWrap)}</div>
   </div>
 </div>
 <nav class="nav">
@@ -2482,13 +2487,13 @@ function bindPlayerNav() {
 function renderMain() {
   const totalDays=S.days.length+(S.today?1:0);
   const estWrap = S.today?.estWrap || '--:--';
+  const wrapStatusClass = S.today&&S.today.wrapTime ? 'off' : 'live';
   return `
 <div class="hdr">
   <div class="hdr-day">${totalDays ? displayDayProgress(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap">Wrap ${esc(estWrap)}</div>
-    <span class="sync-dot js-sync-dot ${S.today&&S.today.wrapTime?'off':'live'}" title="Live sync"></span>
+    <div class="hdr-wrap js-sync-dot ${wrapStatusClass}" title="Live sync">Wrap ${esc(estWrap)}</div>
   </div>
 </div>
 <nav class="nav">
@@ -3998,8 +4003,7 @@ function showPreview() {
   <div class="hdr-day">${displayDayProgress(totalDays)} Preview</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap">Wrap ${esc(savedWrap)}</div>
-    <span class="sync-dot live js-sync-dot"></span>
+    <div class="hdr-wrap live js-sync-dot">Wrap ${esc(savedWrap)}</div>
   </div>
 </div>
 <div class="standalone-scroll">
@@ -4240,14 +4244,18 @@ onSnapshot(STATE_REF, (snap) => {
   
   // Update all dots
   document.querySelectorAll('.js-sync-dot').forEach(dot => {
+    dot.classList.remove('off');
     dot.classList.add('live');
-    dot.style.background = ''; // Reset manual error color
+    dot.style.background = '';
+    dot.style.color = '';
   });
 }, (err) => {
   console.error("Firestore error:", err);
   document.querySelectorAll('.js-sync-dot').forEach(dot => {
     dot.classList.remove('live');
-    dot.style.background = 'var(--red)';
+    dot.classList.add('off');
+    dot.style.background = '';
+    dot.style.color = '';
   });
   if (!_stateReady) showConnectionError();
 });
