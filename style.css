@@ -504,7 +504,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .today-fixed-view .today-scroll-card { flex:1 1 auto; min-height:0; margin-bottom:0; display:flex; flex-direction:column; overflow:hidden; }
 .today-fixed-view .today-scroll-card { padding-bottom:4px; }
 .today-completed-view .today-scroll-card { margin-bottom:12px; }
-.today-completed-view .next-day-btn { margin-bottom:12px; }
 .today-scroll-card > .card-lbl { position:relative; z-index:2; flex:0 0 auto; }
 .today-scroll-list,
 .standings-scroll-list { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:0; padding-top:0; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.55) calc(100% - 4px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.55) calc(100% - 4px), transparent 100%); }
