@@ -3003,7 +3003,7 @@ function renderBoard(view=_boardView) {
   if (view === 'pie') {
     return `<div class="card">${toolbar}${renderBoardPie(pl)}</div>`;
   }
-  return `<div class="card">${toolbar}<div class="card-lbl" style="margin-top:4px;">Standings</div>
+  return `<div class="card">${toolbar}
 ${pl.map((p,i)=>{
   const score = S.scores[p.name] || 0;
   const openKey = `${i}:${p.name}`;
@@ -3940,7 +3940,7 @@ function renderHistory() {
 function renderSettings() {
   const pl = getAlphabeticalPlayerRoster();
   const hasCurrentDay = S.today !== null;
-  return `<div class="card"><div class="card-lbl">Player Roster — Editable</div>
+  return `<div class="card"><div class="card-lbl">Editable Player Roster</div>
 ${pl.map((p, idx)=> {
   const realIdx = S.playerRoster.findIndex(orig => orig.name === p.name);
   return `
@@ -3965,7 +3965,7 @@ ${pl.map((p, idx)=> {
 </div>
 <div class="card"><div class="card-lbl">Danger Zone</div>
 ${hasCurrentDay ? `
-<p class="mono dim" style="font-size:.7rem;margin-bottom:12px">Delete today's game, matching history, and scores for that day</p>
+<p class="mono dim" style="font-size:.7rem;margin-bottom:12px">Delete today's game, matching history, and scores for that day.</p>
 <button class="btn btn-d" id="delete-day-btn" style="margin-bottom:16px;">Delete Current Day</button>
 ` : ''}
 <p class="mono dim mt8" style="margin-bottom:12px">This will erase all data permanently for everyone.</p>
