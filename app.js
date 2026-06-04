@@ -2039,7 +2039,7 @@ function renderPlayerMain() {
   <div class="hdr-day">${dayNum ? displayDayProgress(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap ${wrapStatusClass}">Wrap ${esc(estWrap)}</div>
+    <div class="hdr-wrap">Wrap <span class="hdr-wrap-time ${wrapStatusClass}">${esc(estWrap)}</span></div>
   </div>
 </div>
 <nav class="nav">
@@ -2494,7 +2494,7 @@ function renderMain() {
   <div class="hdr-day">${totalDays ? displayDayProgress(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap ${wrapStatusClass}">Wrap ${esc(estWrap)}</div>
+    <div class="hdr-wrap">Wrap <span class="hdr-wrap-time ${wrapStatusClass}">${esc(estWrap)}</span></div>
   </div>
 </div>
 <nav class="nav">
@@ -4011,7 +4011,7 @@ function showPreview() {
   <div class="hdr-day">${displayDayProgress(totalDays)} Preview</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap live">Wrap ${esc(savedWrap)}</div>
+    <div class="hdr-wrap">Wrap <span class="hdr-wrap-time live">${esc(savedWrap)}</span></div>
   </div>
 </div>
 <div class="standalone-scroll">

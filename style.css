@@ -216,9 +216,10 @@ body::before {
   25.1%, 100% { opacity: 0; }
 }
 
-.hdr-wrap { font-family: 'Alte Haas Grotesk', sans-serif; font-size: 0.90rem; color: var(--accent); letter-spacing: .02em; white-space: nowrap; transition: color .3s; }
-.hdr-wrap.live { color: var(--green); }
-.hdr-wrap.off { color: var(--red); }
+.hdr-wrap { font-family: 'Alte Haas Grotesk', sans-serif; font-size: 0.90rem; color: var(--dim); letter-spacing: .02em; white-space: nowrap; }
+.hdr-wrap-time { transition: color .3s; }
+.hdr-wrap-time.live { color: var(--green); }
+.hdr-wrap-time.off { color: var(--red); }
 .nav { position: relative; z-index: 199; background: var(--bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); display: flex; }
 .nav-btn { flex: 1; padding: 11px 4px; background: none; border: none; border-bottom: 2px solid transparent; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); cursor: pointer; transition: color .2s; }
 .nav-btn.on { color: var(--accent); border-bottom-color: transparent; }
