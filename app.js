@@ -2111,12 +2111,14 @@ function renderCompletedToday(t, canStartNextDay=false) {
 
   if (t.noWinner) {
     return `
+    <div class="today-fixed-view today-completed-view">
       <${winnerTag} class="winner-banner no-winner-banner">
         <span class="winner-sub">🎬 Day Complete</span>
         <span class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</span>
 	        <span class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</span>
       </${winnerCloseTag}>
-      <div class="card"><div class="card-lbl">Results</div>
+      <div class="card today-scroll-card"><div class="card-lbl">Results</div>
+        <div class="today-scroll-list">
         ${sg.map(g => {
           const st = getPreviousStreak(g.name);
           return `
@@ -2131,19 +2133,23 @@ function renderCompletedToday(t, canStartNextDay=false) {
             ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
           </div>`;
         }).join('')}
+        </div>
       </div>
-      ${nextDayBtn}`;
+      ${nextDayBtn}
+    </div>`;
   }
 
   const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
   const todayWinnerStr = formatSafeNames(todayWinnerNames);
   return `
+  <div class="today-fixed-view today-completed-view">
   <${winnerTag} class="winner-banner">
     <span class="winner-sub">🎬 Today's Winner${todayWinnerNames.length > 1 ? 's' : ''}</span>
     <span class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</span>
 	    <span class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</span>
   </${winnerCloseTag}>
-  <div class="card"><div class="card-lbl">Results</div>
+  <div class="card today-scroll-card"><div class="card-lbl">Results</div>
+    <div class="today-scroll-list">
     ${sg.map(g => {
       const st = getPreviousStreak(g.name);
       const isWinner = todayWinnerNames.includes(g.name);
@@ -2170,8 +2176,10 @@ function renderCompletedToday(t, canStartNextDay=false) {
         ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
       </div>`;
     }).join('')}
+    </div>
   </div>
-  ${nextDayBtn}`;
+  ${nextDayBtn}
+  </div>`;
 }
 
 function getShareResultInfo(day) {
@@ -2505,6 +2513,7 @@ function renderPlayerToday() {
   const slices = boundaries(t.guesses, t);
 
   return `
+  <div class="today-fixed-view">
   <div class="card">
     <div style="display: flex; align-items: center; justify-content: center;">
       <div class="big-clock js-clock">--:--:--</div>
@@ -2512,8 +2521,9 @@ function renderPlayerToday() {
     <div class="big-clock-lbl">Live Time</div>
     <div id="next-out-countdown" class="countdown-txt"></div>
   </div>
-  <div class="card"><div class="card-lbl">${statusHeader}</div>
-    ${renderActiveTodayRows(t, sg, out, slices)}
+  <div class="card today-scroll-card"><div class="card-lbl">${statusHeader}</div>
+    <div class="today-scroll-list">${renderActiveTodayRows(t, sg, out, slices)}</div>
+  </div>
   </div>`;
 }
 
@@ -2583,9 +2593,11 @@ function renderToday() {
     const sg = sortedGuesses(t.guesses, t);
     const slices = boundaries(t.guesses, t);
     return `
+      <div class="today-fixed-view">
       ${clockCard}
-      <div class="card"><div class="card-lbl">${statusHeader}</div>
-        ${renderActiveTodayRows(t, sg, out, slices)}
+      <div class="card today-scroll-card"><div class="card-lbl">${statusHeader}</div>
+        <div class="today-scroll-list">${renderActiveTodayRows(t, sg, out, slices)}</div>
+      </div>
       </div>
     `;
   }
@@ -2992,8 +3004,7 @@ function renderBoard(view=_boardView) {
   if (view === 'pie') {
     return `<div class="card board-fixed-card">${toolbar}${renderBoardPie(pl)}</div>`;
   }
-  return `<div class="card">${toolbar}
-${pl.map((p,i)=>{
+  const standingsRows = pl.map((p,i)=>{
   const score = S.scores[p.name] || 0;
   const openKey = `${i}:${p.name}`;
   const isOpen = _openBoardPlayer === openKey;
@@ -3005,8 +3016,10 @@ ${pl.map((p,i)=>{
     </div>
     ${isOpen ? renderBoardPlayerStats(p.name) : ''}
   </div>`;
-}).join('')}
-</div>`;
+}).join('');
+  return `<div class="card board-fixed-card board-standings-card">${toolbar}
+    <div class="standings-scroll-list">${standingsRows}</div>
+  </div>`;
 }
 
 function countWord(value, singular, plural) {
