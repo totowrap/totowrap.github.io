@@ -1990,7 +1990,7 @@ function renderConnectionError() {
 <div class="standalone-scroll">
   <div class="card">
     <div class="card-lbl">Connection Problem</div>
-    <p class="mono dim center" style="font-size:.72rem;margin:8px 0 14px">Could not load the game data. Check your connection and try again.</p>
+    <p class="mono dim center" style="margin:8px 0 14px">Could not load the game data. Check your connection and try again.</p>
     <button class="btn btn-p" id="reload-btn">Retry</button>
   </div>
 </div>`;
@@ -2015,7 +2015,7 @@ function renderAdminLogin() {
 <div class="standalone-scroll">
   <div class="card">
     <div class="card-lbl">Admin Sign In</div>
-    <p class="mono dim center" style="font-size:.72rem;margin:8px 0 14px">Sign in with an authorized admin account to edit the game.</p>
+    <p class="mono dim center" style="margin:8px 0 14px">Sign in with an authorized admin account to edit the game.</p>
     <div class="inp-wrap">
       <label class="inp-lbl">Email</label>
       <input type="text" id="admin-email" autocomplete="email" placeholder="admin@example.com">
@@ -2580,7 +2580,7 @@ function renderToday() {
   return `
     <div class="card">
       <div class="card-lbl">Set Wrap Time</div>
-      <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set the estimated wrap time players see before the game starts.</p>
+      <p class="mono dim" style="margin-bottom:10px">Set the estimated wrap time players see before the game starts.</p>
       <div class="admin-time-save-row admin-wrap-save-row">
         <input type="text" class="admin-time-input" id="est-wrap-input" value="${esc(t.estWrap && t.estWrap !== '--:--' ? t.estWrap : '')}" placeholder="HH:MM" inputmode="text" maxlength="5" aria-label="Estimated wrap time">
         <input type="text" class="admin-date-input" id="est-wrap-date-input" value="${esc(displayDate(t.estWrapDate || localDateISO()))}" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10" aria-label="Wrap date">
@@ -2591,7 +2591,7 @@ function renderToday() {
     </div>
     <div class="card">
       <div class="card-lbl">Closing Bet Time</div>
-      <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Set when players must stop submitting bets. Players will see a countdown until guesses are pasted.</p>
+      <p class="mono dim" style="margin-bottom:10px">Set when players must stop submitting bets. Players will see a countdown until guesses are pasted.</p>
       <div class="admin-time-save-row admin-close-save-row">
         <input type="text" class="admin-time-input" id="bet-close-input" value="${esc(t.betCloseAt || '')}" placeholder="HH:MM" inputmode="text" maxlength="5" aria-label="Closing bet time">
         <button class="settings-delete admin-time-delete-btn" id="clear-bet-close-btn" type="button" title="Clear closing bet time" aria-label="Clear closing bet time">×</button>
@@ -2601,7 +2601,7 @@ function renderToday() {
     </div>
     <div class="card">
       <div class="card-lbl">Paste Today's Guesses</div>
-      <p class="mono dim" style="font-size:.7rem;margin-bottom:10px">Format: Name - HH:MM (one per line).</p>
+      <p class="mono dim" style="margin-bottom:10px">Format: Name - HH:MM (one per line).</p>
       <textarea id="paste-inp" placeholder="ES:
 Luigi - 18:30
 Daniela - 19:15
@@ -3965,7 +3965,7 @@ ${pl.map((p, idx)=> {
 </div>
 <div class="card"><div class="card-lbl">Danger Zone</div>
 ${hasCurrentDay ? `
-<p class="mono dim" style="font-size:.7rem;margin-bottom:12px">Delete today's game, matching history, and scores for that day.</p>
+<p class="mono dim" style="margin-bottom:12px">Delete today's game, matching history, and scores for that day.</p>
 <button class="btn btn-d" id="delete-day-btn" style="margin-bottom:16px;">Delete Current Day</button>
 ` : ''}
 <p class="mono dim mt8" style="margin-bottom:12px">This will erase all data permanently for everyone.</p>
