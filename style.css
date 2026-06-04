@@ -41,7 +41,8 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
   --border-glass: rgba(var(--yellow-rgb), 0.15);
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 body {
   background-color: var(--bg);
@@ -452,6 +453,15 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .board-pie-graphic { width:100%; display:flex; justify-content:center; }
 .board-pie-svg { width:min(82vw, 300px); height:auto; filter:drop-shadow(0 8px 28px rgba(0,0,0,.35)); }
 .closeness-wrap { display:flex; flex-direction:column; gap:12px; }
+.board-fixed-card { height:100%; min-height:0; margin-bottom:0; display:flex; flex-direction:column; overflow:hidden; }
+.board-fixed-card .board-toolbar { flex:0 0 auto; }
+.board-fixed-card .board-pie-wrap,
+.board-fixed-card .closeness-wrap { flex:1 1 auto; min-height:0; overflow:hidden; gap:0; }
+.board-fixed-card .board-pie-graphic,
+.board-fixed-card .closeness-graph { position:relative; z-index:2; flex:0 0 auto; }
+.board-fixed-card .board-pie-graphic { padding:2px 0 8px; background:linear-gradient(180deg, rgba(38,55,89,.52), rgba(38,55,89,.22) 72%, rgba(38,55,89,0)); pointer-events:none; }
+.board-fixed-card .accuracy-sort { flex:0 0 auto; }
+.board-fixed-card .board-legend { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:-4px; padding-top:18px; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.45) 24px, #000 70px); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.45) 24px, #000 70px); }
 .accuracy-active-name { position:absolute; left:-58px; right:-4px; top:3%; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; line-height:1; text-align:center; pointer-events:none; z-index:3; }
 .closeness-graph { position:relative; height:210px; margin:2px 4px 28px 58px; overflow:visible; }
 .closeness-y-axis,
