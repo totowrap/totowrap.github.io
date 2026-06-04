@@ -638,7 +638,8 @@ document.addEventListener('click', e => {
 
   const closenessOrderBtn = e.target.closest?.('[data-closeness-order]');
   if (closenessOrderBtn) {
-    _closenessOrder = closenessOrderBtn.dataset.closenessOrder === 'bets' ? 'bets' : 'accuracy';
+    const requestedOrder = closenessOrderBtn.dataset.closenessOrder;
+    _closenessOrder = ['accuracy', 'bets', 'name'].includes(requestedOrder) ? requestedOrder : 'accuracy';
     _closenessSortFlash = 'order';
     const board = document.querySelector('.sec[data-view="board"]');
     if (board) board.innerHTML = renderBoard(_boardView);
@@ -2038,7 +2039,7 @@ function renderPlayerMain() {
   <div class="hdr-day">${dayNum ? displayDayProgress(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap js-sync-dot ${wrapStatusClass}">Wrap ${esc(estWrap)}</div>
+    <div class="hdr-wrap ${wrapStatusClass}">Wrap ${esc(estWrap)}</div>
   </div>
 </div>
 <nav class="nav">
@@ -2493,7 +2494,7 @@ function renderMain() {
   <div class="hdr-day">${totalDays ? displayDayProgress(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap js-sync-dot ${wrapStatusClass}" title="Live sync">Wrap ${esc(estWrap)}</div>
+    <div class="hdr-wrap ${wrapStatusClass}">Wrap ${esc(estWrap)}</div>
   </div>
 </div>
 <nav class="nav">
@@ -2881,6 +2882,11 @@ function renderBoardCloseness(pl) {
   }).join('');
 
   const compareAccuracyStats = (a, b) => {
+    if (_closenessOrder === 'name') {
+      return _closenessOrderDir === 'desc'
+        ? b.name.localeCompare(a.name)
+        : a.name.localeCompare(b.name);
+    }
     if (_closenessOrder === 'bets') {
       if (a.count !== b.count) {
         return _closenessOrderDir === 'desc' ? b.count - a.count : a.count - b.count;
@@ -2900,15 +2906,17 @@ function renderBoardCloseness(pl) {
   };
   const sortedStats = [...stats].sort((a, b) => {
     const result = compareAccuracyStats(a, b);
-    if (_closenessOrder === 'bets') return result;
+    if (_closenessOrder === 'bets' || _closenessOrder === 'name') return result;
     return _closenessOrderDir === 'desc' ? -result : result;
   });
 
+  const nextClosenessOrder = _closenessOrder === 'accuracy' ? 'bets' : (_closenessOrder === 'bets' ? 'name' : 'accuracy');
+  const closenessOrderLabel = _closenessOrder === 'accuracy' ? 'Time' : (_closenessOrder === 'bets' ? 'Bet' : 'Name');
   const orderControl = `
     <div class="accuracy-sort">
       <div class="accuracy-sort-controls">
-        <button class="accuracy-sort-select${_closenessSortFlash === 'order' ? ' flash' : ''}" type="button" data-closeness-order="${_closenessOrder === 'accuracy' ? 'bets' : 'accuracy'}">
-          ${_closenessOrder === 'accuracy' ? 'Time' : 'Bet'}
+        <button class="accuracy-sort-select${_closenessSortFlash === 'order' ? ' flash' : ''}" type="button" data-closeness-order="${nextClosenessOrder}">
+          ${closenessOrderLabel}
         </button>
         <button class="accuracy-sort-dir${_closenessSortFlash === 'dir' ? ' flash' : ''}" type="button" data-closeness-order-dir="${_closenessOrderDir}" aria-label="Reverse order" style="--arrow-from:${Math.max(0, _closenessArrowTurns - 1) * 180}deg; --arrow-rotation:${_closenessArrowTurns * 180}deg">
           ↑
@@ -4003,7 +4011,7 @@ function showPreview() {
   <div class="hdr-day">${displayDayProgress(totalDays)} Preview</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
-    <div class="hdr-wrap live js-sync-dot">Wrap ${esc(savedWrap)}</div>
+    <div class="hdr-wrap live">Wrap ${esc(savedWrap)}</div>
   </div>
 </div>
 <div class="standalone-scroll">
@@ -4241,21 +4249,7 @@ onSnapshot(STATE_REF, (snap) => {
   _stateReady = true;
   render();
   maybeSaveTerritoryRuleMigration();
-  
-  // Update all dots
-  document.querySelectorAll('.js-sync-dot').forEach(dot => {
-    dot.classList.remove('off');
-    dot.classList.add('live');
-    dot.style.background = '';
-    dot.style.color = '';
-  });
 }, (err) => {
   console.error("Firestore error:", err);
-  document.querySelectorAll('.js-sync-dot').forEach(dot => {
-    dot.classList.remove('live');
-    dot.classList.add('off');
-    dot.style.background = '';
-    dot.style.color = '';
-  });
   if (!_stateReady) showConnectionError();
 });
