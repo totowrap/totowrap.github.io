@@ -850,9 +850,8 @@ function displayDayProgress(internalDayNumber) {
   return `${displayDayLabel(internalDayNumber)}/${DISPLAY_TOTAL_DAYS}`;
 }
 
-function displayDayProgressHeader(internalDayNumber, statusClass='live') {
-  const dayStatus = statusClass === 'off' ? 'off' : 'live';
-  return `Day <span class="hdr-day-current ${dayStatus}">${esc(displayDayNumber(internalDayNumber))}</span>/${DISPLAY_TOTAL_DAYS}`;
+function displayDayProgressHeader(internalDayNumber) {
+  return `Day ${esc(displayDayNumber(internalDayNumber))}/${DISPLAY_TOTAL_DAYS}`;
 }
 
 function restoreAfterFailedSave(prevS) {
@@ -2075,7 +2074,7 @@ function renderPlayerMain() {
   const estWrap = S.today?.estWrap || '--:--';
   return `
 <div class="hdr">
-  <div class="hdr-day">${dayNum ? displayDayProgressHeader(dayNum, wrapStatusClass) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
+  <div class="hdr-day">${dayNum ? displayDayProgressHeader(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap <span class="hdr-wrap-time ${wrapStatusClass}">${esc(estWrap)}</span></div>
@@ -2532,7 +2531,7 @@ function renderMain() {
   const wrapStatusClass = S.today&&S.today.wrapTime ? 'off' : 'live';
   return `
 <div class="hdr">
-  <div class="hdr-day">${totalDays ? displayDayProgressHeader(totalDays, wrapStatusClass) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
+  <div class="hdr-day">${totalDays ? displayDayProgressHeader(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap <span class="hdr-wrap-time ${wrapStatusClass}">${esc(estWrap)}</span></div>
