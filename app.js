@@ -70,6 +70,7 @@ const BOOT_FADE_MS = 1500;
 const BOOT_PLAYER_NAMES_STORAGE_KEY = 'totowrap-boot-player-names';
 const BOOT_STARTED_AT = Date.now();
 let _bootHideQueued = false;
+const INNER_SCROLL_SELECTOR = '.today-scroll-list, .standings-scroll-list, .board-legend, .preview-card';
 
 function waitMs(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -626,8 +627,14 @@ document.addEventListener('click', e => {
 
   const boardPlayerBtn = e.target.closest?.('[data-board-player]');
   if (boardPlayerBtn) {
+    const board = document.querySelector('.sec[data-view="board"]');
+    const scrollByInnerList = captureInnerScrollState();
     _openBoardPlayer = _openBoardPlayer === boardPlayerBtn.dataset.boardPlayer ? null : boardPlayerBtn.dataset.boardPlayer;
-    setBoardView('list');
+    _boardView = 'list';
+    if (board) {
+      board.innerHTML = renderBoard(_boardView);
+      restoreInnerScrollState(scrollByInnerList);
+    }
     return;
   }
 
@@ -648,11 +655,10 @@ document.addEventListener('click', e => {
   if (closenessPlayerBtn) {
     _closenessPlayer = closenessPlayerBtn.dataset.closenessPlayer;
     const board = document.querySelector('.sec[data-view="board"]');
-    const legendScrollTop = board?.querySelector('.board-legend')?.scrollTop || 0;
+    const scrollByInnerList = captureInnerScrollState();
     if (board) {
       board.innerHTML = renderBoard(_boardView);
-      const nextLegend = board.querySelector('.board-legend');
-      if (nextLegend) nextLegend.scrollTop = legendScrollTop;
+      restoreInnerScrollState(scrollByInnerList);
     }
     return;
   }
@@ -663,7 +669,11 @@ document.addEventListener('click', e => {
     _closenessOrder = ['accuracy', 'bets', 'name'].includes(requestedOrder) ? requestedOrder : 'accuracy';
     _closenessSortFlash = 'order';
     const board = document.querySelector('.sec[data-view="board"]');
-    if (board) board.innerHTML = renderBoard(_boardView);
+    const scrollByInnerList = captureInnerScrollState();
+    if (board) {
+      board.innerHTML = renderBoard(_boardView);
+      restoreInnerScrollState(scrollByInnerList);
+    }
     setTimeout(() => {
       document.querySelector('.accuracy-sort-select.flash')?.classList.remove('flash');
       if (_closenessSortFlash === 'order') _closenessSortFlash = null;
@@ -677,7 +687,11 @@ document.addEventListener('click', e => {
     _closenessArrowTurns += 1;
     _closenessSortFlash = 'dir';
     const board = document.querySelector('.sec[data-view="board"]');
-    if (board) board.innerHTML = renderBoard(_boardView);
+    const scrollByInnerList = captureInnerScrollState();
+    if (board) {
+      board.innerHTML = renderBoard(_boardView);
+      restoreInnerScrollState(scrollByInnerList);
+    }
     setTimeout(() => {
       document.querySelector('.accuracy-sort-dir.flash')?.classList.remove('flash');
       if (_closenessSortFlash === 'dir') _closenessSortFlash = null;
@@ -1898,6 +1912,35 @@ function scheduleWinnerConfetti() {
   })();
 }
 
+function innerScrollKey(el, index) {
+  const view = el.closest('.sec[data-view]')?.dataset.view || (el.closest('.standalone-scroll') ? 'standalone' : 'global');
+  let type = 'scroll';
+  if (el.classList.contains('today-scroll-list')) type = 'today-list';
+  else if (el.classList.contains('standings-scroll-list')) type = 'standings-list';
+  else if (el.classList.contains('board-legend')) {
+    type = el.closest('.closeness-wrap') ? 'accuracy-legend' : 'pie-legend';
+  } else if (el.classList.contains('preview-card')) {
+    type = 'preview-card';
+  }
+  return `${view}:${type}:${index}`;
+}
+
+function captureInnerScrollState() {
+  const scrollByInnerList = {};
+  document.querySelectorAll(INNER_SCROLL_SELECTOR).forEach((el, index) => {
+    scrollByInnerList[innerScrollKey(el, index)] = el.scrollTop;
+  });
+  return scrollByInnerList;
+}
+
+function restoreInnerScrollState(scrollByInnerList) {
+  if (!scrollByInnerList) return;
+  document.querySelectorAll(INNER_SCROLL_SELECTOR).forEach((el, index) => {
+    const scrollTop = scrollByInnerList[innerScrollKey(el, index)];
+    if (typeof scrollTop === 'number') el.scrollTop = scrollTop;
+  });
+}
+
 function captureUIState() {
   const active = document.activeElement;
   const isField = active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
@@ -1927,7 +1970,7 @@ function captureUIState() {
     .map(row => row.dataset.historyDate)
     .filter(Boolean);
 
-  return { activeField, scrollByView, openHistoryDates };
+  return { activeField, scrollByView, scrollByInnerList: captureInnerScrollState(), openHistoryDates };
 }
 
 function restoreUIState(uiState) {
@@ -1942,6 +1985,8 @@ function restoreUIState(uiState) {
   if (standalone && typeof uiState.scrollByView?.__standalone === 'number') {
     standalone.scrollTop = uiState.scrollByView.__standalone;
   }
+
+  restoreInnerScrollState(uiState.scrollByInnerList);
 
   const openDates = new Set(uiState.openHistoryDates || []);
   document.querySelectorAll('[data-history-row]').forEach(row => {
@@ -2660,17 +2705,25 @@ function renderBetClosePlayerCard(day) {
 
 function setBoardView(v) {
   if (!getBoardViews().includes(v)) return;
+  const scrollByInnerList = captureInnerScrollState();
   _boardView = v;
   const board = document.querySelector('.sec[data-view="board"]');
-  if (board) board.innerHTML = renderBoard(_boardView);
+  if (board) {
+    board.innerHTML = renderBoard(_boardView);
+    restoreInnerScrollState(scrollByInnerList);
+  }
 }
 
 function openAccuracyGraphForPlayer(name) {
   if (!name) return;
   _closenessPlayer = name;
   _boardView = 'closeness';
+  const scrollByInnerList = captureInnerScrollState();
   const board = document.querySelector('.sec[data-view="board"]');
-  if (board) board.innerHTML = renderBoard(_boardView);
+  if (board) {
+    board.innerHTML = renderBoard(_boardView);
+    restoreInnerScrollState(scrollByInnerList);
+  }
   setMainTab('board');
 }
 
