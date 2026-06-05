@@ -2090,7 +2090,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
   return `
   <div class="today-fixed-view today-completed-view">
   <${winnerTag} class="winner-banner">
-    <span class="winner-sub">🎬 Today's Winner${todayWinnerNames.length > 1 ? 's' : ''}</span>
+    <span class="winner-sub">Today's winner${todayWinnerNames.length > 1 ? 's' : ''}</span>
     <span class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</span>
 	    <span class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</span>
   </${winnerCloseTag}>
@@ -2148,7 +2148,7 @@ function getShareResultInfo(day) {
     noWinner,
     estWrap: day?.estWrap || '--:--',
     dayLabel: dayNum ? displayDayLabel(dayNum) : 'Day —',
-    kicker: noWinner ? 'Day Complete' : `🎬 Today's Winner${winnerNames.length > 1 ? 's' : ''}`,
+    kicker: noWinner ? 'Day Complete' : `Today's winner${winnerNames.length > 1 ? 's' : ''}`,
     name: noWinner ? 'No Winner' : formatNames(winnerNames),
     bet: winnerBet,
     wrap: day?.wrapTime || '--:--',
