@@ -465,7 +465,7 @@ document.addEventListener('click', e => {
 }, true);
 
 document.addEventListener('click', e => {
-  const logoActionBtn = e.target.closest?.('[data-logo-action]');
+  const logoActionBtn = e.target.closest?.('.logo-3d-container');
   if (logoActionBtn) {
     if (_tab === 'today') location.reload();
     else setMainTab('today');
@@ -619,14 +619,14 @@ function get3DLogoHTML() {
   const elapsed = (performance.now() - _logoStartedAt) / 1000;
   const mode = elapsed < LOGO_STEP_SEC ? 'logo-step0' : 'logo-loop';
   return `
-  <button class="logo-3d-container ${mode}" type="button" data-logo-action aria-label="Open Today or refresh" style="--logo-delay:-${elapsed.toFixed(3)}s">
+  <div class="logo-3d-container ${mode}" style="--logo-delay:-${elapsed.toFixed(3)}s">
     <div class="logo-3d-inner">
       <img src="imgs/tonnowrap.png" class="face face-1">
       <img src="imgs/tuna.png"      class="face face-2">
       <img src="imgs/totowrap.png"  class="face face-3">
       <img src="imgs/tuna.png"      class="face face-4">
     </div>
-  </button>`;
+  </div>`;
 }
 
 // Helper to beautifully format an array of names using commas and "and"

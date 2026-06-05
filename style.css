@@ -96,17 +96,11 @@ body::before {
 
 /* 3D LOGO STYLES */
 .logo-3d-container {
-  -webkit-appearance: none;
-  appearance: none;
   height: 48px;
   width: 88px;
   perspective: 1000px;
   margin: 0 10px;
   flex-shrink: 0;
-  display: block;
-  border: 0;
-  background: transparent;
-  padding: 0;
   cursor: pointer;
 }
 
