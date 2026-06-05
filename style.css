@@ -607,11 +607,10 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .legend-meta { font-family:'Alte Haas Grotesk', sans-serif; font-size:.7rem; color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums; }
 
 /* History Accordion Styles */
-.hist-row { cursor: pointer; padding: 0 !important; overflow: hidden; }
-.hist-summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 16px; min-width: 0; }
-.hist-summary > * { transform: translateY(4px); }
+.hist-row { cursor: pointer; padding: 0 !important; overflow: hidden; margin-bottom: 10px; }
+.hist-summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 16px; min-width: 0; }
 .hist-day-tag { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 0.7rem; color: var(--dim); text-transform: uppercase; flex: 0 0 45px; width: 45px; white-space: nowrap; line-height: 1; }
-.hist-main-info { flex: 1 1 auto; min-width: 0; min-height: 20px; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; line-height: 1; }
+.hist-main-info { flex: 1 1 auto; min-width: 0; min-height: 20px; display: flex; align-items: center; gap: 6px; white-space: nowrap; line-height: 1; }
 .hist-title { min-width: 0; white-space: nowrap; line-height: 1; }
 .hist-bet { flex: 0 0 auto; white-space: nowrap; line-height: 1; }
 .hist-meta { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; font-size: 0.8rem; white-space: nowrap; }
@@ -644,11 +643,12 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .hist-edit:active { transform: scale(.96); }
 .hist-details { display: none; padding: 0 16px 16px; border-top: 1px solid rgba(61, 84, 51, 0.2); background: rgba(0,0,0,0.05); }
 .hist-row.open .hist-details { display: block; }
-.hist-details .row { align-items: center; }
-.hist-details .row-with-boundary { align-items: flex-start; }
+.hist-details .row { align-items: center; min-height: 42px; padding: 9px 0; }
+.hist-details .row-with-boundary { align-items: center; }
 .hist-details .row-name-main { min-height: 22px; align-items: center; }
+.hist-details .row-name-stack { justify-content: center; }
 .hist-details .row-with-boundary > .badge,
-.hist-details .row-with-boundary > .row-time { margin-top: 1px; }
+.hist-details .row-with-boundary > .row-time { margin-top: 0; }
 .admin-dialog-modal { position: fixed; inset: 0; z-index: 9600; display: grid; place-items: center; padding: 18px; background: rgba(18,28,48,.62); overflow-y: auto; }
 .admin-dialog-panel { width: min(100%,400px); border: 1px solid var(--border-glass); border-radius: 10px; padding: 16px; background: linear-gradient(135deg, rgba(62,79,112,.96), rgba(38,55,89,.98)); }
 .admin-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(61,84,51,.62); }
