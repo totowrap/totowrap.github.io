@@ -50,8 +50,6 @@ let _swipeStart = null;
 let _suppressNextClick = false;
 let _dragState = null;
 let _navIndicatorHideTO = null;
-let _pullRefreshState = null;
-let _pullRefreshReloading = false;
 let _inactiveAt = document.hidden ? Date.now() : null;
 let _inactivityTimer = null;
 let _stateReady = false;
@@ -64,7 +62,6 @@ let _territoryRuleMigrationPending = false;
 let _territoryRuleMigrationSaving = false;
 const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
-const PULL_REFRESH_DISTANCE = 125;
 const BOOT_TOTAL_MS = 4500;
 const BOOT_FADE_MS = 1500;
 const BOOT_PLAYER_NAMES_STORAGE_KEY = 'totowrap-boot-player-names';
@@ -365,120 +362,6 @@ function isMobileSwipeSurface() {
   return matchMedia('(pointer: coarse), (max-width: 700px)').matches;
 }
 
-function activePullRefreshScroller() {
-  const standalone = document.querySelector('.standalone-scroll');
-  if (standalone) return standalone;
-  return document.querySelector('.sec.on') || document.querySelector('.sec[data-view="' + _tab + '"]');
-}
-
-function nearestScrollableParent(node) {
-  for (let el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement; el && el !== document.body; el = el.parentElement) {
-    const style = getComputedStyle(el);
-    const scrollsY = /(auto|scroll)/.test(style.overflowY);
-    if (scrollsY && el.scrollHeight > el.clientHeight + 1) return el;
-  }
-  return null;
-}
-
-function canStartPullRefresh(target) {
-  if (!isMobileSwipeSurface() || isSwipeIgnoredTarget(target)) return false;
-  const scroller = activePullRefreshScroller();
-  if (!scroller) return false;
-  const nestedScroller = nearestScrollableParent(target);
-  if (nestedScroller && nestedScroller !== scroller) return false;
-  return scroller.scrollTop <= 0;
-}
-
-function pullRefreshIndicator() {
-  let indicator = document.getElementById('pull-refresh-indicator');
-  const host = document.querySelector('.tab-viewport') || document.getElementById('app') || document.body;
-  if (!indicator) {
-    indicator = document.createElement('div');
-    indicator.id = 'pull-refresh-indicator';
-    indicator.className = 'pull-refresh-indicator';
-    indicator.setAttribute('aria-hidden', 'true');
-    indicator.innerHTML = '<img src="imgs/tunacan.png" alt="">';
-  }
-  if (indicator.parentElement !== host) host.appendChild(indicator);
-  return indicator;
-}
-
-function updatePullRefreshIndicator(distance=0, armed=false) {
-  const indicator = pullRefreshIndicator();
-  const progress = Math.max(0, Math.min(1, distance / PULL_REFRESH_DISTANCE));
-  const eased = 1 - Math.pow(1 - progress, 2);
-  const y = -8 + eased * 18;
-  const contentY = eased * 42;
-  const rotation = progress * 220;
-  indicator.classList.toggle('show', distance > 8 || armed);
-  indicator.classList.toggle('armed', armed);
-  indicator.style.setProperty('--pull-y', `${y.toFixed(1)}px`);
-  indicator.style.setProperty('--pull-rotate', `${rotation.toFixed(1)}deg`);
-  document.documentElement.style.setProperty('--pull-content-y', `${contentY.toFixed(1)}px`);
-}
-
-function resetPullRefreshIndicator() {
-  if (_pullRefreshReloading) return;
-  const indicator = document.getElementById('pull-refresh-indicator');
-  if (!indicator) return;
-  indicator.classList.remove('show', 'armed', 'loading');
-  indicator.style.setProperty('--pull-y', '-8px');
-  indicator.style.setProperty('--pull-rotate', '0deg');
-  document.documentElement.style.setProperty('--pull-content-y', '0px');
-}
-
-document.addEventListener('touchstart', e => {
-  if (_pullRefreshReloading || e.touches.length !== 1 || !canStartPullRefresh(e.target)) {
-    _pullRefreshState = null;
-    return;
-  }
-  _pullRefreshState = {
-    startX: e.touches[0].clientX,
-    startY: e.touches[0].clientY,
-    armed: false
-  };
-}, { passive: true });
-
-document.addEventListener('touchmove', e => {
-  if (!_pullRefreshState || e.touches.length !== 1) return;
-  const dx = e.touches[0].clientX - _pullRefreshState.startX;
-  const dy = e.touches[0].clientY - _pullRefreshState.startY;
-  if (dy <= 0 || Math.abs(dx) > dy * 0.75) {
-    _pullRefreshState = null;
-    resetPullRefreshIndicator();
-    return;
-  }
-  if (activePullRefreshScroller()?.scrollTop > 0) {
-    _pullRefreshState = null;
-    resetPullRefreshIndicator();
-    return;
-  }
-  if (dy > 16) e.preventDefault();
-  _pullRefreshState.armed = dy >= PULL_REFRESH_DISTANCE;
-  updatePullRefreshIndicator(dy, _pullRefreshState.armed);
-}, { passive: false });
-
-document.addEventListener('touchend', () => {
-  const shouldRefresh = _pullRefreshState?.armed;
-  _pullRefreshState = null;
-  if (shouldRefresh) {
-    _pullRefreshReloading = true;
-    const indicator = pullRefreshIndicator();
-    indicator.classList.add('show', 'loading');
-    indicator.classList.remove('armed');
-    indicator.style.setProperty('--pull-y', '10px');
-    document.documentElement.style.setProperty('--pull-content-y', '42px');
-    setTimeout(() => location.reload(), 220);
-    return;
-  }
-  resetPullRefreshIndicator();
-}, { passive: true });
-
-document.addEventListener('touchcancel', () => {
-  _pullRefreshState = null;
-  resetPullRefreshIndicator();
-}, { passive: true });
-
 document.addEventListener('touchstart', e => {
   if (!isMobileSwipeSurface() || e.touches.length !== 1 || isSwipeIgnoredTarget(e.target)) {
     _swipeStart = null;
@@ -582,6 +465,13 @@ document.addEventListener('click', e => {
 }, true);
 
 document.addEventListener('click', e => {
+  const logoActionBtn = e.target.closest?.('[data-logo-action]');
+  if (logoActionBtn) {
+    if (_tab === 'today') location.reload();
+    else setMainTab('today');
+    return;
+  }
+
   const adminDialogCloseBtn = e.target.closest?.('[data-admin-dialog-close]');
   if (adminDialogCloseBtn || e.target.id === 'admin-dialog-modal') {
     closeAdminDialog();
@@ -729,14 +619,14 @@ function get3DLogoHTML() {
   const elapsed = (performance.now() - _logoStartedAt) / 1000;
   const mode = elapsed < LOGO_STEP_SEC ? 'logo-step0' : 'logo-loop';
   return `
-  <div class="logo-3d-container ${mode}" style="--logo-delay:-${elapsed.toFixed(3)}s">
+  <button class="logo-3d-container ${mode}" type="button" data-logo-action aria-label="Open Today or refresh" style="--logo-delay:-${elapsed.toFixed(3)}s">
     <div class="logo-3d-inner">
       <img src="imgs/tonnowrap.png" class="face face-1">
       <img src="imgs/tuna.png"      class="face face-2">
       <img src="imgs/totowrap.png"  class="face face-3">
       <img src="imgs/tuna.png"      class="face face-4">
     </div>
-  </div>`;
+  </button>`;
 }
 
 // Helper to beautifully format an array of names using commas and "and"
