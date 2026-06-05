@@ -490,6 +490,12 @@ document.addEventListener('click', e => {
     return;
   }
 
+  const copyCurrentBetsBtn = e.target.closest?.('[data-copy-current-bets]');
+  if (copyCurrentBetsBtn) {
+    copyCurrentBetsRecap();
+    return;
+  }
+
   const currentBetBtn = e.target.closest?.('[data-current-bet-player]');
   if (currentBetBtn) {
     openCurrentBetDialog(currentBetBtn.dataset.currentBetPlayer);
@@ -1336,7 +1342,7 @@ function parsePaste(text) {
 function formatConfirmedBetsClipboard(dayNumber, wrapTime, guesses, dayContext) {
   const rows = sortedGuesses(guesses.filter(g => g.time), dayContext)
     .map(g => `${g.name} - ${g.time}`);
-  return [`_TonnoWrap - ${displayDayLabel(dayNumber)}_`, '', `*Wrap ${wrapTime}*`, '', ...rows].join('\n');
+  return [`_TonnoWrap recap - ${displayDayLabel(dayNumber)}_`, '', `*Wrap ${wrapTime}*`, '', ...rows].join('\n');
 }
 
 async function copyTextToClipboard(text) {
@@ -1366,6 +1372,31 @@ async function copyTextToClipboard(text) {
   } finally {
     textarea.remove();
   }
+}
+
+async function copyCurrentBetsRecap() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return false;
+  const guesses = S.today.guesses || [];
+  if (!guesses.some(g => g.time)) {
+    toast('No bets to copy', 'err');
+    return false;
+  }
+  const wrapTime = S.today.estWrap && S.today.estWrap !== '--:--' ? S.today.estWrap : '';
+  if (!wrapTime) {
+    toast('No wrap time to copy', 'err');
+    return false;
+  }
+  const dayNumber = S.days.length + 1;
+  const dayContext = {
+    approvedAt: S.today.approvedAt,
+    approvedDate: S.today.approvedDate || S.today.date,
+    estWrap: S.today.estWrap,
+    estWrapDate: S.today.estWrapDate
+  };
+  const clipboardText = formatConfirmedBetsClipboard(dayNumber, wrapTime, guesses, dayContext);
+  const copied = await copyTextToClipboard(clipboardText);
+  toast(copied ? 'Bets recap copied' : 'Could not copy bets recap', copied ? 'ok' : 'err');
+  return copied;
 }
 
 function buildFullGuessList(parsed) {
@@ -2049,8 +2080,12 @@ function renderPlayerMain() {
 }
 
 function renderPlayerStatusHeader(lastDay) {
+  const canCopyCurrentBets = IS_ADMIN && S.today && !S.today.wrapTime && (S.today.guesses || []).some(g => g.time);
+  const statusTitle = canCopyCurrentBets
+    ? '<button class="player-status-copy" type="button" data-copy-current-bets>Player Status</button>'
+    : '<span>Player Status</span>';
   return `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-    <span>Player Status</span>
+    ${statusTitle}
     ${renderPreviousWinnerTag(lastDay)}
   </div>`;
 }
