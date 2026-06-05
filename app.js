@@ -3221,7 +3221,7 @@ function closeAdminDialog() {
   document.getElementById('admin-dialog-modal')?.remove();
 }
 
-function openAdminDialog({ title, copy='', body='', focusSelector='' }) {
+function openAdminDialog({ title, copy='', body='', focusSelector='', showClose=true }) {
   closeAdminDialog();
   const modal = document.createElement('div');
   modal.id = 'admin-dialog-modal';
@@ -3232,7 +3232,7 @@ function openAdminDialog({ title, copy='', body='', focusSelector='' }) {
         <div class="admin-dialog-title">${esc(title)}</div>
         ${copy ? `<p class="admin-dialog-copy">${esc(copy)}</p>` : ''}
       </div>
-      <button class="admin-dialog-close" type="button" aria-label="Close" data-admin-dialog-close>×</button>
+      ${showClose ? '<button class="admin-dialog-close" type="button" aria-label="Close" data-admin-dialog-close>×</button>' : ''}
     </div>
     ${body}
   </div>`;
@@ -3330,6 +3330,7 @@ function openHistoryWrapDialog(date) {
   openAdminDialog({
     title: 'Edit Official Wrap',
     copy: `${getHistoryDayLabel(date)} current wrap: ${currentWrap || '--:--'}`,
+    showClose: false,
     focusSelector: '#admin-history-wrap-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-history-wrap-input">Wrap Time (HH:MM:SS)</label>
@@ -3356,6 +3357,7 @@ function openHistoryDeleteDialog(date) {
   openAdminDialog({
     title: `Delete ${getHistoryDayLabel(date)}?`,
     copy,
+    showClose: false,
     body: `<div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
       <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="history-delete-confirm" data-history-date="${esc(date)}">Delete</button>
@@ -3452,10 +3454,11 @@ function openLiveWrapActions(wrapTime) {
   const capturedWrap = String(wrapTime || nowHMS());
   openAdminDialog({
     title: 'Set Official Wrap',
+    showClose: false,
     body: `<div class="admin-dialog-actions">
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-approve" data-wrap-time="${esc(capturedWrap)}">Approve ${esc(capturedWrap)}</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="today-wrap-manual">Manual</button>
-      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Undo</button>
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
     </div>`
   });
 }
@@ -3465,13 +3468,14 @@ function openManualTodayWrapDialog() {
   openAdminDialog({
     title: 'Insert Wrap Manually',
     copy: 'Type the official wrap time and confirm.',
+    showClose: false,
     focusSelector: '#admin-today-wrap-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-today-wrap-input">Wrap Time (HH:MM:SS)</label>
       <input class="admin-dialog-wrap-input" type="text" id="admin-today-wrap-input" placeholder="hh:mm:ss" maxlength="8" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
     </div>
     <div class="admin-dialog-split">
-      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Undo</button>
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-save">Confirm</button>
     </div>`
   });
@@ -3487,7 +3491,7 @@ function openCurrentBetDialog(name) {
   }
   openAdminDialog({
     title: `Add ${playerName} Bet`,
-    copy: 'Add this player bet to the current game.',
+    showClose: false,
     focusSelector: '#admin-current-bet-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-current-bet-input">Bet Time (HH:MM)</label>
@@ -3508,7 +3512,7 @@ function openRosterPlayerDialog() {
   if (!IS_ADMIN) return;
   openAdminDialog({
     title: 'Add Player',
-    copy: 'Add a player to the current roster.',
+    showClose: false,
     focusSelector: '#admin-roster-player-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-roster-player-input">Player Name</label>
