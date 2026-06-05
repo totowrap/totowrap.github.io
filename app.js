@@ -2975,33 +2975,36 @@ function renderBoardCloseness(pl) {
   }).join('');
 
   const compareAccuracyStats = (a, b) => {
+    const arrowPointsUp = _closenessOrderDir === 'asc';
+    const compareNameAsc = (left, right) => left.name.localeCompare(right.name);
+    const compareAvgAsc = (left, right) => {
+      if (left.avgGap === null && right.avgGap === null) return compareNameAsc(left, right);
+      if (left.avgGap === null) return 1;
+      if (right.avgGap === null) return -1;
+      if (left.avgGap !== right.avgGap) return left.avgGap - right.avgGap;
+      if (right.count !== left.count) return right.count - left.count;
+      return compareNameAsc(left, right);
+    };
+
     if (_closenessOrder === 'name') {
-      return _closenessOrderDir === 'desc'
-        ? b.name.localeCompare(a.name)
-        : a.name.localeCompare(b.name);
+      return arrowPointsUp ? b.name.localeCompare(a.name) : compareNameAsc(a, b);
     }
+
     if (_closenessOrder === 'bets') {
       if (a.count !== b.count) {
-        return _closenessOrderDir === 'desc' ? b.count - a.count : a.count - b.count;
+        return arrowPointsUp ? b.count - a.count : a.count - b.count;
       }
-      if (a.avgGap === null && b.avgGap === null) return a.name.localeCompare(b.name);
-      if (a.avgGap === null) return 1;
-      if (b.avgGap === null) return -1;
-      if (a.avgGap !== b.avgGap) return a.avgGap - b.avgGap;
-      return a.name.localeCompare(b.name);
+      return compareAvgAsc(a, b);
     }
-    if (a.avgGap === null && b.avgGap === null) return a.name.localeCompare(b.name);
+
+    if (a.avgGap === null && b.avgGap === null) return compareNameAsc(a, b);
     if (a.avgGap === null) return 1;
     if (b.avgGap === null) return -1;
-    if (a.avgGap !== b.avgGap) return a.avgGap - b.avgGap;
+    if (a.avgGap !== b.avgGap) return arrowPointsUp ? b.avgGap - a.avgGap : a.avgGap - b.avgGap;
     if (b.count !== a.count) return b.count - a.count;
-    return a.name.localeCompare(b.name);
+    return compareNameAsc(a, b);
   };
-  const sortedStats = [...stats].sort((a, b) => {
-    const result = compareAccuracyStats(a, b);
-    if (_closenessOrder === 'bets' || _closenessOrder === 'name') return result;
-    return _closenessOrderDir === 'desc' ? -result : result;
-  });
+  const sortedStats = [...stats].sort(compareAccuracyStats);
 
   const nextClosenessOrder = _closenessOrder === 'accuracy' ? 'bets' : (_closenessOrder === 'bets' ? 'name' : 'accuracy');
   const closenessOrderLabel = _closenessOrder === 'accuracy' ? 'Time' : (_closenessOrder === 'bets' ? 'Bet' : 'Name');
