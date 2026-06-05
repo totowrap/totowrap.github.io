@@ -3843,7 +3843,7 @@ function renderHistory() {
           </div>
           <div class="hist-details" data-history-details>
             <div class="hist-details-head">
-              <div class="card-lbl">Day Details</div>
+              <div class="card-lbl">Day Leaderboard</div>
               ${estWrapInfo}
             </div>
             ${sg.map(g => {
@@ -3889,7 +3889,7 @@ function renderHistory() {
       </div>
       <div class="hist-details" data-history-details>
         <div class="hist-details-head">
-          <div class="card-lbl">Day Details</div>
+          <div class="card-lbl">Day Leaderboard</div>
           ${estWrapInfo}
         </div>
         ${sg.map(g => {
