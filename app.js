@@ -2497,7 +2497,7 @@ function renderMain() {
   <button class="nav-btn ${_tab==='today'?'on':''}" data-tab="today">Today</button>
   <button class="nav-btn ${_tab==='board'?'on':''}" data-tab="board">Board</button>
   <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
-  <button class="nav-btn ${_tab==='settings'?'on':''}" data-tab="settings">⚙</button>
+  <button class="nav-btn ${_tab==='settings'?'on':''}" data-tab="settings">Settings</button>
 </nav>
 
 <div class="tab-viewport">
