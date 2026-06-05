@@ -2049,11 +2049,32 @@ function renderPlayerStatusHeader(lastDay) {
   </div>`;
 }
 
+function getWrapDateISO(day) {
+  if (!day?.wrapTime) return displayToISO(day?.date);
+  const baseDate = approvalDateISO(day);
+  const wrapGameSec = normalizeGameSec(day.wrapTime, day);
+  return addDaysISO(baseDate, Math.floor(wrapGameSec / DAY_SEC));
+}
+
+function renderFridayWrapBanner(day) {
+  const wrapDate = dateFromISO(getWrapDateISO(day));
+  if (!wrapDate || wrapDate.getDay() !== 5) return '';
+  const className = day?.noWinner ? 'weekday-message-banner no-winner' : 'weekday-message-banner';
+  return `<div class="${className}">Have a good weekend and get some rest, even though you spent the whole workweek betting, as usual!</div>`;
+}
+
+function renderMondayWaitingBanner(day) {
+  const startDate = dateFromISO(displayToISO(day?.date));
+  if (!startDate || startDate.getDay() !== 1) return '';
+  return `<div class="weekday-message-banner">A full week of betting is waiting for you, but let's pretend to work so Colette doesn't get mad!</div>`;
+}
+
 function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
   const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
   const winnerCloseTag = canStartNextDay ? 'button' : 'div';
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p next-day-btn" id="new-day-btn">Start Next Day</button>' : '';
+  const fridayBanner = renderFridayWrapBanner(t);
 
   if (t.noWinner) {
     return `
@@ -2063,6 +2084,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
         <span class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</span>
 	        <span class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</span>
       </${winnerCloseTag}>
+      ${fridayBanner}
       <div class="card today-scroll-card"><div class="card-lbl">Results</div>
         <div class="today-scroll-list">
         ${sg.map(g => {
@@ -2094,6 +2116,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
     <span class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</span>
 	    <span class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</span>
   </${winnerCloseTag}>
+  ${fridayBanner}
   <div class="card today-scroll-card"><div class="card-lbl">Results</div>
     <div class="today-scroll-list">
     ${sg.map(g => {
@@ -2449,6 +2472,7 @@ function renderPlayerToday() {
   if (!hasValidGuesses) {
     return `
   ${renderBetClosePlayerCard(t)}
+  ${renderMondayWaitingBanner(t)}
   <div class="card waiting-guesses-card">
     <p class="mono dim center">Waiting for admin to submit today's guesses…</p>
   </div>`;
