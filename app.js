@@ -490,6 +490,12 @@ document.addEventListener('click', e => {
     return;
   }
 
+  const currentBetBtn = e.target.closest?.('[data-current-bet-player]');
+  if (currentBetBtn) {
+    openCurrentBetDialog(currentBetBtn.dataset.currentBetPlayer);
+    return;
+  }
+
   const todayAccuracyPlayerBtn = e.target.closest?.('[data-today-accuracy-player]');
   if (todayAccuracyPlayerBtn) {
     openAccuracyGraphForPlayer(todayAccuracyPlayerBtn.dataset.todayAccuracyPlayer);
@@ -2444,7 +2450,9 @@ function renderActiveTodayRows(t, sg, out, slices) {
 	        <div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">
           ${isOut ? 'OUT' : 'IN'}
         </div>
-      ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+      ` : IS_ADMIN && S.today && !S.today.wrapTime
+        ? `<button class="badge b-missing missing-bet-action" type="button" data-current-bet-player="${esc(g.name)}">This tuna forgot to bet today</button>`
+        : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
     </div>`;
   }).join('');
 }
@@ -3434,6 +3442,33 @@ function openManualTodayWrapDialog() {
   });
 }
 
+function openCurrentBetDialog(name) {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
+  const playerName = String(name || '').trim();
+  const existingGuess = (S.today.guesses || []).find(g => nameKey(g.name) === nameKey(playerName));
+  if (!existingGuess || existingGuess.time) {
+    toast('Duplicate names', 'err');
+    return;
+  }
+  openAdminDialog({
+    title: `Add ${playerName} Bet`,
+    copy: 'Add this player bet to the current game.',
+    focusSelector: '#admin-current-bet-input',
+    body: `<div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-current-bet-input">Bet Time (HH:MM)</label>
+      <input class="admin-dialog-wrap-input" type="text" id="admin-current-bet-input" placeholder="hh:mm" maxlength="5" pattern="[0-9]{2}:[0-9]{2}">
+    </div>
+    <div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-current-bet-date-input">Bet Date (Optional)</label>
+      <input class="admin-dialog-wrap-input" type="text" id="admin-current-bet-date-input" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
+    </div>
+    <div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="current-bet-save" data-current-bet-player="${esc(playerName)}">Confirm</button>
+    </div>`
+  });
+}
+
 function openRosterPlayerDialog() {
   if (!IS_ADMIN) return;
   openAdminDialog({
@@ -3469,6 +3504,44 @@ async function addRosterPlayer(name) {
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Player added', 'ok');
+  render();
+  return true;
+}
+
+async function addCurrentPlayerBet(name, betTime, betDate='') {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return false;
+  const playerName = String(name || '').trim();
+  const existingGuess = (S.today.guesses || []).find(g => nameKey(g.name) === nameKey(playerName));
+  if (!existingGuess) {
+    toast('Choose a current player', 'err');
+    return false;
+  }
+  if (existingGuess.time) {
+    toast('Duplicate names', 'err');
+    return false;
+  }
+  const normalizedBet = normalizeHMInput(betTime);
+  if (!normalizedBet) {
+    toast('Enter bet time', 'err');
+    return false;
+  }
+  if (!isValidHM(normalizedBet)) {
+    toast('Use a valid bet time (HH:MM)', 'err');
+    return false;
+  }
+  const dateValue = String(betDate || '').trim();
+  const normalizedDate = dateValue ? parseDateInput(dateValue) : null;
+  if (dateValue && !normalizedDate) {
+    toast('Use a valid bet date', 'err');
+    return false;
+  }
+
+  const prevS = cloneState();
+  existingGuess.time = normalizedBet;
+  existingGuess.date = normalizedDate || inferBetDate(normalizedBet, S.today);
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast(`${playerName} bet added`, 'ok');
   render();
   return true;
 }
@@ -3636,6 +3709,16 @@ async function handleAdminDialogAction(btn) {
   if (action === 'today-wrap-save') {
     const saved = await confirmTodayWrap(document.getElementById('admin-today-wrap-input')?.value);
     if (saved) closeAdminDialog();
+    return;
+  }
+  if (action === 'current-bet-save') {
+    const saved = await addCurrentPlayerBet(
+      btn.dataset.currentBetPlayer,
+      document.getElementById('admin-current-bet-input')?.value,
+      document.getElementById('admin-current-bet-date-input')?.value
+    );
+    if (saved) closeAdminDialog();
+    return;
   }
 }
 
