@@ -2,7 +2,13 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
 #boot-loader { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: var(--bg); opacity: 1; visibility: visible; transition: opacity 1.5s ease, visibility 1.5s ease; }
 #boot-loader.done { opacity: 0; visibility: hidden; pointer-events: none; }
 .boot-content { display: grid; justify-items: center; gap: 10px; width: min(100%, 400px); padding: 18px; text-align: center; }
-.boot-can { width: 320px; height: 320px; object-fit: contain; animation: boot-spin 3.5s linear infinite; filter: drop-shadow(0 14px 32px rgba(0,0,0,.32)); }
+.boot-logo-stage { position: relative; width: 320px; height: 320px; }
+.boot-logo-layer { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transition: opacity 1.5s cubic-bezier(.45,0,.25,1); pointer-events: none; }
+.boot-logo-layer.is-visible { opacity: 1; }
+.boot-logo-image { display: block; object-fit: contain; transform-origin: center; }
+.boot-logo-image.is-rotating { animation: boot-spin 3.5s linear infinite; }
+.boot-logo-regular { width: 320px; height: 320px; filter: drop-shadow(0 14px 32px rgba(0,0,0,.32)); }
+.boot-logo-edoardo { width: auto; height: 243px; filter: drop-shadow(1px 0 0 var(--yellow)) drop-shadow(-1px 0 0 var(--yellow)) drop-shadow(0 1px 0 var(--yellow)) drop-shadow(0 -1px 0 var(--yellow)) drop-shadow(0 14px 32px rgba(0,0,0,.32)); }
 .boot-phrase { display: grid; place-items: center; min-height: 2.8em; width: min(100%, 360px); color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.05rem; font-weight: bold; line-height: 1.32; text-align: center; text-transform: uppercase; white-space: pre-line; opacity: 0; transition: opacity .65s ease; }
 .boot-phrase-text { display: block; max-width: 100%; }
 .boot-phrase-right { display: block; width: 100%; text-align: right; }
@@ -87,7 +93,7 @@ body::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .boot-can { animation-duration: 6s; }
+  .boot-logo-image.is-rotating { animation-duration: 6s; }
 }
 
 .hdr { position: relative; z-index: 200; background: var(--bg);  backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-bottom: 1px solid var(--border); padding: 10px 18px 8px; display: flex; justify-content: space-between; align-items: center; height: 50px}

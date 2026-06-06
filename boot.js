@@ -1,6 +1,9 @@
 (() => {
   const phrase = document.querySelector('[data-boot-phrase]');
   if (!phrase) return;
+  const regularLogoLayer = document.querySelector('[data-boot-logo-layer="regular"]');
+  const edoardoLogoLayer = document.querySelector('[data-boot-logo-layer="edoardo"]');
+  const edoardoLogo = document.querySelector('[data-boot-edoardo-logo]');
 
   if (phrase.dataset.bootPhraseReady === 'true') return;
   phrase.dataset.bootPhraseReady = 'true';
@@ -13,7 +16,9 @@
   const PHRASE_CLEAN_MS = 500;
   let phraseTimer = null;
   let lastChoiceIndex = getLastPhraseIndex();
+  let isFirstPhrase = true;
   const nameTag = name => `<span class="boot-player-name">${escapeHTML(name)}</span>`;
+  const leadWithNameTag = (lead, name) => `<span class="boot-player-name">${escapeHTML(lead)} ${escapeHTML(name)}</span>`;
   const phrases = [
     () => '99% of players stop playing before winning. Keep gambling!',
     () => 'Che ti sei perso due Range Rover?',
@@ -47,7 +52,7 @@
     () => {
       const storedNames = getPlayerNames();
       const name = storedNames[randomInt(storedNames.length)];
-      return name ? `Anche oggi ${nameTag(name)} ha fatto un bel buco nell’acqua.` : '';
+      return name ? `${leadWithNameTag('Anche oggi', name)} ha fatto un bel buco nell’acqua.` : '';
     }
   ];
 
@@ -118,6 +123,18 @@
     return choices[randomInt(choices.length)] || available[0] || null;
   }
 
+  function phraseContainsEdoardo(text) {
+    return /(?:^|[^A-Za-zÀ-ÖØ-öø-ÿ])Edoardo(?:[^A-Za-zÀ-ÖØ-öø-ÿ]|$)/i.test(text);
+  }
+
+  function showLogoForPhrase(text, firstPhrase) {
+    if (!regularLogoLayer || !edoardoLogoLayer || !edoardoLogo) return;
+    const showEdoardo = phraseContainsEdoardo(text);
+    regularLogoLayer.classList.toggle('is-visible', !showEdoardo);
+    edoardoLogoLayer.classList.toggle('is-visible', showEdoardo);
+    edoardoLogo.classList.toggle('is-rotating', showEdoardo && !firstPhrase);
+  }
+
   function showNextPhrase() {
     if (!loaderIsActive()) return;
     const choice = choosePhrase();
@@ -125,6 +142,8 @@
 
     lastChoiceIndex = choice.index;
     storePhraseIndex(choice.index);
+    showLogoForPhrase(choice.text, isFirstPhrase);
+    isFirstPhrase = false;
     phrase.innerHTML = `<span class="boot-phrase-text">${choice.text}</span>`;
     phrase.classList.remove('is-loading', 'is-ready', 'is-exiting');
 
