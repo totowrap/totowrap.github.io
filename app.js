@@ -2124,11 +2124,12 @@ function renderCompletedToday(t, canStartNextDay=false) {
   const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
   const winnerCloseTag = canStartNextDay ? 'button' : 'div';
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p next-day-btn" id="new-day-btn">Start Next Day</button>' : '';
+  const completedViewClass = canStartNextDay ? 'today-fixed-view today-completed-view has-next-day-action' : 'today-fixed-view today-completed-view';
   const fridayBanner = renderFridayWrapBanner(t);
 
   if (t.noWinner) {
     return `
-    <div class="today-fixed-view today-completed-view">
+    <div class="${completedViewClass}">
       <${winnerTag} class="winner-banner no-winner-banner">
         <span class="winner-sub">🎬 Day Complete</span>
         <span class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</span>
@@ -2160,7 +2161,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
   const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
   const todayWinnerStr = formatSafeNames(todayWinnerNames);
   return `
-  <div class="today-fixed-view today-completed-view">
+  <div class="${completedViewClass}">
   <${winnerTag} class="winner-banner">
     <span class="winner-sub">Today's winner${todayWinnerNames.length > 1 ? 's' : ''}</span>
     <span class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</span>
@@ -2508,10 +2509,12 @@ function renderPlayerToday() {
 
   if (!t) {
     return `
+    <div class="tab-page-frame">
       <div class="card"><div class="card-lbl">${statusHeader}</div>
         <div class="empty" style="padding:20px 0;">No active game today</div>
       </div>
       ${lastDay ? `<p class="mono dim center">Last wrap: <span class="accent">${esc(lastDay.wrapTime)}</span></p>` : ''}
+    </div>
     `;
   }
 
@@ -2523,10 +2526,12 @@ function renderPlayerToday() {
   const hasValidGuesses = sg.some(g => g.time);
   if (!hasValidGuesses) {
     return `
+  <div class="tab-page-frame">
   ${renderBetClosePlayerCard(t)}
   ${renderMondayWaitingBanner(t)}
   <div class="card waiting-guesses-card">
     <p class="mono dim center">Waiting for admin to submit today's guesses…</p>
+  </div>
   </div>`;
   }
 
@@ -2592,10 +2597,10 @@ function renderToday() {
   const statusHeader = renderPlayerStatusHeader(lastDay);
   
   if (!t) {
-    return `<div class="card">
+    return `<div class="tab-page-frame"><div class="card">
       <div class="card-lbl">Start New Day</div>
       <button class="btn btn-p" id="new-day-btn">🎬 Start Today's Game</button>
-    </div>`;
+    </div></div>`;
   }
 
   const clockCard = `
@@ -2623,7 +2628,7 @@ function renderToday() {
       </div>
     `;
   }
-  return `
+  return `<div class="tab-page-frame">
     <div class="card">
       <div class="card-lbl">Set Wrap Time</div>
       <p class="mono dim" style="margin-bottom:10px">Set the estimated wrap time players see before the game starts.</p>
@@ -2656,7 +2661,7 @@ function renderToday() {
       </div>
       <button class="btn btn-p mt12" id="parse-btn">Preview Guesses</button>
     </div>
-  `;
+  </div>`;
 }
 
 function renderBetClosePlayerCard(day) {
@@ -3943,9 +3948,9 @@ async function deleteCurrentDayAndMatchingHistory() {
 
 function renderHistory() {
   const all = getHistoryEntries();
-  if (!all.length) return '<div class="empty">No completed days yet</div>';
+  if (!all.length) return '<div class="tab-page-frame"><div class="empty">No completed days yet</div></div>';
 
-  return [...all].reverse().map((d, i) => {
+  const historyRows = [...all].reverse().map((d, i) => {
     const num = all.length - i;
     const sg = sortedGuesses(d.guesses, d);
     const canManage = IS_ADMIN;
@@ -4046,12 +4051,13 @@ function renderHistory() {
       </div>
     </div>`;
   }).join('');
+  return `<div class="tab-page-frame">${historyRows}</div>`;
 }
 
 function renderSettings() {
   const pl = getAlphabeticalPlayerRoster();
   const hasCurrentDay = S.today !== null;
-  return `<div class="card"><div class="card-lbl">Editable Player Roster</div>
+  return `<div class="tab-page-frame"><div class="card"><div class="card-lbl">Editable Player Roster</div>
 ${pl.map((p, idx)=> {
   const realIdx = S.playerRoster.findIndex(orig => orig.name === p.name);
   return `
@@ -4081,7 +4087,7 @@ ${hasCurrentDay ? `
 ` : ''}
 <p class="mono dim mt8" style="margin-bottom:12px">This will erase all data permanently for everyone.</p>
 <button class="btn btn-d" id="reset-btn">Reset Entire Game</button>
-</div>`;
+</div></div>`;
 }
 
 function showPreview() {
