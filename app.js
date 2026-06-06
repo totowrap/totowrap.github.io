@@ -1621,6 +1621,13 @@ function formatBetCloseCountdown(diffSec) {
 }
 
 function updateBetCloseCountdown() {
+  document.querySelectorAll('[data-player-bet-close-card]').forEach(card => {
+    const diff = betCloseDiffSec();
+    if (diff === null || diff > 0 || card.classList.contains('is-closed')) return;
+    card.className = 'card bet-close-card is-closed';
+    card.innerHTML = '<div class="bet-close-status">Bets Are Closed</div>';
+  });
+
   document.querySelectorAll('[data-bet-close-countdown]').forEach(el => {
     const diff = betCloseDiffSec();
     if (diff === null) {
@@ -2526,12 +2533,12 @@ function renderPlayerToday() {
   const hasValidGuesses = sg.some(g => g.time);
   if (!hasValidGuesses) {
     return `
-  <div class="tab-page-frame">
+  <div class="tab-page-frame pregame-boundary-frame">
   ${renderBetClosePlayerCard(t)}
-  ${renderMondayWaitingBanner(t)}
   <div class="card waiting-guesses-card">
     <p class="mono dim center">Waiting for admin to submit today's guesses…</p>
   </div>
+  ${renderMondayWaitingBanner(t)}
   </div>`;
   }
 
@@ -2666,7 +2673,13 @@ function renderToday() {
 
 function renderBetClosePlayerCard(day) {
   if (!day?.betCloseAt) return '';
-  return `<div class="card bet-close-card">
+  const closeDiff = betCloseDiffSec(day);
+  if (closeDiff !== null && closeDiff <= 0) {
+    return `<div class="card bet-close-card is-closed" data-player-bet-close-card>
+      <div class="bet-close-status">Bets Are Closed</div>
+    </div>`;
+  }
+  return `<div class="card bet-close-card is-open" data-player-bet-close-card>
     <div class="card-lbl">Bets Close At</div>
     <div class="bet-close-time">${esc(day.betCloseAt)}</div>
     <p class="mono dim center">Time left to bet</p>
