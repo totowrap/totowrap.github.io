@@ -33,6 +33,7 @@ function openPlayerVersion() {
 }
 let _tab = 'today';
 let _clockInterval = null;
+let _lastRenderedLocalDate = localDateISO();
 let _toastTO = null;
 let currentUser = null;
 let authReady = false;
@@ -1631,6 +1632,13 @@ function updateBetCloseCountdown() {
 }
 
 function tickClock() {
+  const currentLocalDate = localDateISO();
+  if (currentLocalDate !== _lastRenderedLocalDate) {
+    _lastRenderedLocalDate = currentLocalDate;
+    render();
+    return;
+  }
+
   const t = nowHMS();
   const cur = gameNowSec();
   
@@ -2098,15 +2106,16 @@ function getWrapDateISO(day) {
 }
 
 function renderFridayWrapBanner(day) {
-  const wrapDate = dateFromISO(getWrapDateISO(day));
-  if (!wrapDate || wrapDate.getDay() !== 5) return '';
+  const wrapDateISO = getWrapDateISO(day);
+  const wrapDate = dateFromISO(wrapDateISO);
+  const daysSinceWrap = dateDiffDays(wrapDateISO, localDateISO());
+  if (!wrapDate || wrapDate.getDay() !== 5 || daysSinceWrap < 0 || daysSinceWrap > 2) return '';
   const className = day?.noWinner ? 'weekday-message-banner no-winner' : 'weekday-message-banner';
   return `<div class="${className}">Have a good weekend and get some rest, even though you spent the whole workweek betting, as usual!</div>`;
 }
 
 function renderMondayWaitingBanner(day) {
-  const startDate = dateFromISO(displayToISO(day?.date));
-  if (!startDate || startDate.getDay() !== 1) return '';
+  if (new Date().getDay() !== 1) return '';
   return `<div class="weekday-message-banner">A full week of betting is waiting for you, but let's pretend to work so Colette doesn't get mad!</div>`;
 }
 
