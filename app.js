@@ -3465,7 +3465,7 @@ function openLiveWrapActions(wrapTime) {
     title: 'Set Official Wrap',
     showClose: false,
     body: `<div class="admin-dialog-actions">
-      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-approve" data-wrap-time="${esc(capturedWrap)}">Approve ${esc(capturedWrap)}</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-approve" data-wrap-time="${esc(capturedWrap)}">Approve &mdash; ${esc(capturedWrap)}</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="today-wrap-manual">Set wrap manually</button>
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
     </div>`
