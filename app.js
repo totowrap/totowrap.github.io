@@ -61,6 +61,7 @@ let _bootHiddenPromise = null;
 let _bootFadeStartedPromise = null;
 let _territoryRuleMigrationPending = false;
 let _territoryRuleMigrationSaving = false;
+let _historyRowScrollAnimation = null;
 const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
@@ -76,6 +77,71 @@ function waitMs(ms) {
 
 function nextFrame() {
   return new Promise(resolve => requestAnimationFrame(resolve));
+}
+
+function cancelHistoryRowScroll() {
+  if (!_historyRowScrollAnimation) return;
+  cancelAnimationFrame(_historyRowScrollAnimation.frame);
+  _historyRowScrollAnimation.cleanup();
+  _historyRowScrollAnimation = null;
+}
+
+function scrollDirectHistoryRowToTop(row) {
+  cancelHistoryRowScroll();
+  const animation = { frame: 0, cleanup: () => {} };
+  _historyRowScrollAnimation = animation;
+  animation.frame = requestAnimationFrame(() => {
+    if (_historyRowScrollAnimation !== animation) return;
+    animation.frame = requestAnimationFrame(() => {
+      if (_historyRowScrollAnimation !== animation) return;
+      const history = row.closest('.sec[data-view="history"]');
+      if (!history || !row.isConnected || !row.classList.contains('open')) {
+        _historyRowScrollAnimation = null;
+        return;
+      }
+
+      const historyRect = history.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
+      const topPadding = parseFloat(getComputedStyle(history).paddingTop) || 0;
+      const startTop = history.scrollTop;
+      const maxTop = Math.max(0, history.scrollHeight - history.clientHeight);
+      const targetTop = Math.max(0, Math.min(maxTop, startTop + rowRect.top - historyRect.top - topPadding));
+      const distance = targetTop - startTop;
+      if (Math.abs(distance) < 1) {
+        _historyRowScrollAnimation = null;
+        return;
+      }
+
+      const duration = 850;
+      const startedAt = performance.now();
+      const cancel = () => cancelHistoryRowScroll();
+      const cleanup = () => {
+        history.removeEventListener('touchstart', cancel);
+        history.removeEventListener('pointerdown', cancel);
+        history.removeEventListener('wheel', cancel);
+      };
+      animation.cleanup = cleanup;
+      history.addEventListener('touchstart', cancel, { passive: true });
+      history.addEventListener('pointerdown', cancel, { passive: true });
+      history.addEventListener('wheel', cancel, { passive: true });
+
+      const animate = now => {
+        if (_historyRowScrollAnimation !== animation) return;
+        const progress = Math.min(1, (now - startedAt) / duration);
+        const eased = progress < .5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        history.scrollTop = startTop + distance * eased;
+        if (progress < 1) {
+          animation.frame = requestAnimationFrame(animate);
+          return;
+        }
+        cleanup();
+        _historyRowScrollAnimation = null;
+      };
+      animation.frame = requestAnimationFrame(animate);
+    });
+  });
 }
 
 function storeBootPlayerNames() {
@@ -623,7 +689,10 @@ document.addEventListener('click', e => {
 
   const historyRow = e.target.closest?.('[data-history-row]');
   if (historyRow && !e.target.closest?.('[data-history-details]')) {
+    const wasOpen = historyRow.classList.contains('open');
+    cancelHistoryRowScroll();
     historyRow.classList.toggle('open');
+    if (!wasOpen) scrollDirectHistoryRowToTop(historyRow);
   }
 });
 
