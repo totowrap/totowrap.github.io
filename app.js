@@ -2186,8 +2186,7 @@ function renderFridayWrapBanner(day) {
   const wrapDate = dateFromISO(wrapDateISO);
   const daysSinceWrap = dateDiffDays(wrapDateISO, localDateISO());
   if (!wrapDate || wrapDate.getDay() !== 5 || daysSinceWrap < 0 || daysSinceWrap > 2) return '';
-  const className = day?.noWinner ? 'weekday-message-banner no-winner' : 'weekday-message-banner';
-  return `<div class="${className}">Have a good weekend and get some rest, even though you spent the whole workweek betting, as usual!</div>`;
+  return `<div class="weekday-message-banner">Have a good weekend and get some rest, even though you spent the whole workweek betting, as usual!</div>`;
 }
 
 function renderMondayWaitingBanner(day) {
@@ -2604,10 +2603,10 @@ function renderPlayerToday() {
     return `
   <div class="tab-page-frame pregame-boundary-frame">
   ${renderBetClosePlayerCard(t)}
+  ${renderMondayWaitingBanner(t)}
   <div class="card waiting-guesses-card">
     <p class="mono dim center">Waiting for admin to submit today's guesses…</p>
   </div>
-  ${renderMondayWaitingBanner(t)}
   </div>`;
   }
 
