@@ -299,11 +299,13 @@ body::before {
 .admin-time-delete-btn { width: 22px; height: 22px; }
 .admin-time-save-btn { font-size: .82rem; }
 .bet-close-card { text-align: center; }
-.bet-close-card.is-open { border-color: rgba(var(--neutral-rgb), .22); background: linear-gradient(135deg, rgba(62,79,112,.84), rgba(38,55,89,.88)), rgba(38,55,89,.88); }
+.bet-close-card.is-open { position: relative; overflow: hidden; border-color: rgba(var(--neutral-rgb), .22); background: linear-gradient(135deg, rgba(62,79,112,.84), rgba(38,55,89,.88)), rgba(38,55,89,.88); }
+.bet-close-card.is-open::before { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: rgba(38,55,89,.3); pointer-events: none; }
+.bet-close-card.is-open > * { position: relative; z-index: 1; }
 .bet-close-card.is-closed { display: grid; place-items: center; min-height: 132px; border-color: rgba(var(--red-rgb), .42); background: linear-gradient(135deg, rgba(var(--red-rgb), .16), rgba(var(--red-rgb), .07)), linear-gradient(135deg, rgba(62,79,112,.84), rgba(38,55,89,.88)), rgba(38,55,89,.88); }
 .bet-close-card.is-closed .bet-close-status { width: 100%; color: var(--red); font-family: 'Alte Haas Grotesk', sans-serif; font-size: clamp(1.8rem, 9vw, 2.8rem); font-weight: 900; line-height: .95; text-align: center; text-transform: uppercase; }
 @supports (-webkit-backdrop-filter: blur(1px)) {
-  .bet-close-card.is-open { background: linear-gradient(135deg, rgba(46,60,87,.54), rgba(46,60,87,.36)); }
+  .bet-close-card.is-open { background: linear-gradient(135deg, rgba(46,60,87,.54), rgba(46,60,87,.36)); -webkit-backdrop-filter: blur(14px) saturate(105%); backdrop-filter: blur(14px) saturate(105%); }
   .bet-close-card.is-closed { background: linear-gradient(135deg, rgba(var(--red-rgb), .14), rgba(var(--red-rgb), .04)), linear-gradient(135deg, rgba(46,60,87,.54), rgba(46,60,87,.36)); }
 }
 .bet-close-card .card-lbl { margin-bottom: 2px; }
