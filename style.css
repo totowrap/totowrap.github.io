@@ -36,8 +36,8 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
   --yellow-rgb: 240, 180, 40;
   --neutral: #b8c9a8;
   --neutral-rgb: 184, 201, 168;
-  --red:     #d65656;
-  --red-rgb: 214, 86, 86;
+  --red:     #cf5252;
+  --red-rgb: 207, 82, 82;
   --green:   #8fdf6a;
   --green-rgb: 143, 223, 106;
   --text:    var(--yellow);
