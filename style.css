@@ -7,7 +7,7 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
 .boot-logo-layer.is-visible { opacity: 1; }
 .boot-logo-image { display: block; object-fit: contain; transform-origin: center; }
 .boot-logo-image.is-rotating { animation: boot-spin 3.5s linear infinite; }
-.boot-logo-regular { width: 320px; height: 320px; filter: drop-shadow(0 14px 32px rgba(0,0,0,.32)); }
+.boot-logo-regular { width: 320px; height: 320px; filter: brightness(95%) drop-shadow(0 14px 32px rgba(0,0,0,.32)); }
 .boot-logo-edoardo { width: auto; height: 243px; filter: drop-shadow(1px 0 0 var(--yellow)) drop-shadow(-1px 0 0 var(--yellow)) drop-shadow(0 1px 0 var(--yellow)) drop-shadow(0 -1px 0 var(--yellow)); }
 .boot-phrase { position: absolute; top: calc(var(--main-logo-center-y) + 170px); left: 50%; display: grid; place-items: center; min-height: 2.8em; width: min(calc(100% - 36px), 360px); color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.05rem; font-weight: bold; line-height: 1.32; text-align: center; text-transform: uppercase; white-space: pre-line; opacity: 0; transform: translateX(-50%); transition: opacity .65s ease; }
 .boot-phrase-text { display: block; max-width: 100%; }
