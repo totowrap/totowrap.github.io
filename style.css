@@ -76,6 +76,7 @@ body::before {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+  filter: brightness(95%);
   z-index: 0;
   pointer-events: none;
 }
