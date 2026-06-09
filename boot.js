@@ -29,7 +29,7 @@
     () => 'You miss 100% of the bets you don’t place.',
     () => 'Your strategy is so confusing that it fooled even you.',
     () => '<span class="boot-phrase-right">"Se oggi non vinco, mi licenzio"\n- Marco Mattioli</span>',
-    () => '<span class="boot-phrase-right">"Questa <u>non</u> è una dittatura!"\n- Dittatore Supremo \n Edoardo Galeone</span>',
+    () => '<span class="boot-phrase-right">"Questa <u>non</u> è una dittatura!"</span>',
     () => {
       const storedNames = getPlayerNames();
       const name = storedNames[randomInt(storedNames.length)];
