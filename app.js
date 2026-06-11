@@ -62,6 +62,7 @@ let _bootFadeStartedPromise = null;
 let _territoryRuleMigrationPending = false;
 let _territoryRuleMigrationSaving = false;
 let _historyRowScrollAnimation = null;
+let _standingsLongPress = null;
 const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
@@ -519,10 +520,43 @@ document.addEventListener('touchend', e => {
 document.addEventListener('touchcancel', () => {
   _swipeStart = null;
   _dragState = null;
+  cancelStandingsLongPress();
   syncTabUI(true, false);
 }, { passive: true });
 
 window.addEventListener('resize', () => syncTabUI(false));
+
+function cancelStandingsLongPress() {
+  if (!_standingsLongPress) return;
+  clearTimeout(_standingsLongPress.timer);
+  _standingsLongPress = null;
+}
+
+document.addEventListener('touchstart', e => {
+  cancelStandingsLongPress();
+  const btn = e.target.closest?.('[data-board-view="list"]');
+  if (!btn || e.touches.length !== 1 || !IS_ADMIN || !currentUser || _tab !== 'board' || _boardView !== 'list') return;
+  const touch = e.touches[0];
+  _standingsLongPress = {
+    x: touch.clientX,
+    y: touch.clientY,
+    timer: setTimeout(() => {
+      _standingsLongPress = null;
+      _suppressNextClick = true;
+      openStandingsExportDialog();
+    }, 650)
+  };
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!_standingsLongPress || e.touches.length !== 1) return;
+  const touch = e.touches[0];
+  if (Math.hypot(touch.clientX - _standingsLongPress.x, touch.clientY - _standingsLongPress.y) > 10) {
+    cancelStandingsLongPress();
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', cancelStandingsLongPress, { passive: true });
 
 document.addEventListener('click', e => {
   if (!_suppressNextClick) return;
@@ -553,6 +587,17 @@ document.addEventListener('click', e => {
 
   const boardBtn = e.target.closest?.('[data-board-view]');
   if (boardBtn) {
+    if (
+      boardBtn.dataset.boardView === 'list'
+      && _boardView === 'list'
+      && _tab === 'board'
+      && IS_ADMIN
+      && currentUser
+      && matchMedia('(hover: hover) and (pointer: fine)').matches
+    ) {
+      openStandingsExportDialog();
+      return;
+    }
     setBoardView(boardBtn.dataset.boardView);
     return;
   }
@@ -2531,6 +2576,174 @@ async function shareResultImage() {
   }
 }
 
+function openStandingsExportDialog() {
+  if (!IS_ADMIN || !currentUser || _tab !== 'board' || _boardView !== 'list') return;
+  openAdminDialog({
+    title: 'Save Final Standings',
+    copy: 'Download a high-resolution transparent PNG using the approved TonnoWrap leaderboard layout.',
+    showClose: false,
+    body: `<div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="standings-export-save">Save PNG</button>
+    </div>`
+  });
+}
+
+function standingsMetalGradient(ctx, x, width, colors) {
+  const gradient = ctx.createLinearGradient(x, 0, x + width, 0);
+  colors.forEach(([stop, color]) => gradient.addColorStop(stop, color));
+  return gradient;
+}
+
+function standingsExportLines(ctx, names, maxWidth) {
+  const lines = [];
+  let current = '';
+  names.forEach(name => {
+    const candidate = current ? `${current} - ${name}` : name;
+    if (current && ctx.measureText(candidate).width > maxWidth) {
+      lines.push(current);
+      current = name;
+    } else {
+      current = candidate;
+    }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+
+async function renderStandingsExportBlob() {
+  const entries = getStandingsEntries();
+  if (!entries.length) throw new Error('No standings available');
+  if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 3000;
+  canvas.height = 3900;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not create image');
+  ctx.textBaseline = 'middle';
+  ctx.font = "bold 52px 'Alte Haas Grotesk', sans-serif";
+
+  const yellow = '#f0b428';
+  const neutral = '#b8c9a8';
+  const navy = '#263759';
+  const left = 300;
+  const contentWidth = 2400;
+  const podium = entries.slice(0, 3);
+  const scoring = entries.slice(3).filter(entry => entry.score > 0);
+  const zeroNames = entries.filter(entry => entry.score <= 0).map(entry => entry.player.name.toUpperCase());
+
+  const logo = await loadShareImage('imgs/tonnowrapbig.png');
+  if (logo) {
+    const logoWidth = 860;
+    const logoHeight = logoWidth * logo.height / logo.width;
+    ctx.drawImage(logo, (canvas.width - logoWidth) / 2, 180, logoWidth, logoHeight);
+  } else {
+    ctx.fillStyle = yellow;
+    ctx.textAlign = 'center';
+    ctx.font = "bold 150px 'Alte Haas Grotesk', sans-serif";
+    ctx.fillText('TonnoWrap', canvas.width / 2, 300);
+  }
+
+  let y = 1050;
+  const podiumHeight = 245;
+  const podiumGap = 38;
+  podium.forEach(entry => {
+    const rank = Number(entry.rank);
+    let fill = standingsMetalGradient(ctx, left, contentWidth, [[0, '#d9e0e5'], [.48, '#aeb8c2'], [1, '#c5ccd3']]);
+    if (rank === 1) fill = standingsMetalGradient(ctx, left, contentWidth, [[0, '#f6c85f'], [.48, '#d6ad45'], [1, '#f0b428']]);
+    if (rank === 3) fill = standingsMetalGradient(ctx, left, contentWidth, [[0, '#d9a06e'], [.48, '#b87955'], [1, '#c88860']]);
+    canvasRoundRect(ctx, left, y, contentWidth, podiumHeight, 34);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.35)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    ctx.fillStyle = navy;
+    ctx.font = "bold 112px 'Alte Haas Grotesk', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.fillText(entry.rank, left + 140, y + podiumHeight / 2);
+    ctx.textAlign = 'left';
+    drawShareText(ctx, entry.player.name.toUpperCase(), left + 280, y + podiumHeight / 2, 1080, 100, 62);
+    ctx.font = "bold 42px 'Alte Haas Grotesk', sans-serif";
+    ctx.fillText(`${entry.wins} ${countWord(entry.wins, 'GAME', 'GAMES')} WON`, left + 1540, y + podiumHeight / 2);
+    ctx.font = "bold 82px 'Alte Haas Grotesk', sans-serif";
+    ctx.fillText(`${entry.score} ${countWord(entry.score, 'PT', 'PTS')}`, left + 2050, y + podiumHeight / 2);
+    y += podiumHeight + podiumGap;
+  });
+
+  y += 80;
+  const columnGap = 120;
+  const columnWidth = (contentWidth - columnGap) / 2;
+  const leftCount = Math.ceil(scoring.length / 2);
+  const columns = [scoring.slice(0, leftCount), scoring.slice(leftCount)];
+  const rowHeight = 170;
+  const scoringTop = y;
+  columns.forEach((column, columnIdx) => {
+    const x = left + columnIdx * (columnWidth + columnGap);
+    column.forEach((entry, rowIdx) => {
+      const rowY = scoringTop + rowIdx * rowHeight;
+      ctx.strokeStyle = 'rgba(184,201,168,.28)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x, rowY + rowHeight);
+      ctx.lineTo(x + columnWidth, rowY + rowHeight);
+      ctx.stroke();
+      ctx.fillStyle = neutral;
+      ctx.textAlign = 'center';
+      ctx.font = "bold 48px 'Alte Haas Grotesk', sans-serif";
+      ctx.fillText(entry.rank, x + 55, rowY + rowHeight / 2);
+      ctx.textAlign = 'left';
+      drawShareText(ctx, entry.player.name.toUpperCase(), x + 120, rowY + rowHeight / 2, 480, 52, 36);
+      ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
+      ctx.fillText(`${entry.wins} ${countWord(entry.wins, 'GAME', 'GAMES')} WON`, x + 660, rowY + rowHeight / 2);
+      ctx.fillStyle = yellow;
+      ctx.font = "bold 47px 'Alte Haas Grotesk', sans-serif";
+      ctx.fillText(`${entry.score} ${countWord(entry.score, 'PT', 'PTS')}`, x + 980, rowY + rowHeight / 2);
+    });
+  });
+  y = scoringTop + Math.max(...columns.map(column => column.length), 0) * rowHeight + 115;
+
+  if (zeroNames.length) {
+    ctx.fillStyle = neutral;
+    ctx.globalAlpha = .68;
+    ctx.font = "bold 42px 'Alte Haas Grotesk', sans-serif";
+    ctx.textAlign = 'center';
+    standingsExportLines(ctx, zeroNames, contentWidth - 80).forEach(line => {
+      ctx.fillText(line, canvas.width / 2, y);
+      y += 72;
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  y += 75;
+  ctx.fillStyle = yellow;
+  ctx.textAlign = 'center';
+  ctx.font = "bold 38px 'Alte Haas Grotesk', sans-serif";
+  ctx.fillText('LA LUDOPATIA È UN PROBLEMA SOLO SE PERDI', canvas.width / 2, y);
+
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('Could not create image');
+  return blob;
+}
+
+async function downloadStandingsExport() {
+  try {
+    const blob = await renderStandingsExportBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tonnowrap-final-standings-${localDateISO().replace(/-/g, '')}.png`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Standings PNG saved', 'ok');
+  } catch (e) {
+    console.error('Standings export failed:', e);
+    toast('Could not create standings image', 'err');
+  }
+}
+
 function renderActiveTodayRows(t, sg, out, slices) {
   const cur = gameNowSec(t);
   const activeSlice = slices.find(slice => cur >= slice.start && cur <= slice.end);
@@ -3099,6 +3312,31 @@ function renderBoardCloseness(pl) {
   </div>`;
 }
 
+function getStandingsEntries() {
+  const standingsPlayers = getSortedPlayerRoster().map(player => ({
+    player,
+    score: Number(S.scores[player.name]) || 0,
+    wins: getBoardPlayerStats(player.name).wins
+  })).sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    return String(a.player.name || '').localeCompare(String(b.player.name || ''));
+  });
+  let previousRank = null;
+  let previousScore = null;
+  let previousWins = null;
+  return standingsPlayers.map((entry, i) => {
+    let rank = '—';
+    if (entry.score > 0) {
+      if (entry.score !== previousScore || entry.wins !== previousWins) previousRank = i + 1;
+      rank = previousRank;
+      previousScore = entry.score;
+      previousWins = entry.wins;
+    }
+    return { ...entry, rank };
+  });
+}
+
 function renderBoard(view=_boardView) {
   const pl = getSortedPlayerRoster();
   if (!pl.length) return '<div class="empty">No players yet</div>';
@@ -3118,27 +3356,8 @@ function renderBoard(view=_boardView) {
   if (view === 'pie') {
     return `<div class="card board-fixed-card">${toolbar}${renderBoardPie(pl)}</div>`;
   }
-  const standingsPlayers = pl.map(player => ({
-    player,
-    score: Number(S.scores[player.name]) || 0,
-    wins: getBoardPlayerStats(player.name).wins
-  })).sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    return String(a.player.name || '').localeCompare(String(b.player.name || ''));
-  });
-  let previousRank = null;
-  let previousScore = null;
-  let previousWins = null;
-  const standingsRows = standingsPlayers.map((entry, i)=>{
-  const { player: p, score, wins } = entry;
-  let rank = '—';
-  if (score > 0) {
-    if (score !== previousScore || wins !== previousWins) previousRank = i + 1;
-    rank = previousRank;
-    previousScore = score;
-    previousWins = wins;
-  }
+  const standingsRows = getStandingsEntries().map((entry, i)=>{
+  const { player: p, score, wins, rank } = entry;
   const openKey = `${i}:${p.name}`;
   const isOpen = _openBoardPlayer === openKey;
   const medalRankClass = [1, 2, 3].includes(rank) ? ` board-rank-${rank}` : '';
