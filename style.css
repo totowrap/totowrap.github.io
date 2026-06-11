@@ -444,7 +444,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 @supports (-webkit-backdrop-filter: blur(1px)) {
   .weekday-message-banner { -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); }
 }
-.day-footer { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .67rem; color: var(--dim); margin-top: 8px; }
 .bnd-duration { color: inherit; margin-left: 8px; }
 #toast { position: fixed; bottom: 125px; left: 50%; transform: translateX(-50%) translateY(12px); background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 18px; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .72rem; white-space: nowrap; max-width: 90vw; opacity: 0; transition: opacity .25s, transform .25s; z-index: 9000; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -638,6 +637,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .hist-day-tag { font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 0.7rem; color: var(--dim); text-transform: uppercase; flex: 0 0 45px; width: 45px; white-space: nowrap; line-height: 1; }
 .hist-main-info { flex: 1 1 auto; min-width: 0; min-height: 20px; display: flex; align-items: center; gap: 6px; white-space: nowrap; line-height: 1; }
 .hist-title { min-width: 0; white-space: nowrap; line-height: 1; }
+.hist-title-multi { display: inline-flex; flex-direction: column; justify-content: center; gap: 3px; }
 .hist-bet { flex: 0 0 auto; white-space: nowrap; line-height: 1; }
 .hist-meta { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; font-size: 0.8rem; white-space: nowrap; }
 .hist-wrap-time { display: inline-flex; align-items: center; min-height: 20px; font-variant-numeric: tabular-nums; }
@@ -667,7 +667,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 }
 .hist-edit:hover { background: rgba(var(--yellow-rgb), .2); }
 .hist-edit:active { transform: scale(.96); }
-.hist-details { display: none; padding: 0 16px 16px; border-top: 1px solid rgba(61, 84, 51, 0.2); background: rgba(0,0,0,0.05); }
+.hist-details { display: none; padding: 0 16px 6px; border-top: 1px solid rgba(61, 84, 51, 0.2); background: rgba(0,0,0,0.05); }
 .hist-row.open .hist-details { display: block; }
 .hist-details .row { align-items: center; min-height: 42px; padding: 9px 0; }
 .hist-details .row-with-boundary { align-items: center; }

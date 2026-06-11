@@ -4037,6 +4037,7 @@ function renderHistory() {
     const canManage = IS_ADMIN;
     const estWrapInfo = `<div class="hist-est-wrap">Estimated Wrap - <span>${esc(d.estWrap || '--:--')}</span></div>`;
     const historyDate = esc(d.date);
+    const historyDetailsLabel = `Day Leaderboard — ${esc(displayDate(d.date) || d.date)}`;
     const actionBtns = canManage ? `
 	<div class="hist-actions">
 	  <button class="hist-edit" type="button" title="Edit day" aria-label="Edit day" data-history-edit="${historyDate}">✎</button>
@@ -4060,7 +4061,7 @@ function renderHistory() {
           </div>
           <div class="hist-details" data-history-details>
             <div class="hist-details-head">
-              <div class="card-lbl">Day Leaderboard</div>
+              <div class="card-lbl">${historyDetailsLabel}</div>
               ${estWrapInfo}
             </div>
             ${sg.map(g => {
@@ -4079,13 +4080,15 @@ function renderHistory() {
                 ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
               </div>`;
             }).join('')}
-            <div class="day-footer" style="text-align:right; font-size:0.6rem; opacity:0.5; margin-top:10px;">${esc(displayDate(d.date) || d.date)}</div>
           </div>
         </div>`;
       }
     
     const histNames = d.winners ? d.winners.map(w => w.name) : [d.winner];
-    const histWinnerStr = formatSafeNames(histNames);
+    const histWinnerMarkup = histNames.length > 1
+      ? histNames.map(name => `<span>${esc(name)}</span>`).join('')
+      : esc(histNames[0] || '');
+    const histWinnerClass = histNames.length > 1 ? 'hist-title hist-title-multi accent' : 'hist-title accent';
     const winnerBet = d.guesses.find(g => histNames.includes(g.name))?.time || '--:--';
     const slices = boundaries(d.guesses, d);
     
@@ -4094,7 +4097,7 @@ function renderHistory() {
       <div class="hist-summary">
         <div class="hist-main-info">
           <span class="hist-day-tag">${displayDayLabel(num)}</span>
-          <span class="hist-title accent" style="font-weight:bold">${histWinnerStr}</span>
+          <span class="${histWinnerClass}" style="font-weight:bold">${histWinnerMarkup}</span>
           <span class="hist-bet mono dim" style="font-size:0.75rem">(${esc(winnerBet)})</span>
         </div>
         <div class="hist-meta">
@@ -4106,7 +4109,7 @@ function renderHistory() {
       </div>
       <div class="hist-details" data-history-details>
         <div class="hist-details-head">
-          <div class="card-lbl">Day Leaderboard</div>
+          <div class="card-lbl">${historyDetailsLabel}</div>
           ${estWrapInfo}
         </div>
         ${sg.map(g => {
@@ -4128,7 +4131,6 @@ function renderHistory() {
             ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
           </div>`;
         }).join('')}
-        <div class="day-footer" style="text-align:right; font-size:0.6rem; opacity:0.5; margin-top:10px;">${esc(displayDate(d.date) || d.date)}</div>
       </div>
     </div>`;
   }).join('');
