@@ -1783,10 +1783,14 @@ function refreshStatusBadges() {
     if(!el || !nameEl) return;
     if(out.has(g.name)){
       el.className='badge b-out';el.textContent='OUT';
+      el.removeAttribute('data-current-bet-player');
+      el.removeAttribute('aria-label');
+      if (el instanceof HTMLButtonElement) el.disabled = true;
       nameEl.textContent = g.name + ' 🍣';
     }
     else{
-      el.className='badge b-in';el.textContent='IN';
+      el.className = el instanceof HTMLButtonElement && IS_ADMIN ? 'badge b-in current-bet-edit-action' : 'badge b-in';
+      el.textContent='IN';
       nameEl.textContent = g.name + ' 🐟';
     }
   });
@@ -2567,9 +2571,9 @@ function renderActiveTodayRows(t, sg, out, slices) {
 
 	        <div class="row-time">${esc(g.time)}</div>
 
-	        <div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">
-          ${isOut ? 'OUT' : 'IN'}
-        </div>
+	        ${!isOut && IS_ADMIN && S.today && !S.today.wrapTime
+          ? `<button class="badge b-in current-bet-edit-action" id="st-${playerId}" type="button" data-current-bet-player="${esc(g.name)}" aria-label="Edit ${esc(g.name)} bet">IN</button>`
+          : `<div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">${isOut ? 'OUT' : 'IN'}</div>`}
       ` : IS_ADMIN && S.today && !S.today.wrapTime
         ? `<button class="badge b-missing missing-bet-action" type="button" data-current-bet-player="${esc(g.name)}">This tuna forgot to bet today</button>`
         : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
@@ -3123,20 +3127,41 @@ function renderBoard(view=_boardView) {
   if (view === 'pie') {
     return `<div class="card board-fixed-card">${toolbar}${renderBoardPie(pl)}</div>`;
   }
-  const standingsRows = pl.map((p,i)=>{
-  const score = S.scores[p.name] || 0;
+  const standingsPlayers = pl.map(player => ({
+    player,
+    score: Number(S.scores[player.name]) || 0,
+    wins: getBoardPlayerStats(player.name).wins
+  })).sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    return String(a.player.name || '').localeCompare(String(b.player.name || ''));
+  });
+  let previousRank = null;
+  let previousScore = null;
+  let previousWins = null;
+  const standingsRows = standingsPlayers.map((entry, i)=>{
+  const { player: p, score, wins } = entry;
+  let rank = '—';
+  if (score > 0) {
+    if (score !== previousScore || wins !== previousWins) previousRank = i + 1;
+    rank = previousRank;
+    previousScore = score;
+    previousWins = wins;
+  }
   const openKey = `${i}:${p.name}`;
   const isOpen = _openBoardPlayer === openKey;
   return `<div class="board-player${isOpen ? ' open' : ''}">
     <div class="board-row">
-      <div class="board-rank">${i+1}</div>
+      <div class="board-rank">${rank}</div>
       <button class="board-player-name" type="button" data-board-player="${esc(openKey)}">${esc(p.name)}</button>
-      <div class="board-player-points accent">${score} <span class="mono dim">${countWord(score, 'pt', 'pts')}</span></div>
+      <div class="board-player-wins">${wins} ${countWord(wins, 'game', 'games')} won</div>
+      <div class="board-player-points accent"><strong>${score}</strong><span class="mono dim">${countWord(score, 'pt', 'pts')}</span></div>
     </div>
     ${isOpen ? renderBoardPlayerStats(p.name) : ''}
   </div>`;
 }).join('');
   return `<div class="card board-fixed-card board-standings-card">${toolbar}
+    <div class="standings-player-count">${pl.length} ${countWord(pl.length, 'TUNA PLAYING', 'TUNAS PLAYING')}</div>
     <div class="standings-scroll-list">${standingsRows}</div>
   </div>`;
 }
@@ -3580,25 +3605,28 @@ function openCurrentBetDialog(name) {
   if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
   const playerName = String(name || '').trim();
   const existingGuess = (S.today.guesses || []).find(g => nameKey(g.name) === nameKey(playerName));
-  if (!existingGuess || existingGuess.time) {
-    toast('Duplicate names', 'err');
+  if (!existingGuess) {
+    toast('Choose a current player', 'err');
     return;
   }
+  const isEditing = Boolean(existingGuess.time);
+  const currentBet = isEditing ? existingGuess.time : '';
+  const currentDate = isEditing && existingGuess.date ? displayDate(existingGuess.date) : '';
   openAdminDialog({
-    title: `Add ${playerName} Bet`,
+    title: `${isEditing ? 'Edit' : 'Add'} ${playerName} Bet`,
     showClose: false,
     focusSelector: '#admin-current-bet-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-current-bet-input">Bet Time (HH:MM)</label>
-      <input class="admin-dialog-wrap-input" type="text" id="admin-current-bet-input" placeholder="hh:mm" maxlength="5" pattern="[0-9]{2}:[0-9]{2}">
+      <input class="admin-dialog-wrap-input" type="text" id="admin-current-bet-input" value="${esc(currentBet)}" placeholder="hh:mm" maxlength="5" pattern="[0-9]{2}:[0-9]{2}">
     </div>
     <div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-current-bet-date-input">Bet Date (Optional)</label>
-      <input class="admin-dialog-wrap-input" type="text" id="admin-current-bet-date-input" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
+      <input class="admin-dialog-wrap-input" type="text" id="admin-current-bet-date-input" value="${esc(currentDate)}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
     </div>
     <div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
-      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="current-bet-save" data-current-bet-player="${esc(playerName)}">Confirm</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="${isEditing ? 'current-bet-update' : 'current-bet-save'}" data-current-bet-player="${esc(playerName)}">Confirm</button>
     </div>`
   });
 }
@@ -3676,6 +3704,36 @@ async function addCurrentPlayerBet(name, betTime, betDate='') {
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast(`${playerName} bet added`, 'ok');
+  render();
+  return true;
+}
+
+async function updateCurrentPlayerBet(name, betTime, betDate='') {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return false;
+  const playerName = String(name || '').trim();
+  const existingGuess = (S.today.guesses || []).find(g => nameKey(g.name) === nameKey(playerName));
+  if (!existingGuess?.time) {
+    toast('Choose a current player bet', 'err');
+    return false;
+  }
+  const normalizedBet = normalizeHMInput(betTime);
+  if (!normalizedBet || !isValidHM(normalizedBet)) {
+    toast('Use a valid bet time (HH:MM)', 'err');
+    return false;
+  }
+  const dateValue = String(betDate || '').trim();
+  const normalizedDate = dateValue ? parseDateInput(dateValue) : null;
+  if (dateValue && !normalizedDate) {
+    toast('Use a valid bet date', 'err');
+    return false;
+  }
+
+  const prevS = cloneState();
+  existingGuess.time = normalizedBet;
+  existingGuess.date = normalizedDate || inferBetDate(normalizedBet, S.today);
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast(`${playerName} bet updated`, 'ok');
   render();
   return true;
 }
@@ -3847,6 +3905,15 @@ async function handleAdminDialogAction(btn) {
   }
   if (action === 'current-bet-save') {
     const saved = await addCurrentPlayerBet(
+      btn.dataset.currentBetPlayer,
+      document.getElementById('admin-current-bet-input')?.value,
+      document.getElementById('admin-current-bet-date-input')?.value
+    );
+    if (saved) closeAdminDialog();
+    return;
+  }
+  if (action === 'current-bet-update') {
+    const saved = await updateCurrentPlayerBet(
       btn.dataset.currentBetPlayer,
       document.getElementById('admin-current-bet-input')?.value,
       document.getElementById('admin-current-bet-date-input')?.value
