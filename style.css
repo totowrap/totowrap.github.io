@@ -703,6 +703,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .hist-row.open .hist-details { display: block; }
 .hist-details .row { align-items: baseline; min-height: 42px; padding: 9px 0; }
 .hist-details .row-name { color: var(--dim); }
+.hist-details .row-name.history-winner-name { color: var(--accent); }
 .hist-details .row-with-boundary { align-items: baseline; }
 .hist-details .row-name-main { min-height: 22px; align-items: baseline; }
 .hist-details .row-name-stack { justify-content: center; }

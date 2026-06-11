@@ -4190,7 +4190,7 @@ function renderHistory() {
           const prob  = g.time ? getWinProbability(g.name, d.guesses, d) : null;
           return `
           <div class="row${slice ? ' row-with-boundary' : ''}">
-            <div class="row-name row-name-stack">
+            <div class="row-name row-name-stack${isWinner ? ' history-winner-name' : ''}">
               <div class="row-name-main"><span>${esc(g.name)}</span></div>
               ${slice ? `<div class="row-boundary">${slice.startStr} → ${slice.endStr}</div>` : ''}
             </div>
