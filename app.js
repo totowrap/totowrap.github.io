@@ -2206,7 +2206,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
     return `
     <div class="${completedViewClass}">
       <${winnerTag} class="winner-banner no-winner-banner">
-        <span class="winner-sub">🎬 Day Complete</span>
+        <span class="winner-sub">Day Complete</span>
         <span class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</span>
 	        <span class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</span>
       </${winnerCloseTag}>
@@ -2674,7 +2674,7 @@ function renderToday() {
   if (!t) {
     return `<div class="tab-page-frame"><div class="card">
       <div class="card-lbl">Start New Day</div>
-      <button class="btn btn-p" id="new-day-btn">🎬 Start Today's Game</button>
+      <button class="btn btn-p" id="new-day-btn">Start Today's Game</button>
     </div></div>`;
   }
 
