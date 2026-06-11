@@ -1776,10 +1776,13 @@ function tickClock() {
 function refreshStatusBadges() {
   if(!S.today||!S.today.guesses.length||S.today.wrapTime) return;
   const cur=gameNowSec(), out=eliminated(S.today.guesses,cur,S.today);
+  const activeSlice = boundaries(S.today.guesses, S.today).find(slice => cur >= slice.start && cur <= slice.end);
+  const activeNames = new Set(activeSlice?.names || []);
   S.today.guesses.forEach((g, idx)=>{
     const id = playerDomId(idx);
     const el=document.getElementById('st-'+id);
     const nameEl = document.getElementById('name-span-'+id);
+    nameEl?.closest('.row-name')?.classList.toggle('territory-active', activeNames.has(g.name));
     if(!el || !nameEl) return;
     if(out.has(g.name)){
       el.className='badge b-out';el.textContent='OUT';
@@ -2544,6 +2547,9 @@ async function shareResultImage() {
 }
 
 function renderActiveTodayRows(t, sg, out, slices) {
+  const cur = gameNowSec(t);
+  const activeSlice = slices.find(slice => cur >= slice.start && cur <= slice.end);
+  const activeNames = new Set(activeSlice?.names || []);
   return sg.map(g => {
     const st = getPreviousStreak(g.name);
     const isOut = out.has(g.name);
@@ -2556,7 +2562,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
 
     return `
     <div class="row${boundaryInfo ? ' row-with-boundary' : ''}">
-      <div class="row-name row-name-stack" data-today-accuracy-player="${esc(g.name)}">
+      <div class="row-name row-name-stack${activeNames.has(g.name) ? ' territory-active' : ''}" data-today-accuracy-player="${esc(g.name)}">
         <div class="row-name-main">
           <span id="name-span-${playerId}">${displayName}</span>
           ${g.time ? st.pill : ''}
