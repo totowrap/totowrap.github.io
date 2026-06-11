@@ -521,11 +521,11 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .board-toggle { flex:1; padding:5px 8px; border-radius:8px; border:1px solid var(--border); background:var(--bg3); color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.66rem; line-height:1; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; transition:background .15s, color .15s, border-color .15s, transform .08s; }
 .board-toggle.on { background:var(--accent); color:#000; border-color:var(--accent); font-weight:bold; }
 .board-toggle:active { transform: scale(.98); }
-.board-row { display:grid; grid-template-columns:24px minmax(0,1fr) 72px auto; align-items:baseline; column-gap:6px; min-height:46px; padding:14px 0 8px; border-bottom:1px solid var(--border); }
+.board-row { display:grid; grid-template-columns:24px minmax(0,1fr) 64px auto; align-items:baseline; column-gap:6px; min-height:46px; padding:14px 0 8px; border-bottom:1px solid var(--border); }
 .board-player:last-child .board-row { border-bottom:none; }
-.board-rank { min-width:20px; font-family:'Alte Haas Grotesk', sans-serif; font-weight:bold; font-size:1.1rem; line-height:1; color:var(--dim); text-align:left; }
+.board-rank { min-width:20px; font-family:'Alte Haas Grotesk', sans-serif; font-weight:bold; font-size:1.1rem; line-height:1; color:var(--dim); text-align:center; }
 .board-player-name { min-width:0; display:block; overflow:visible; border:0; background:none; padding:0; color:var(--accent); font-family:'Alte Haas Grotesk', sans-serif; font-size:1.18rem; font-weight:500; line-height:1; text-align:left; white-space:nowrap; cursor:pointer; }
-.board-player-wins { width:72px; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; line-height:1; white-space:nowrap; text-align:left; margin-right:10px; }
+.board-player-wins { width:64px; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; line-height:1; white-space:nowrap; text-align:left; }
 .board-player-points { min-width:42px; display:inline-flex; align-items:baseline; justify-content:flex-end; gap:3px; font-family:'Alte Haas Grotesk', sans-serif; font-weight:bold; font-size:1.25rem; line-height:1; text-align:right; white-space:nowrap; }
 .board-player-points strong { font:inherit; line-height:1; }
 .board-player-points span { width:3ch; display:inline-block; font-size:.65rem; line-height:1; text-align:left; }
@@ -577,7 +577,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .preview-card { touch-action: pan-y; overscroll-behavior-y: contain; }
 .today-scroll-list .row:last-child { padding-bottom:2px; }
 .board-standings-card { height:100%; min-height:0; margin-bottom:0; padding-bottom:6px; display:flex; flex-direction:column; overflow:hidden; }
-.standings-player-count { flex:0 0 auto; width:calc((100% - 16px) / 3); margin:-2px 0 5px; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.52rem; letter-spacing:.12em; line-height:1; text-align:center; text-transform:uppercase; }
+.standings-player-count { flex:0 0 auto; width:calc((100% - 16px) / 3); margin:-2px 0 5px; color:var(--green); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; letter-spacing:.12em; line-height:1; text-align:center; text-transform:uppercase; }
 .board-standings-card .standings-scroll-list { flex:1 1 auto; }
 .standings-scroll-list .board-player:last-child .board-row { padding-bottom:2px; }
 .accuracy-active-name { position:absolute; left:-58px; right:-4px; top:3%; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; line-height:1; text-align:center; pointer-events:none; z-index:3; }
