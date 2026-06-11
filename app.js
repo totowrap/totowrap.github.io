@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import { getFirestore, doc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { getFirestore, doc, getDocFromServer, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -790,34 +790,19 @@ function cloneState() {
   return JSON.parse(JSON.stringify(S));
 }
 
-function buildProjectBackup() {
-  return {
-    type: 'totowrap-project-backup',
-    backupVersion: 1,
-    exportedAt: new Date().toISOString(),
-    source: {
-      origin: location.origin,
-      path: location.pathname,
-      appMode: APP_MODE,
-      totalDaysDisplay: DISPLAY_TOTAL_DAYS
-    },
-    codeSnapshotNote: 'This backup stores Firestore game data only. Exact colors, phrases, layout, images, and future features require the matching website files, Git commit, Git tag, or zipped website snapshot.',
-    appData: cloneState()
-  };
-}
-
-function exportProjectBackup() {
+async function exportProjectBackup() {
   if (!IS_ADMIN || !currentUser) {
     toast('Admin only', 'err');
     return;
   }
 
   try {
-    const backup = buildProjectBackup();
-    const json = JSON.stringify(backup, null, 2);
+    const snap = await getDocFromServer(STATE_REF);
+    if (!snap.exists()) throw new Error('Firestore state document does not exist');
+    const json = JSON.stringify(snap.data(), null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const stamp = new Date(backup.exportedAt).toISOString().slice(0, 10).replace(/-/g, '');
+    const stamp = localDateISO().replace(/-/g, '');
     const link = document.createElement('a');
     link.href = url;
     link.download = `totowrapdatabackup_${stamp}.json`;
