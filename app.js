@@ -4105,10 +4105,10 @@ function renderHistory() {
     const estWrapInfo = `<div class="hist-est-wrap">Estimated Wrap - <span>${esc(d.estWrap || '--:--')}</span></div>`;
     const historyDate = esc(d.date);
     const historyDetailsLabel = `${esc(displayDate(d.date) || d.date)} Leaderboard`;
-    const actionBtns = canManage ? `
-	<div class="hist-actions">
-	  <button class="hist-edit" type="button" title="Edit day" aria-label="Edit day" data-history-edit="${historyDate}">✎</button>
-	</div>` : '';
+    const dayLabel = displayDayLabel(num);
+    const historyDayTag = canManage
+      ? `<button class="hist-day-tag hist-day-edit" type="button" title="Edit ${dayLabel}" aria-label="Edit ${dayLabel}" data-history-edit="${historyDate}">${dayLabel}</button>`
+      : `<span class="hist-day-tag">${dayLabel}</span>`;
     
     if (d.noWinner) {
         const slices = boundaries(d.guesses, d);
@@ -4116,13 +4116,12 @@ function renderHistory() {
         <div class="card hist-row" data-history-row data-history-date="${historyDate}">
           <div class="hist-summary">
             <div class="hist-main-info">
-              <span class="hist-day-tag">${displayDayLabel(num)}</span>
+              ${historyDayTag}
               <span class="hist-title red" style="font-weight:bold">No Winner</span>
             </div>
-            <div class="hist-meta${canManage ? ' has-actions' : ''}">
+            <div class="hist-meta">
               <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
               <span class="dim mono hist-points">+0pts</span>
-              ${actionBtns}
               <span class="hist-arrow">▶</span>
             </div>
           </div>
@@ -4163,14 +4162,13 @@ function renderHistory() {
     <div class="card hist-row" data-history-row data-history-date="${historyDate}">
       <div class="hist-summary">
         <div class="hist-main-info">
-          <span class="hist-day-tag">${displayDayLabel(num)}</span>
+          ${historyDayTag}
           <span class="${histWinnerClass}" style="font-weight:bold">${histWinnerMarkup}</span>
           <span class="hist-bet mono dim" style="font-size:0.75rem">(${esc(winnerBet)})</span>
         </div>
-        <div class="hist-meta${canManage ? ' has-actions' : ''}">
+        <div class="hist-meta">
           <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
           <span class="dim mono hist-points">+${d.points}${countWord(d.points, 'pt', 'pts')}</span>
-          ${actionBtns}
           <span class="hist-arrow">▶</span>
         </div>
       </div>
