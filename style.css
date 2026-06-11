@@ -524,6 +524,17 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .board-row { display:grid; grid-template-columns:24px minmax(0,1fr) 64px auto; align-items:baseline; column-gap:6px; min-height:46px; padding:14px 0 8px; border-bottom:1px solid var(--border); }
 .board-player:last-child .board-row { border-bottom:none; }
 .board-rank { min-width:20px; font-family:'Alte Haas Grotesk', sans-serif; font-weight:bold; font-size:1.1rem; line-height:1; color:var(--dim); text-align:center; }
+.board-rank-1,
+.board-rank-2,
+.board-rank-3 {
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.board-rank-1 { background-image: linear-gradient(115deg, #8f6812 0%, #f3c84b 36%, #fff0a6 52%, #d99b1d 68%, #fff0a6 100%); }
+.board-rank-2 { background-image: linear-gradient(115deg, #87929c 0%, #e8edf1 36%, #ffffff 52%, #aab5bf 68%, #f7fafc 100%); }
+.board-rank-3 { background-image: linear-gradient(115deg, #7f4428 0%, #d59468 36%, #ffd0aa 52%, #a85c38 68%, #edb083 100%); }
 .board-player-name { min-width:0; display:block; overflow:visible; border:0; background:none; padding:0; color:var(--accent); font-family:'Alte Haas Grotesk', sans-serif; font-size:1.18rem; font-weight:500; line-height:1; text-align:left; white-space:nowrap; cursor:pointer; }
 .board-player-wins { width:64px; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; line-height:1; white-space:nowrap; text-align:left; }
 .board-player-points { min-width:42px; display:inline-flex; align-items:baseline; justify-content:flex-end; gap:3px; font-family:'Alte Haas Grotesk', sans-serif; font-weight:bold; font-size:1.25rem; line-height:1; text-align:right; white-space:nowrap; }

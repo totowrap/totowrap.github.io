@@ -3150,9 +3150,10 @@ function renderBoard(view=_boardView) {
   }
   const openKey = `${i}:${p.name}`;
   const isOpen = _openBoardPlayer === openKey;
+  const medalRankClass = [1, 2, 3].includes(rank) ? ` board-rank-${rank}` : '';
   return `<div class="board-player${isOpen ? ' open' : ''}">
     <div class="board-row">
-      <div class="board-rank">${rank}</div>
+      <div class="board-rank${medalRankClass}">${rank}</div>
       <button class="board-player-name" type="button" data-board-player="${esc(openKey)}">${esc(p.name)}</button>
       <div class="board-player-wins">${wins} ${countWord(wins, 'game', 'games')} won</div>
       <div class="board-player-points accent"><strong>${score}</strong><span class="mono dim">${countWord(score, 'pt', 'pts')}</span></div>
