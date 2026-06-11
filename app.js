@@ -4119,7 +4119,7 @@ function renderHistory() {
               <span class="hist-day-tag">${displayDayLabel(num)}</span>
               <span class="hist-title red" style="font-weight:bold">No Winner</span>
             </div>
-            <div class="hist-meta">
+            <div class="hist-meta${canManage ? ' has-actions' : ''}">
               <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
               <span class="dim mono hist-points">+0pts</span>
               ${actionBtns}
@@ -4167,7 +4167,7 @@ function renderHistory() {
           <span class="${histWinnerClass}" style="font-weight:bold">${histWinnerMarkup}</span>
           <span class="hist-bet mono dim" style="font-size:0.75rem">(${esc(winnerBet)})</span>
         </div>
-        <div class="hist-meta">
+        <div class="hist-meta${canManage ? ' has-actions' : ''}">
           <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
           <span class="dim mono hist-points">+${d.points}${countWord(d.points, 'pt', 'pts')}</span>
           ${actionBtns}
