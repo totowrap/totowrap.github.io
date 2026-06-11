@@ -2244,7 +2244,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
   <${winnerTag} class="winner-banner">
     <span class="winner-sub">Today's winner${todayWinnerNames.length > 1 ? 's' : ''}</span>
     <span class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</span>
-	    <span class="winner-pts">+${t.points} pt · Wrap at ${esc(t.wrapTime)}</span>
+	    <span class="winner-pts">+${t.points} ${countWord(t.points, 'pt', 'pts')} · Wrap at ${esc(t.wrapTime)}</span>
   </${winnerCloseTag}>
   ${fridayBanner}
   <div class="card today-scroll-card"><div class="card-lbl">Results</div>
@@ -2877,7 +2877,7 @@ function renderBoardPie(pl) {
     <div class="legend-item">
       <div class="legend-swatch" style="background:${colorOf(p.name)};"></div>
       <div class="legend-name">${esc(p.name)}</div>
-      <div class="legend-meta">${pts}pt · ${pct}%</div>
+      <div class="legend-meta">${pts}${countWord(pts, 'pt', 'pts')} · ${pct}%</div>
     </div>`;
   }).join('');
 
@@ -4104,7 +4104,7 @@ function renderHistory() {
     const canManage = IS_ADMIN;
     const estWrapInfo = `<div class="hist-est-wrap">Estimated Wrap - <span>${esc(d.estWrap || '--:--')}</span></div>`;
     const historyDate = esc(d.date);
-    const historyDetailsLabel = `Day Leaderboard — ${esc(displayDate(d.date) || d.date)}`;
+    const historyDetailsLabel = `${esc(displayDate(d.date) || d.date)} Leaderboard`;
     const actionBtns = canManage ? `
 	<div class="hist-actions">
 	  <button class="hist-edit" type="button" title="Edit day" aria-label="Edit day" data-history-edit="${historyDate}">✎</button>
@@ -4121,7 +4121,7 @@ function renderHistory() {
             </div>
             <div class="hist-meta">
               <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
-              <span class="dim mono hist-points">+0pt</span>
+              <span class="dim mono hist-points">+0pts</span>
               ${actionBtns}
               <span class="hist-arrow">▶</span>
             </div>
@@ -4169,7 +4169,7 @@ function renderHistory() {
         </div>
         <div class="hist-meta">
           <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
-          <span class="dim mono hist-points">+${d.points}pt</span>
+          <span class="dim mono hist-points">+${d.points}${countWord(d.points, 'pt', 'pts')}</span>
           ${actionBtns}
           <span class="hist-arrow">▶</span>
         </div>

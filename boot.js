@@ -29,7 +29,7 @@
     () => 'You miss 100% of the bets you don’t place.',
     () => 'Your strategy is so confusing that it fooled even you.',
     () => '<span class="boot-phrase-right">"Se oggi non vinco, mi licenzio"\n- Marco Mattioli</span>',
-    () => '<span class="boot-phrase-right">"Questa <i>non</i> è una dittatura!"</span>',
+    () => '<span class="boot-phrase-right">"Questa <u>non</u> è una dittatura!"</span>',
     () => 'I love the smell of TotoWrap in the morning',
     () => 'Facciamo un referendum?',
     () => 'Viva la Edocrazia!',
