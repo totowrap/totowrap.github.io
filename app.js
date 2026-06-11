@@ -4313,8 +4313,8 @@ function showPreview() {
 
   <div class="card">
     <div class="card-lbl">Confirm Player Guesses</div>
+    <div class="preview-head compact-preview-head"><span>Player</span><span>Bet</span><span>Date</span></div>
     <div class="preview-card compact-preview-card">
-      <div class="preview-head compact-preview-head"><span>Player</span><span>Bet</span><span>Date</span></div>
       ${sorted.map(g => {
         const isDup = duplicates.includes(nameKey(g.name));
         return `
