@@ -2268,7 +2268,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
       const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
 
       return `
-      <div class="row">
+      <div class="row${isWinner ? ' golden-winner-row' : ''}">
         <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
 	          <span><span${isWinner ? ' class="today-result-winner-name"' : ''}>${esc(g.name)}</span> ${displayEmoji}</span>
           ${g.time ? st.pill : ''}
@@ -4419,7 +4419,7 @@ function renderHistory() {
           const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
           const prob  = g.time ? getWinProbability(g.name, d.guesses, d) : null;
           return `
-          <div class="row${slice ? ' row-with-boundary' : ''}">
+          <div class="row${slice ? ' row-with-boundary' : ''}${isWinner ? ' golden-winner-row' : ''}">
             <div class="row-name row-name-stack${isWinner ? ' history-winner-name' : ''}">
               <div class="row-name-main"><span>${esc(g.name)}</span></div>
               ${slice ? `<div class="row-boundary">${slice.startStr} → ${slice.endStr}</div>` : ''}

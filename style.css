@@ -288,6 +288,26 @@ body::before {
 .row { display: flex; align-items: baseline; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); min-height: 46px; }
 .row-with-boundary { align-items: baseline; }
 .row:last-child { border-bottom: none; }
+.golden-winner-row {
+  position:relative;
+  isolation:isolate;
+}
+.golden-winner-row::before {
+  content:"";
+  position:absolute;
+  inset:3px -8px;
+  z-index:-1;
+  border:1px solid rgba(var(--yellow-rgb),.24);
+  border-radius:7px;
+  background:linear-gradient(135deg, rgba(var(--yellow-rgb),.11), rgba(var(--yellow-rgb),.035)), rgba(38,55,89,.34);
+  pointer-events:none;
+}
+@supports (-webkit-backdrop-filter:blur(1px)) {
+  .golden-winner-row::before {
+    -webkit-backdrop-filter:blur(8px) saturate(125%);
+    backdrop-filter:blur(8px) saturate(125%);
+  }
+}
 .row-name { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .9rem; color: var(--accent); flex: 1; min-width: 0; font-weight: 500; display: flex; align-items: baseline; gap: 8px; overflow-wrap: anywhere; }
 .row-name-stack { flex-direction: column; align-items: flex-start; gap: 3px; }
 .row-name-main { display: flex; align-items: baseline; gap: 8px; min-width: 0; max-width: 100%; }
@@ -582,6 +602,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .today-scroll-card > .card-lbl { position:relative; z-index:2; flex:0 0 auto; }
 .today-scroll-list,
 .standings-scroll-list { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:0; padding-top:0; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); }
+.today-scroll-list { margin-inline:-8px; padding-inline:8px; overflow-x:hidden; }
 .today-scroll-list .row-name { color:var(--dim); }
 .today-scroll-list .today-live-name-text { color:var(--dim); transition:color .75s ease; }
 .today-scroll-list .row-name.territory-active .today-live-name-text { color:var(--accent); }
