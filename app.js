@@ -2570,19 +2570,61 @@ function standingsMetalGradient(ctx, x, width, colors) {
 }
 
 function standingsExportLines(ctx, names, maxWidth) {
-  const lines = [];
+  if (!names.length) return [];
+  const separator = ' - ';
+  const greedyLines = [];
   let current = '';
   names.forEach(name => {
-    const candidate = current ? `${current} - ${name}` : name;
+    const candidate = current ? `${current}${separator}${name}` : name;
     if (current && ctx.measureText(candidate).width > maxWidth) {
-      lines.push(current);
+      greedyLines.push(current);
       current = name;
     } else {
       current = candidate;
     }
   });
-  if (current) lines.push(current);
-  return lines;
+  if (current) greedyLines.push(current);
+
+  const lineCount = greedyLines.length;
+  if (lineCount < 2) return greedyLines;
+
+  const segmentText = (start, end) => names.slice(start, end).join(separator);
+  const segmentWidth = (start, end) => ctx.measureText(segmentText(start, end)).width;
+  const totalWidth = names.reduce((sum, name) => sum + ctx.measureText(name).width, 0)
+    + ctx.measureText(separator).width * Math.max(0, names.length - lineCount);
+  const targetWidth = totalWidth / lineCount;
+  const memo = new Map();
+
+  function findBalancedLines(start, remainingLines) {
+    const key = `${start}:${remainingLines}`;
+    if (memo.has(key)) return memo.get(key);
+    if (remainingLines === 1) {
+      const width = segmentWidth(start, names.length);
+      const result = width <= maxWidth
+        ? { cost: (width - targetWidth) ** 2, lines: [segmentText(start, names.length)] }
+        : null;
+      memo.set(key, result);
+      return result;
+    }
+
+    let best = null;
+    const maxEnd = names.length - remainingLines + 1;
+    for (let end = start + 1; end <= maxEnd; end++) {
+      const width = segmentWidth(start, end);
+      if (width > maxWidth) break;
+      const rest = findBalancedLines(end, remainingLines - 1);
+      if (!rest) continue;
+      const candidate = {
+        cost: (width - targetWidth) ** 2 + rest.cost,
+        lines: [segmentText(start, end), ...rest.lines]
+      };
+      if (!best || candidate.cost < best.cost) best = candidate;
+    }
+    memo.set(key, best);
+    return best;
+  }
+
+  return findBalancedLines(0, lineCount)?.lines || greedyLines;
 }
 
 async function renderStandingsExportBlob() {
