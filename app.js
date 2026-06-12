@@ -1779,26 +1779,31 @@ function refreshStatusBadges() {
     const nameEl = document.getElementById('name-span-'+id);
     const nameRow = nameEl?.closest('.row-name');
     const isActive = activeNames.has(g.name);
-    const isNewlyActive = isActive && !nameRow?.classList.contains('territory-active');
     nameRow?.classList.toggle('territory-active', isActive);
-    if (isNewlyActive && nameRow) {
-      nameRow.classList.remove('territory-entering-from-top');
-      void nameRow.offsetWidth;
-      nameRow.classList.add('territory-entering-from-top');
-      setTimeout(() => nameRow.classList.remove('territory-entering-from-top'), 800);
-    }
     if(!el || !nameEl) return;
+    const nameTextEl = nameEl.querySelector('.today-live-name-text');
+    const nameEmojiEl = nameEl.querySelector('.today-live-name-emoji');
     if(out.has(g.name)){
       el.className='badge b-out';el.textContent='OUT';
       el.removeAttribute('data-current-bet-player');
       el.removeAttribute('aria-label');
       if (el instanceof HTMLButtonElement) el.disabled = true;
-      nameEl.textContent = g.name + ' 🍣';
+      if (nameTextEl && nameEmojiEl) {
+        nameTextEl.textContent = g.name;
+        nameEmojiEl.textContent = ' 🍣';
+      } else {
+        nameEl.textContent = g.name + ' 🍣';
+      }
     }
     else{
       el.className = el instanceof HTMLButtonElement && IS_ADMIN ? 'badge b-in current-bet-edit-action' : 'badge b-in';
       el.textContent='IN';
-      nameEl.textContent = g.name + ' 🐟';
+      if (nameTextEl && nameEmojiEl) {
+        nameTextEl.textContent = g.name;
+        nameEmojiEl.textContent = ' 🐟';
+      } else {
+        nameEl.textContent = g.name + ' 🐟';
+      }
     }
   });
 }
@@ -2769,7 +2774,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
   return sg.map(g => {
     const st = getPreviousStreak(g.name);
     const isOut = out.has(g.name);
-    const displayName = esc(g.name) + (!g.time ? ' 🎣' : (isOut ? ' 🍣' : ' 🐟'));
+    const displayEmoji = !g.time ? '🎣' : (isOut ? '🍣' : '🐟');
     const playerIdx = t.guesses.indexOf(g);
     const playerId = playerDomId(playerIdx);
     const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
@@ -2780,7 +2785,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
     <div class="row${boundaryInfo ? ' row-with-boundary' : ''}">
       <div class="row-name row-name-stack${activeNames.has(g.name) ? ' territory-active' : ''}" data-today-accuracy-player="${esc(g.name)}">
         <div class="row-name-main">
-          <span id="name-span-${playerId}">${displayName}</span>
+          <span id="name-span-${playerId}"><span class="today-live-name-text">${esc(g.name)}</span><span class="today-live-name-emoji"> ${displayEmoji}</span></span>
           ${g.time ? st.pill : ''}
         </div>
         ${boundaryInfo ? `<div class="row-boundary">${boundaryInfo}</div>` : ''}
