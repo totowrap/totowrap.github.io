@@ -3070,24 +3070,22 @@ function renderBoardPie(pl) {
 
     sliceSVG += `<path d="${pathD}" fill="${color}" stroke="#263759" stroke-width="1.5"/>`;
 
-    // Label — keep wide slices horizontal, align tighter labels on the slice center line.
-    if (sweep >= 0.22) {
-      const mid = angle + sweep / 2;
-      const baseLabelRadius = r * 0.62;
-      const horizontalLabelRadius = sweep < 0.55 ? r * 0.72 : baseLabelRadius;
-      const fs = sweep >= 0.65 ? 9 : 7.5;
-      const availableArc = sweep * horizontalLabelRadius * 0.84;
-      const estimatedTextWidth = String(p.name || '').length * fs * 0.56;
-      const rotateLabel = sweep < 0.56 || availableArc < estimatedTextWidth;
-      const textRadius = rotateLabel ? r * 0.88 : horizontalLabelRadius;
-      const lx = cx + textRadius * Math.cos(mid);
-      const ly = cy + textRadius * Math.sin(mid);
-      const rotation = ((((mid + Math.PI) * 180 / Math.PI) % 360 + 360) % 360).toFixed(1);
-      const transform = rotateLabel ? ` transform="rotate(${rotation} ${lx.toFixed(1)} ${ly.toFixed(1)})"` : '';
-      const anchor = rotateLabel ? 'start' : 'middle';
-      const labelColor = contrastTextForHex(color);
-      labelSVG += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}"${transform} text-anchor="${anchor}" dominant-baseline="middle" font-family="'Alte Haas Grotesk',sans-serif" font-size="${fs}" font-style="italic" fill="${labelColor}" style="pointer-events:none;">${esc(p.name)}</text>`;
-    }
+    // Keep every name visible. Narrow labels follow the slice center line from the outer edge inward.
+    const mid = angle + sweep / 2;
+    const baseLabelRadius = r * 0.70;
+    const horizontalLabelRadius = sweep < 0.55 ? r * 0.79 : baseLabelRadius;
+    const fs = sweep >= 0.65 ? 9 : sweep >= 0.22 ? 7.5 : 6.2;
+    const availableArc = sweep * horizontalLabelRadius * 0.84;
+    const estimatedTextWidth = String(p.name || '').length * fs * 0.56;
+    const rotateLabel = sweep < 0.56 || availableArc < estimatedTextWidth;
+    const textRadius = rotateLabel ? r * 0.95 : horizontalLabelRadius;
+    const lx = cx + textRadius * Math.cos(mid);
+    const ly = cy + textRadius * Math.sin(mid);
+    const rotation = ((((mid + Math.PI) * 180 / Math.PI) % 360 + 360) % 360).toFixed(1);
+    const transform = rotateLabel ? ` transform="rotate(${rotation} ${lx.toFixed(1)} ${ly.toFixed(1)})"` : '';
+    const anchor = rotateLabel ? 'start' : 'middle';
+    const labelColor = contrastTextForHex(color);
+    labelSVG += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}"${transform} text-anchor="${anchor}" dominant-baseline="middle" font-family="'Alte Haas Grotesk',sans-serif" font-size="${fs}" font-style="italic" fill="${labelColor}" style="pointer-events:none;">${esc(p.name)}</text>`;
 
     angle = end;
   });
