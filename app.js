@@ -2264,13 +2264,13 @@ function renderCompletedToday(t, canStartNextDay=false) {
     ${sg.map(g => {
       const st = getPreviousStreak(g.name);
       const isWinner = todayWinnerNames.includes(g.name);
-      const displayName = esc(g.name) + (isWinner ? ' 🦈' : (!g.time ? ' 🎣' : ' 🍣'));
+      const displayEmoji = isWinner ? '🦈' : (!g.time ? '🎣' : '🍣');
       const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
 
       return `
       <div class="row">
         <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
-	          <span>${displayName}</span>
+	          <span><span${isWinner ? ' class="today-result-winner-name"' : ''}>${esc(g.name)}</span> ${displayEmoji}</span>
           ${g.time ? st.pill : ''}
         </div>
         
