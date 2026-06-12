@@ -1777,7 +1777,16 @@ function refreshStatusBadges() {
     const id = playerDomId(idx);
     const el=document.getElementById('st-'+id);
     const nameEl = document.getElementById('name-span-'+id);
-    nameEl?.closest('.row-name')?.classList.toggle('territory-active', activeNames.has(g.name));
+    const nameRow = nameEl?.closest('.row-name');
+    const isActive = activeNames.has(g.name);
+    const isNewlyActive = isActive && !nameRow?.classList.contains('territory-active');
+    nameRow?.classList.toggle('territory-active', isActive);
+    if (isNewlyActive && nameRow) {
+      nameRow.classList.remove('territory-entering-from-top');
+      void nameRow.offsetWidth;
+      nameRow.classList.add('territory-entering-from-top');
+      setTimeout(() => nameRow.classList.remove('territory-entering-from-top'), 800);
+    }
     if(!el || !nameEl) return;
     if(out.has(g.name)){
       el.className='badge b-out';el.textContent='OUT';

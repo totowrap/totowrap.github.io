@@ -584,6 +584,26 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .standings-scroll-list { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:0; padding-top:0; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); }
 .today-scroll-list .row-name { color:var(--dim); transition:color .45s ease; }
 .today-scroll-list .row-name.territory-active { color:var(--accent); }
+.today-scroll-list .row-name.territory-entering-from-top .row-name-main > span {
+  color:transparent;
+  background-image:linear-gradient(to bottom, var(--accent) 0 28%, #d7bd62 50%, var(--dim) 72% 100%);
+  background-size:100% 240%;
+  background-position:0 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  animation:territory-name-fill-down .75s cubic-bezier(.25,.6,.35,1) forwards;
+}
+@keyframes territory-name-fill-down {
+  from { background-position:0 100%; opacity:.82; }
+  to { background-position:0 0; opacity:1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .today-scroll-list .row-name.territory-entering-from-top .row-name-main > span {
+    animation:none;
+    color:var(--accent);
+    background:none;
+  }
+}
 .today-scroll-list,
 .standings-scroll-list,
 .board-legend,
