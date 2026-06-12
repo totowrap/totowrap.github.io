@@ -62,7 +62,6 @@ let _bootFadeStartedPromise = null;
 let _territoryRuleMigrationPending = false;
 let _territoryRuleMigrationSaving = false;
 let _historyRowScrollAnimation = null;
-let _standingsLongPress = null;
 const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
@@ -520,43 +519,10 @@ document.addEventListener('touchend', e => {
 document.addEventListener('touchcancel', () => {
   _swipeStart = null;
   _dragState = null;
-  cancelStandingsLongPress();
   syncTabUI(true, false);
 }, { passive: true });
 
 window.addEventListener('resize', () => syncTabUI(false));
-
-function cancelStandingsLongPress() {
-  if (!_standingsLongPress) return;
-  clearTimeout(_standingsLongPress.timer);
-  _standingsLongPress = null;
-}
-
-document.addEventListener('touchstart', e => {
-  cancelStandingsLongPress();
-  const btn = e.target.closest?.('[data-board-view="list"]');
-  if (!btn || e.touches.length !== 1 || !IS_ADMIN || !currentUser || _tab !== 'board' || _boardView !== 'list') return;
-  const touch = e.touches[0];
-  _standingsLongPress = {
-    x: touch.clientX,
-    y: touch.clientY,
-    timer: setTimeout(() => {
-      _standingsLongPress = null;
-      _suppressNextClick = true;
-      openStandingsExportDialog();
-    }, 650)
-  };
-}, { passive: true });
-
-document.addEventListener('touchmove', e => {
-  if (!_standingsLongPress || e.touches.length !== 1) return;
-  const touch = e.touches[0];
-  if (Math.hypot(touch.clientX - _standingsLongPress.x, touch.clientY - _standingsLongPress.y) > 10) {
-    cancelStandingsLongPress();
-  }
-}, { passive: true });
-
-document.addEventListener('touchend', cancelStandingsLongPress, { passive: true });
 
 document.addEventListener('click', e => {
   if (!_suppressNextClick) return;
@@ -593,7 +559,6 @@ document.addEventListener('click', e => {
       && _tab === 'board'
       && IS_ADMIN
       && currentUser
-      && matchMedia('(hover: hover) and (pointer: fine)').matches
     ) {
       openStandingsExportDialog();
       return;
@@ -2584,7 +2549,7 @@ function openStandingsExportDialog() {
     showClose: false,
     body: `<div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
-      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="standings-export-save">Save PNG</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="standings-export-save">Download PNG</button>
     </div>`
   });
 }
@@ -2735,7 +2700,9 @@ async function downloadStandingsExport() {
     const link = document.createElement('a');
     link.href = url;
     link.download = `tonnowrap-final-standings-${localDateISO().replace(/-/g, '')}.png`;
+    document.body.appendChild(link);
     link.click();
+    link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast('Standings PNG saved', 'ok');
   } catch (e) {
@@ -4055,6 +4022,11 @@ async function clearEstimatedWrapTime() {
 async function handleAdminDialogAction(btn) {
   const action = btn.dataset.adminDialogAction;
   const date = btn.dataset.historyDate;
+  if (action === 'standings-export-save') {
+    closeAdminDialog();
+    await downloadStandingsExport();
+    return;
+  }
   if (action === 'history-wrap-open') {
     openHistoryWrapDialog(date);
     return;
