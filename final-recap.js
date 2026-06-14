@@ -117,7 +117,8 @@
     const noWinnerEntries = [];
     let exactDays = 0;
     let closestWrong = null;
-    let furthest = null;
+    let furthestNoWinner = null;
+    let furthestWinningDay = null;
     const leadChanges = [];
     let previousLeader = null;
     const runningScores = new Map(players.map(name => [name, 0]));
@@ -164,8 +165,9 @@
           player.gaps.push(gap);
           player.gapPoints.push({dayIndex,gap});
         }
-        const item = {name:guess.name,gap,date:day.date || '',bet:guess.time,wrap:day.wrapTime};
-        if (gap !== null && (!furthest || gap > furthest.gap)) furthest = item;
+        const item = {name:guess.name,gap,date:day.date || '',bet:guess.time,wrap:day.wrapTime,dayIndex};
+        if (!winners.size && gap !== null && (!furthestNoWinner || gap > furthestNoWinner.gap)) furthestNoWinner = item;
+        if (winners.size && gap !== null && (!furthestWinningDay || gap > furthestWinningDay.gap)) furthestWinningDay = item;
         if (!winners.has(guess.name) && gap !== null) {
           if (gap < 300) player.closeWrong += 1;
           const territoryGap = wrongTerritoryGap(guess.name,day);
@@ -201,7 +203,7 @@
     const longestStreak = list.filter(item => item.longestWinStreak === maxStreak && maxStreak > 0).sort((a,b) => a.name.localeCompare(b.name));
     const maxCloseWrong = Math.max(0,...list.map(item => item.closeWrong));
     const closeWrongLeaders = list.filter(item => item.closeWrong === maxCloseWrong && maxCloseWrong > 0).sort((a,b) => a.name.localeCompare(b.name));
-    return {days,list,leaderboard,totalBets,totalForgot,noWinnerEntries,exactDays,closestWrong,furthest,leadChanges,mostAccurate,leastAccurate,mostReliable,mostForgot,exactPlayers,longestStreak,closeWrongLeaders};
+    return {days,list,leaderboard,totalBets,totalForgot,noWinnerEntries,exactDays,closestWrong,furthestNoWinner,furthestWinningDay,leadChanges,mostAccurate,leastAccurate,mostReliable,mostForgot,exactPlayers,longestStreak,closeWrongLeaders};
   }
 
   function stat(value, label) {
@@ -215,6 +217,18 @@
       <span>${esc(label)}</span>
       <strong>${esc(value)}</strong>
       <b>${esc(names)}</b>
+    </div>`;
+  }
+  function furthestComparisonCard(noWinner, winningDay) {
+    const row = (label, item) => `<div class="final-recap-furthest-row">
+      <span>${esc(label)}</span>
+      <strong>${esc(item ? `${compactTime(item.gap)} off` : '—')}</strong>
+      <b>${esc(item?.name || '—')}</b>
+      <small>${esc(item ? `Day ${item.dayIndex} · ${formatDate(item.date)}` : 'No qualifying day')}</small>
+    </div>`;
+    return `<div class="final-recap-showcase-card final-recap-furthest-card" data-tone="red">
+      <span>Furthest from the official wrap</span>
+      <div>${row('No-winner day',noWinner)}${row('Winning day',winningDay)}</div>
     </div>`;
   }
   function reactionCard(label, file, tone) {
@@ -317,7 +331,7 @@
       screen('Least accurate',esc(data.leastAccurate?.name || 'No winner'),leastAccuracyCopy,`${accuracyGraph(data.leastAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.leastAccurate?.avgGap),'Average distance')}${stat(data.leastAccurate?.bets || 0,word(data.leastAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.leastAccurate?.wins || 0,word(data.leastAccurate?.wins || 0,'Win','Wins'))}</div>`),
       screen('The highs and lows','Every second counted','',`<div class="final-recap-showcase-grid">
         ${splitShowcaseAward('Closest wrong bet',data.closestWrong?.name || '—',data.closestWrong ? compactTime(data.closestWrong.gap) : '—','green')}
-        ${splitShowcaseAward('Bet furthest from the official wrap',data.furthest?.name || '—',data.furthest ? `${compactTime(data.furthest.gap)} off` : '—','red')}
+        ${furthestComparisonCard(data.furthestNoWinner,data.furthestWinningDay)}
         ${splitShowcaseAward('Most wrong bets within 5 minutes',data.closeWrongLeaders.length ? data.closeWrongLeaders.map(item => item.name).join(', ') : '—',data.closeWrongLeaders.length ? `${data.closeWrongLeaders[0].closeWrong} ${word(data.closeWrongLeaders[0].closeWrong,'bet','bets')}` : '—','gold')}
       </div>`),
       screen('Showing up matters','The regulars','',`<div class="final-recap-showcase-grid">
