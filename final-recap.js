@@ -222,7 +222,7 @@
       <span>${esc(label)}</span>
       <div class="final-recap-reaction-media">
         <video muted loop playsinline preload="auto" aria-label="${esc(label)}">
-          <source src="${esc(file)}" type="video/mp4">
+          <source src="${esc(file)}?mobile-video=2" type="video/mp4">
         </video>
         <button class="final-recap-sound-toggle" type="button" aria-label="Turn sound on">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -380,18 +380,21 @@
     recap.querySelectorAll('.final-recap-reaction-media').forEach(media => {
       const video = media.querySelector('video');
       const soundToggle = media.querySelector('.final-recap-sound-toggle');
+      const markVideoReady = () => media.classList.add('has-video');
       const playWhenVisible = () => {
         const activeScreen = recap.querySelectorAll('.final-recap-screen')[screenIndex];
-        if (media.closest('.final-recap-screen') === activeScreen) video.play().catch(() => {});
+        if (media.closest('.final-recap-screen') === activeScreen) {
+          video.play().then(markVideoReady).catch(() => {});
+        }
       };
       const updateSoundToggle = () => {
         soundToggle.classList.toggle('is-muted',video.muted);
         soundToggle.setAttribute('aria-label',video.muted ? 'Turn sound on' : 'Mute video');
       };
-      video.addEventListener('canplay', () => {
-        media.classList.add('has-video');
+      ['loadedmetadata','loadeddata','canplay'].forEach(eventName => video.addEventListener(eventName, () => {
+        markVideoReady();
         playWhenVisible();
-      });
+      }));
       video.addEventListener('error', () => media.classList.remove('has-video'));
       media.addEventListener('click', event => {
         event.stopPropagation();
@@ -401,6 +404,9 @@
         playWhenVisible();
       });
       updateSoundToggle();
+      video.muted = true;
+      video.defaultMuted = true;
+      video.load();
     });
     document.documentElement.style.overflow = 'hidden';
     screenIndex = 0;
