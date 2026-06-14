@@ -2209,6 +2209,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
   const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
   const winnerCloseTag = canStartNextDay ? 'button' : 'div';
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p next-day-btn" id="new-day-btn">Start Next Day</button>' : '';
+  const recapPreviewBtn = canStartNextDay ? '<button class="btn btn-s final-recap-preview-btn" id="final-recap-preview-btn">Preview Final Recap</button>' : '';
   const completedViewClass = canStartNextDay ? 'today-fixed-view today-completed-view has-next-day-action' : 'today-fixed-view today-completed-view';
   const fridayBanner = renderFridayWrapBanner(t);
 
@@ -2240,6 +2241,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
         </div>
       </div>
       ${nextDayBtn}
+      ${recapPreviewBtn}
     </div>`;
   }
 
@@ -2284,6 +2286,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
     </div>
   </div>
   ${nextDayBtn}
+  ${recapPreviewBtn}
   </div>`;
 }
 
@@ -4717,6 +4720,9 @@ function bindMain() {
   });
   document.getElementById('player-version-btn')?.addEventListener('click', openPlayerVersion);
   document.getElementById('export-backup-btn')?.addEventListener('click', exportProjectBackup);
+  document.getElementById('final-recap-preview-btn')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('totowrap-open-final-recap'));
+  });
   document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>setMainTab(btn.dataset.tab)));
   document.getElementById('new-day-btn')?.addEventListener('click', async () => {
     const prevS = cloneState();
@@ -4771,6 +4777,17 @@ onSnapshot(STATE_REF, (snap) => {
   storeBootPlayerNames();
   _stateReady = true;
   render();
+  window.__TOTOWRAP_RECAP_STATE__ = JSON.parse(JSON.stringify(S));
+  window.__TOTOWRAP_RECAP_ACCURACY_GRAPH__ = playerName => {
+    const previousPlayer = _closenessPlayer;
+    _closenessPlayer = playerName;
+    const holder = document.createElement('div');
+    holder.innerHTML = renderBoardCloseness(getSortedPlayerRoster());
+    const graph = holder.querySelector('.closeness-graph');
+    _closenessPlayer = previousPlayer;
+    return graph ? graph.outerHTML : '';
+  };
+  window.dispatchEvent(new CustomEvent('totowrap-recap-state-ready'));
   maybeSaveTerritoryRuleMigration();
 }, (err) => {
   console.error("Firestore error:", err);
