@@ -553,13 +553,7 @@ document.addEventListener('click', e => {
 
   const boardBtn = e.target.closest?.('[data-board-view]');
   if (boardBtn) {
-    if (
-      boardBtn.dataset.boardView === 'list'
-      && _boardView === 'list'
-      && _tab === 'board'
-      && IS_ADMIN
-      && currentUser
-    ) {
+    if (boardBtn.hasAttribute('data-standings-export')) {
       openStandingsExportDialog();
       return;
     }
@@ -3367,7 +3361,7 @@ function renderBoard(view=_boardView) {
     : '';
   const toolbar = `
     <div class="board-toolbar">
-      <button class="board-toggle${view === 'list' ? ' on' : ''}" type="button" data-board-view="list">Standings</button>
+      <button class="board-toggle${view === 'list' ? ' on' : ''}" type="button" data-board-view="list"${view === 'list' && IS_ADMIN ? ' data-standings-export' : ''}>Standings</button>
       <button class="board-toggle${view === 'pie' ? ' on' : ''}" type="button" data-board-view="pie">Pie Chart</button>
       ${distanceToggle}
     </div>`;
