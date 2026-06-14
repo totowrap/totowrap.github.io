@@ -280,7 +280,7 @@ body::before {
 .preview-card { background: transparent; border: 0; border-radius: 0; padding: 0; margin-bottom: 12px; max-height: 360px; overflow-y: auto; -webkit-overflow-scrolling: touch; -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); }
 .compact-preview-card { max-height: min(62vh, 520px); }
 .card { background: linear-gradient(135deg, rgba(62, 79, 112, 0.84), rgba(38, 55, 89, 0.88)), rgba(38, 55, 89, 0.88); border: 1px solid rgba(var(--yellow-rgb), 0.22); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(0, 0, 0, 0.12); transform: translateZ(0); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-@supports (-webkit-backdrop-filter: blur(1px)) {
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .card { background: linear-gradient(135deg, rgba(46, 60, 87, 0.54), rgba(46, 60, 87, 0.36)); -webkit-backdrop-filter: blur(14px) saturate(135%); backdrop-filter: blur(14px) saturate(135%); border-color: var(--border-glass); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
 }
 .card-lbl { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin-bottom: 12px; }
@@ -302,7 +302,7 @@ body::before {
   background:linear-gradient(135deg, rgba(var(--yellow-rgb),.11), rgba(var(--yellow-rgb),.035)), rgba(38,55,89,.34);
   pointer-events:none;
 }
-@supports (-webkit-backdrop-filter:blur(1px)) {
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .golden-winner-row::before {
     -webkit-backdrop-filter:blur(8px) saturate(125%);
     backdrop-filter:blur(8px) saturate(125%);
@@ -359,7 +359,7 @@ body::before {
 .bet-close-card.is-open > * { position: relative; z-index: 1; }
 .bet-close-card.is-closed { display: grid; place-items: center; min-height: 132px; border-color: rgba(var(--red-rgb), .42); background: linear-gradient(135deg, rgba(var(--red-rgb), .16), rgba(var(--red-rgb), .07)), linear-gradient(135deg, rgba(62,79,112,.84), rgba(38,55,89,.88)), rgba(38,55,89,.88); }
 .bet-close-card.is-closed .bet-close-status { width: 100%; color: var(--red); font-family: 'Alte Haas Grotesk', sans-serif; font-size: clamp(1.8rem, 9vw, 2.8rem); font-weight: 900; line-height: .95; text-align: center; text-transform: uppercase; }
-@supports (-webkit-backdrop-filter: blur(1px)) {
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .bet-close-card.is-open { background: linear-gradient(135deg, rgba(46,60,87,.54), rgba(46,60,87,.36)); -webkit-backdrop-filter: blur(14px) saturate(105%); backdrop-filter: blur(14px) saturate(105%); }
   .bet-close-card.is-closed { background: linear-gradient(135deg, rgba(var(--red-rgb), .14), rgba(var(--red-rgb), .04)), linear-gradient(135deg, rgba(46,60,87,.54), rgba(46,60,87,.36)); }
 }
@@ -391,7 +391,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .btn-s.chat-upload-btn { background: rgba(var(--green-rgb), .12); color: var(--green); border-color: rgba(var(--green-rgb), .38); }
 .btn-s.chat-upload-btn:hover { background: rgba(var(--green-rgb), .2); border-color: rgba(var(--green-rgb), .55); }
 .btn-d { background: rgba(var(--red-rgb), .12); color: var(--red); border: 1px solid rgba(var(--red-rgb), .25); }
-@supports (-webkit-backdrop-filter: blur(1px)) {
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .settings-add-player,
   #admin-logout-btn,
   #player-version-btn,
@@ -489,7 +489,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .winner-banner { background: linear-gradient(135deg, rgba(var(--green-rgb), .16), rgba(var(--green-rgb), .07)), linear-gradient(135deg, rgba(62, 79, 112, 0.84), rgba(38, 55, 89, 0.88)), rgba(38, 55, 89, 0.88); border: 1px solid rgba(var(--green-rgb), .5); border-radius: var(--radius); padding: 20px 16px; text-align: center; margin-bottom: 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(0, 0, 0, 0.12); }
 .winner-banner[data-share-result] { display:block; width:100%; color:inherit; font:inherit; cursor:pointer; }
 .winner-banner.no-winner-banner { background: linear-gradient(135deg, rgba(var(--red-rgb), .16), rgba(var(--red-rgb), .07)), linear-gradient(135deg, rgba(62, 79, 112, 0.84), rgba(38, 55, 89, 0.88)), rgba(38, 55, 89, 0.88); border-color: rgba(var(--red-rgb), .5); }
-@supports (-webkit-backdrop-filter: blur(1px)) {
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .winner-banner { background: linear-gradient(135deg, rgba(var(--green-rgb), .10), rgba(var(--green-rgb), .025)), linear-gradient(135deg, rgba(46, 60, 87, 0.54), rgba(46, 60, 87, 0.36)); -webkit-backdrop-filter: blur(14px) saturate(135%); backdrop-filter: blur(14px) saturate(135%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
   .winner-banner.no-winner-banner { background: linear-gradient(135deg, rgba(var(--red-rgb), .12), rgba(var(--red-rgb), .03)), linear-gradient(135deg, rgba(46, 60, 87, 0.54), rgba(46, 60, 87, 0.36)); border-color: rgba(var(--red-rgb), .5); }
 }
@@ -497,7 +497,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .winner-name { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 2.8rem; color: var(--accent); letter-spacing: .04em; line-height: 1; }
 .winner-pts { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .7rem; color: var(--dim); margin-top: 4px; }
 .weekday-message-banner { flex:0 0 auto; margin:0 0 12px; border:1px solid rgba(var(--neutral-rgb), .22); border-radius:var(--radius); padding:10px 14px; background:linear-gradient(135deg, rgba(46,60,87,.54), rgba(46,60,87,.36)); color:var(--accent); font-family:'Alte Haas Grotesk', sans-serif; font-size:.68rem; line-height:1.28; letter-spacing:.06em; text-align:center; text-transform:uppercase; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
-@supports (-webkit-backdrop-filter: blur(1px)) {
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .weekday-message-banner { -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); }
 }
 .bnd-duration { color: inherit; margin-left: 8px; }
@@ -572,7 +572,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .board-stat-link:hover { border-color:rgba(var(--yellow-rgb), .24); background:rgba(38,55,89,.62); }
 .board-stat-link:active { transform:scale(.98); }
 .board-win-rate { border-top:1px solid rgba(61,84,51,.52); color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.64rem; margin-top:10px; padding-top:9px; text-align:left; }
-@supports (-webkit-backdrop-filter: blur(1px)) {
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .board-player-stats { background:linear-gradient(135deg, rgba(46,60,87,.54), rgba(46,60,87,.36)); -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); border-color:var(--border-glass); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
 }
 .board-pie-wrap { display:flex; flex-direction:column; align-items:center; gap:20px; }
@@ -691,7 +691,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .result-share-actions { display:flex; gap:8px; }
 .result-share-actions .btn { flex:1; }
 .result-share-actions .btn + .btn { margin-top:0; }
-@supports (-webkit-backdrop-filter: blur(1px)) {
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .result-share-modal { -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
   .result-share-panel { -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); }
 }
@@ -756,7 +756,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .admin-dialog-input-wrap { margin-bottom: 10px; border: 1px solid rgba(var(--neutral-rgb), .14); border-radius: 8px; padding: 12px; background: rgba(38,55,89,.48); }
 .admin-dialog-input-wrap .inp-lbl { margin-bottom: 7px; }
 .admin-dialog-wrap-input { min-height: 44px; color: var(--accent); text-align: center; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
-@supports (-webkit-backdrop-filter: blur(1px)) {
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .admin-dialog-modal { -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
   .admin-dialog-panel { background: linear-gradient(135deg, rgba(46,60,87,.76), rgba(38,55,89,.9)); -webkit-backdrop-filter: blur(14px) saturate(135%); backdrop-filter: blur(14px) saturate(135%); }
 }
