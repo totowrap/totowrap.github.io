@@ -1360,7 +1360,7 @@ async function handleChatUpload(file) {
     }
     textarea.value = extracted;
     const count = extracted.split('\n').filter(Boolean).length;
-    toast(`Loaded ${count} bets from chat`, 'ok');
+    toast(`Loaded ${count} ${countWord(count, 'bet', 'bets')} from chat`, 'ok');
   } catch(e) {
     console.error('Chat upload error:', e);
     toast('Could not read chat file', 'err');
@@ -1646,7 +1646,7 @@ function getPreviousStreak(playerName) {
   if (count >= 2) {
     return {
       count: count,
-      pill: `<div class="badge b-streak">${count} Days</div>`
+      pill: `<div class="badge b-streak">${count} ${countWord(count, 'Day', 'Days')}</div>`
     };
   }
   return { count: 0, pill: "" };
