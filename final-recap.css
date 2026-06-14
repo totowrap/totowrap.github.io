@@ -110,6 +110,7 @@
   font-weight:bold;
   line-height:.94;
   text-transform:uppercase;
+  transform-origin:center;
 }
 .final-recap-title.neutral { color:var(--text); }
 .final-recap-copy {
@@ -161,6 +162,85 @@
   grid-column:1 / -1;
   border-color:rgba(var(--yellow-rgb),.5);
   background:linear-gradient(135deg,rgba(var(--yellow-rgb),.18),rgba(38,55,89,.58));
+}
+.final-recap-screen:not(.is-active) :is(
+  .final-recap-kicker,
+  .final-recap-copy,
+  .final-recap-official-accuracy,
+  .final-recap-stat,
+  .final-recap-exact-winner,
+  .final-recap-exact-others > div,
+  .final-recap-empty,
+  .final-recap-no-winner-day,
+  .final-recap-lead-change,
+  .final-recap-showcase-card,
+  .final-recap-reaction-card,
+  .final-recap-specific-stat,
+  .final-recap-podium-place,
+  .final-recap-replay
+) {
+  opacity:0;
+}
+.final-recap-screen:not(.is-active) :is(
+  .final-recap-official-accuracy,
+  .final-recap-stat,
+  .final-recap-exact-winner,
+  .final-recap-exact-others > div,
+  .final-recap-empty,
+  .final-recap-no-winner-day,
+  .final-recap-lead-change,
+  .final-recap-showcase-card,
+  .final-recap-reaction-card,
+  .final-recap-specific-stat,
+  .final-recap-podium-place,
+  .final-recap-replay
+) {
+  transform:translateY(22px) scale(.86);
+}
+.final-recap-screen.is-active .final-recap-title {
+  animation:final-recap-title-stage 1.72s cubic-bezier(.2,.82,.2,1) both;
+}
+.final-recap-screen.is-active :is(.final-recap-kicker,.final-recap-copy) {
+  animation:final-recap-text-in .5s ease 1.55s both;
+}
+.final-recap-screen.is-active :is(
+  .final-recap-official-accuracy,
+  .final-recap-stat,
+  .final-recap-exact-winner,
+  .final-recap-exact-others > div,
+  .final-recap-empty,
+  .final-recap-no-winner-day,
+  .final-recap-lead-change,
+  .final-recap-showcase-card,
+  .final-recap-reaction-card,
+  .final-recap-specific-stat,
+  .final-recap-podium-place,
+  .final-recap-replay
+) {
+  animation:final-recap-bubble-in .82s cubic-bezier(.2,.9,.25,1.18) calc(1.82s + var(--recap-reveal-index,0) * .52s) both;
+}
+@keyframes final-recap-title-stage {
+  0%,58% { transform:translateY(var(--recap-title-center-shift,0)) scale(1.06); }
+  100% { transform:translateY(0) scale(1); }
+}
+@keyframes final-recap-text-in {
+  0% { opacity:0; transform:translateY(7px); }
+  100% { opacity:1; transform:translateY(0); }
+}
+@keyframes final-recap-bubble-in {
+  0% { opacity:0; transform:translateY(22px) scale(.86); }
+  68% { opacity:1; transform:translateY(-4px) scale(1.03); }
+  100% { opacity:1; transform:translateY(0) scale(1); }
+}
+.final-recap-graph-sequence .closeness-lines > polyline { opacity:0!important; }
+.final-recap-graph-sequence .closeness-marker { opacity:0; }
+.final-recap-screen.is-active .final-recap-graph-sequence .final-recap-draw-marker {
+  animation:final-recap-graph-dot .28s cubic-bezier(.2,.9,.25,1.35) var(--graph-marker-delay) both;
+}
+@keyframes final-recap-graph-dot {
+  0% { opacity:0; transform:translate(-50%,-50%) scale(.25); }
+  72% { opacity:1; transform:translate(-50%,-50%) scale(1.35); }
+  100% { opacity:1; transform:translate(-50%,-50%) scale(1); }
 }
 .final-recap-exact-stage {
   width:min(640px,100%);
@@ -588,4 +668,39 @@
   .final-recap,
   .final-recap-track,
   .final-recap-dot { transition:none; }
+  .final-recap-screen:not(.is-active) :is(
+    .final-recap-kicker,
+    .final-recap-copy,
+    .final-recap-official-accuracy,
+    .final-recap-stat,
+    .final-recap-exact-winner,
+    .final-recap-exact-others > div,
+    .final-recap-empty,
+    .final-recap-no-winner-day,
+    .final-recap-lead-change,
+    .final-recap-showcase-card,
+    .final-recap-reaction-card,
+    .final-recap-specific-stat,
+    .final-recap-podium-place,
+    .final-recap-replay
+  ) { opacity:1; transform:none; }
+  .final-recap-screen.is-active .final-recap-title,
+  .final-recap-screen.is-active :is(.final-recap-kicker,.final-recap-copy),
+  .final-recap-screen.is-active :is(
+    .final-recap-official-accuracy,
+    .final-recap-stat,
+    .final-recap-exact-winner,
+    .final-recap-exact-others > div,
+    .final-recap-empty,
+    .final-recap-no-winner-day,
+    .final-recap-lead-change,
+    .final-recap-showcase-card,
+    .final-recap-reaction-card,
+    .final-recap-specific-stat,
+    .final-recap-podium-place,
+    .final-recap-replay
+  ) { animation:none; }
+  .final-recap-graph-sequence .closeness-lines > polyline { opacity:1!important; }
+  .final-recap-graph-sequence .closeness-marker { opacity:1; }
+  .final-recap-screen.is-active .final-recap-graph-sequence .final-recap-draw-lines { display:none; }
 }

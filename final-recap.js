@@ -344,11 +344,103 @@
     ];
   }
 
+  function prepareGraphDrawing(screen, revealCount) {
+    const graph = screen.querySelector('.final-recap-official-accuracy');
+    const svg = graph?.querySelector('.closeness-lines');
+    const markers = graph ? [...graph.querySelectorAll('.closeness-marker')] : [];
+    const polylines = svg ? [...svg.querySelectorAll('polyline')] : [];
+    if (!graph || !svg || !markers.length || !polylines.length) return;
+
+    svg.querySelector('.final-recap-draw-lines')?.remove();
+    markers.forEach(marker => {
+      marker.classList.remove('final-recap-draw-marker');
+      marker.style.removeProperty('--graph-marker-delay');
+    });
+
+    const drawLayer = document.createElementNS('http://www.w3.org/2000/svg','g');
+    drawLayer.classList.add('final-recap-draw-lines');
+    let markerIndex = 0;
+    let step = 0;
+    const drawStart = 1.82 + .82;
+
+    polylines.forEach(polyline => {
+      const points = polyline.getAttribute('points').trim().split(/\s+/).map(point => point.split(',').map(Number));
+      if (!points.length) return;
+      const firstMarker = markers[markerIndex++];
+      if (firstMarker) {
+        firstMarker.classList.add('final-recap-draw-marker');
+        firstMarker.style.setProperty('--graph-marker-delay',`${drawStart + step * .25}s`);
+      }
+      points.slice(1).forEach((point,index) => {
+        const previous = points[index];
+        const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1',previous[0]);
+        line.setAttribute('y1',previous[1]);
+        line.setAttribute('x2',previous[0]);
+        line.setAttribute('y2',previous[1]);
+        line.setAttribute('stroke',polyline.getAttribute('stroke') || 'currentColor');
+        line.setAttribute('stroke-width',polyline.getAttribute('stroke-width') || '2.8');
+        line.setAttribute('stroke-linecap','round');
+        line.setAttribute('vector-effect','non-scaling-stroke');
+        line.style.opacity = 0;
+        drawLayer.appendChild(line);
+        const lineDelay = (drawStart + step * .25 + .06) * 1000;
+        setTimeout(() => {
+          if (!screen.classList.contains('is-active')) return;
+          line.style.opacity = 1;
+          const startedAt = performance.now();
+          const drawFrame = now => {
+            if (!screen.classList.contains('is-active')) return;
+            const progress = Math.min(1,(now - startedAt) / 170);
+            line.setAttribute('x2',previous[0] + (point[0] - previous[0]) * progress);
+            line.setAttribute('y2',previous[1] + (point[1] - previous[1]) * progress);
+            if (progress < 1) requestAnimationFrame(drawFrame);
+          };
+          requestAnimationFrame(drawFrame);
+        },lineDelay);
+        step += 1;
+        const marker = markers[markerIndex++];
+        if (marker) {
+          marker.classList.add('final-recap-draw-marker');
+          marker.style.setProperty('--graph-marker-delay',`${drawStart + step * .25}s`);
+        }
+      });
+      step += 1;
+    });
+    svg.appendChild(drawLayer);
+    graph.classList.add('final-recap-graph-sequence');
+  }
+
   function updateScreen(next) {
     if (!recap) return;
     const screens = recap.querySelectorAll('.final-recap-screen');
     screenIndex = Math.max(0, Math.min(next, screens.length - 1));
     recap.querySelector('.final-recap-track').style.transform = `translateX(-${screenIndex * 100}%)`;
+    screens.forEach(screen => screen.classList.remove('is-active'));
+    requestAnimationFrame(() => {
+      const screen = screens[screenIndex];
+      const title = screen?.querySelector('.final-recap-title');
+      if (!screen || !title) return;
+      const titleRect = title.getBoundingClientRect();
+      screen.style.setProperty('--recap-title-center-shift', `${window.innerHeight / 2 - (titleRect.top + titleRect.height / 2)}px`);
+      const revealables = screen.querySelectorAll(`
+        .final-recap-official-accuracy,
+        .final-recap-stat,
+        .final-recap-exact-winner,
+        .final-recap-exact-others > div,
+        .final-recap-empty,
+        .final-recap-no-winner-day,
+        .final-recap-lead-change,
+        .final-recap-showcase-card,
+        .final-recap-reaction-card,
+        .final-recap-specific-stat,
+        .final-recap-podium-place,
+        .final-recap-replay
+      `);
+      revealables.forEach((item,index) => item.style.setProperty('--recap-reveal-index',index));
+      prepareGraphDrawing(screen,revealables.length);
+      screen.classList.add('is-active');
+    });
     recap.querySelectorAll('.final-recap-dot').forEach((dot,index) => dot.classList.toggle('on',index === screenIndex));
     recap.querySelectorAll('video').forEach(video => {
       if (video.closest('.final-recap-screen') === screens[screenIndex] && video.readyState >= 2) video.play().catch(() => {});
@@ -410,6 +502,7 @@
     });
     document.documentElement.style.overflow = 'hidden';
     screenIndex = 0;
+    updateScreen(0);
     requestAnimationFrame(() => recap?.classList.add('is-open'));
     recap.addEventListener('click', event => {
       if (event.target.closest('.final-recap-close')) return closeRecap();
