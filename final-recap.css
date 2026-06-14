@@ -40,8 +40,8 @@
   aspect-ratio:1;
   transform:translate(-50%,-50%);
   background:url("imgs/tunacan.png") center/contain no-repeat;
-  filter:brightness(.67);
-  opacity:.24;
+  filter:brightness(.5);
+  opacity:.14;
   pointer-events:none;
 }
 .final-recap-top {
@@ -94,6 +94,7 @@
   justify-content:center;
   align-items:center;
   text-align:center;
+  transform:translateY(-10px);
 }
 .final-recap-kicker {
   color:var(--dim);
