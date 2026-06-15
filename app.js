@@ -2210,7 +2210,6 @@ function renderCompletedToday(t, canStartNextDay=false) {
   const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
   const winnerCloseTag = canStartNextDay ? 'button' : 'div';
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p next-day-btn" id="new-day-btn">Start Next Day</button>' : '';
-  const recapPreviewBtn = canStartNextDay ? '<button class="btn btn-s final-recap-preview-btn" id="final-recap-preview-btn">Preview Final Recap</button>' : '';
   const completedViewClass = canStartNextDay ? 'today-fixed-view today-completed-view has-next-day-action' : 'today-fixed-view today-completed-view';
   const fridayBanner = renderFridayWrapBanner(t);
 
@@ -2242,7 +2241,6 @@ function renderCompletedToday(t, canStartNextDay=false) {
         </div>
       </div>
       ${nextDayBtn}
-      ${recapPreviewBtn}
     </div>`;
   }
 
@@ -2287,7 +2285,6 @@ function renderCompletedToday(t, canStartNextDay=false) {
     </div>
   </div>
   ${nextDayBtn}
-  ${recapPreviewBtn}
   </div>`;
 }
 
@@ -2870,9 +2867,10 @@ function renderMain() {
   const totalDays=S.days.length+(S.today?1:0);
   const estWrap = S.today?.estWrap || '--:--';
   const wrapStatusClass = S.today&&S.today.wrapTime ? 'off' : 'live';
+  const dayHeader = totalDays ? displayDayProgressHeader(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`;
   return `
 <div class="hdr">
-  <div class="hdr-day">${totalDays ? displayDayProgressHeader(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`}</div>
+  <div class="hdr-day"><button class="hdr-day-recap-trigger" type="button" data-final-recap-trigger>${dayHeader}</button></div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <div class="hdr-wrap">Wrap <span class="hdr-wrap-time ${wrapStatusClass}">${esc(estWrap)}</span></div>
@@ -4712,7 +4710,7 @@ function bindMain() {
   });
   document.getElementById('player-version-btn')?.addEventListener('click', openPlayerVersion);
   document.getElementById('export-backup-btn')?.addEventListener('click', exportProjectBackup);
-  document.getElementById('final-recap-preview-btn')?.addEventListener('click', () => {
+  document.querySelector('[data-final-recap-trigger]')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('totowrap-open-final-recap'));
   });
   document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>setMainTab(btn.dataset.tab)));

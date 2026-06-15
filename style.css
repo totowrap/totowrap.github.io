@@ -133,6 +133,7 @@ body::before {
 .hdr { position: relative; z-index: 200; background: var(--bg);  backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-bottom: 1px solid var(--border); padding: 10px 18px 8px; display: flex; justify-content: space-between; align-items: center; height: 50px}
 .hdr-right { font-family: 'Alte Haas Grotesk', sans-serif; text-align: right; display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-end; min-width:0; }
 .hdr-day { font-family: 'Alte Haas Grotesk', sans-serif; font-size: 0.90rem; color: var(--dim); letter-spacing: .02em; flex: 1; }
+.hdr-day-recap-trigger { display:inline; padding:0; border:0; background:none; color:inherit; font:inherit; letter-spacing:inherit; text-align:left; cursor:pointer; }
 
 /* 3D LOGO STYLES */
 .logo-3d-container {
@@ -397,7 +398,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   #admin-logout-btn,
   #player-version-btn,
   #export-backup-btn,
-  .final-recap-preview-btn,
   #cancel-btn {
     background: linear-gradient(135deg, rgba(46,60,87,.52), rgba(46,60,87,.34));
     -webkit-backdrop-filter: blur(14px) saturate(135%);
@@ -409,7 +409,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   #admin-logout-btn:hover,
   #player-version-btn:hover,
   #export-backup-btn:hover,
-  .final-recap-preview-btn:hover,
   #cancel-btn:hover {
     background: linear-gradient(135deg, rgba(46,60,87,.62), rgba(46,60,87,.42));
   }
@@ -602,7 +601,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .today-fixed-view > .winner-banner,
 .today-fixed-view .today-scroll-card { box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
 .today-completed-view.has-next-day-action .today-scroll-card { margin-bottom:12px; }
-.final-recap-preview-btn { margin-top:8px; }
 .today-scroll-card > .card-lbl { position:relative; z-index:2; flex:0 0 auto; }
 .today-scroll-list,
 .standings-scroll-list { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:0; padding-top:0; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); }
