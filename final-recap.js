@@ -100,6 +100,22 @@
     const match = text.match(/Day\s+(\d+)\s*\/\s*(\d+)/i);
     return Boolean(match && Number(match[1]) === Number(match[2]));
   };
+  const isCogImageName = name => /\.(?:avif|gif|jpe?g|png|webp)$/i.test(String(name || ''));
+  const fetchWithTimeout = (url, options={}, timeout=1800) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(),timeout);
+    return fetch(url,{...options,signal:controller.signal}).finally(() => clearTimeout(timer));
+  };
+  async function countCogImages() {
+    try {
+      const api = await fetchWithTimeout('https://api.github.com/repos/totowrap/totowrap.github.io/contents/cog',{cache:'no-store'});
+      if (!api.ok) return 0;
+      const entries = await api.json();
+      return Array.isArray(entries) ? entries.filter(item => item?.type === 'file' && isCogImageName(item.name)).length : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
 
   function calculate(source) {
     const days = getCompletedDays(source);
@@ -347,7 +363,7 @@
         <div class="final-recap-specific-stat">
           <span>Word of encouragement</span>
           <div>
-            <strong>16</strong>
+            <strong>${data.coglioneCount}</strong>
             <b>Times Marco called Edoardo “coglione”</b>
           </div>
         </div>
@@ -471,9 +487,10 @@
       document.documentElement.style.overflow = '';
     },450);
   }
-  function openRecap() {
+  async function openRecap() {
     if (!state || recap) return;
     const data = calculate(state);
+    data.coglioneCount = await countCogImages();
     const screens = buildScreens(data);
     recap = document.createElement('div');
     recap.className = 'final-recap';
