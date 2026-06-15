@@ -1778,7 +1778,8 @@ function refreshStatusBadges() {
     const nameTextEl = nameEl.querySelector('.today-live-name-text');
     const nameEmojiEl = nameEl.querySelector('.today-live-name-emoji');
     if(out.has(g.name)){
-      el.className='badge b-out';el.textContent='OUT';
+      el.className = el instanceof HTMLButtonElement ? 'badge b-out current-bet-edit-action' : 'badge b-out';
+      el.textContent='OUT';
       el.removeAttribute('data-current-bet-player');
       el.removeAttribute('aria-label');
       if (el instanceof HTMLButtonElement) el.disabled = true;
