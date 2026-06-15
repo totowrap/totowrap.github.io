@@ -389,18 +389,27 @@
 
     const drawLayer = document.createElementNS('http://www.w3.org/2000/svg','g');
     drawLayer.classList.add('final-recap-draw-lines');
-    let markerIndex = 0;
+    const markedMarkers = new Set();
+    const markerByPosition = new Map(markers.map(marker => [
+      `${parseFloat(marker.style.left).toFixed(2)},${parseFloat(marker.style.top).toFixed(2)}`,
+      marker
+    ]));
+    const markMarker = (point, delay) => {
+      const marker = markerByPosition.get(`${point[0].toFixed(2)},${point[1].toFixed(2)}`);
+      if (!marker) return;
+      markedMarkers.add(marker);
+      marker.classList.add('final-recap-draw-marker');
+      marker.style.setProperty('--graph-marker-delay',`${delay}s`);
+    };
     let step = 0;
     const drawStart = 1.82 + .82;
+    const stepDelay = .34;
+    const lineDrawMs = 280;
 
     polylines.forEach(polyline => {
       const points = polyline.getAttribute('points').trim().split(/\s+/).map(point => point.split(',').map(Number));
       if (!points.length) return;
-      const firstMarker = markers[markerIndex++];
-      if (firstMarker) {
-        firstMarker.classList.add('final-recap-draw-marker');
-        firstMarker.style.setProperty('--graph-marker-delay',`${drawStart + step * .25}s`);
-      }
+      markMarker(points[0],drawStart + step * stepDelay);
       points.slice(1).forEach((point,index) => {
         const previous = points[index];
         const line = document.createElementNS('http://www.w3.org/2000/svg','line');
@@ -414,14 +423,14 @@
         line.setAttribute('vector-effect','non-scaling-stroke');
         line.style.opacity = 0;
         drawLayer.appendChild(line);
-        const lineDelay = (drawStart + step * .25 + .06) * 1000;
+        const lineDelay = (drawStart + step * stepDelay + .08) * 1000;
         setTimeout(() => {
           if (!screen.classList.contains('is-active')) return;
           line.style.opacity = 1;
           const startedAt = performance.now();
           const drawFrame = now => {
             if (!screen.classList.contains('is-active')) return;
-            const progress = Math.min(1,(now - startedAt) / 170);
+            const progress = Math.min(1,(now - startedAt) / lineDrawMs);
             line.setAttribute('x2',previous[0] + (point[0] - previous[0]) * progress);
             line.setAttribute('y2',previous[1] + (point[1] - previous[1]) * progress);
             if (progress < 1) requestAnimationFrame(drawFrame);
@@ -429,12 +438,14 @@
           requestAnimationFrame(drawFrame);
         },lineDelay);
         step += 1;
-        const marker = markers[markerIndex++];
-        if (marker) {
-          marker.classList.add('final-recap-draw-marker');
-          marker.style.setProperty('--graph-marker-delay',`${drawStart + step * .25}s`);
-        }
+        markMarker(point,drawStart + step * stepDelay);
       });
+      step += 1;
+    });
+    markers.forEach(marker => {
+      if (markedMarkers.has(marker)) return;
+      marker.classList.add('final-recap-draw-marker');
+      marker.style.setProperty('--graph-marker-delay',`${drawStart + step * stepDelay}s`);
       step += 1;
     });
     svg.appendChild(drawLayer);

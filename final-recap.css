@@ -235,7 +235,7 @@
 .final-recap-graph-sequence .closeness-lines > polyline { opacity:0!important; }
 .final-recap-graph-sequence .closeness-marker { opacity:0; }
 .final-recap-screen.is-active .final-recap-graph-sequence .final-recap-draw-marker {
-  animation:final-recap-graph-dot .28s cubic-bezier(.2,.9,.25,1.35) var(--graph-marker-delay) both;
+  animation:final-recap-graph-dot .38s cubic-bezier(.22,.74,.25,1) var(--graph-marker-delay) both;
 }
 @keyframes final-recap-graph-dot {
   0% { opacity:0; transform:translate(-50%,-50%) scale(.25); }
