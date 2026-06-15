@@ -4603,15 +4603,6 @@ function showPreview() {
 	      return nextGuess;
 	    });
 	    if (editedFullList.some(g => !g)) return;
-	    const confirmDayContext = {
-	      approvedAt: previewApprovedAt,
-	      approvedDate: previewApprovedDate,
-	      estWrap: finalWrap,
-	      estWrapDate: savedWrapDate
-	    };
-	    const clipboardText = formatConfirmedBetsClipboard(totalDays, finalWrap, editedFullList, confirmDayContext);
-	    const copiedBets = await copyTextToClipboard(clipboardText);
-	    
 	    const prevS = cloneState();
 	    newPlayers.forEach(name => {
 	      S.playerRoster.push({ name: name });
@@ -4627,7 +4618,7 @@ function showPreview() {
 	    S.today.addedPlayers = newPlayers;
 	    const saved = await saveS();
 		    if (!saved) { restoreAfterFailedSave(prevS); return; }
-	    toast(copiedBets ? 'Day started! Bets copied' : 'Day started! Could not copy bets', copiedBets ? 'ok' : 'err');
+	    toast('Day started!', 'ok');
 	    render();
 	  });
 
