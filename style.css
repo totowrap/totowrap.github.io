@@ -761,23 +761,6 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   .admin-dialog-panel { background: linear-gradient(135deg, rgba(46,60,87,.76), rgba(38,55,89,.9)); -webkit-backdrop-filter: blur(14px) saturate(135%); backdrop-filter: blur(14px) saturate(135%); }
 }
 
-/* Keep glass surfaces readable if a browser reports blur support but renders it weakly. */
-@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .card,
-  .bet-close-card.is-open,
-  .bet-close-card.is-closed,
-  .winner-banner,
-  .winner-banner.no-winner-banner,
-  .weekday-message-banner,
-  .board-player-stats,
-  .result-share-panel,
-  .result-share-winner,
-  .result-share-card.no-winner .result-share-winner,
-  .admin-dialog-panel {
-    background-color: rgba(38,55,89,.62);
-  }
-}
-
 .confetti-canvas {
   position: fixed;
   inset: 0;
@@ -786,4 +769,34 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
   pointer-events: none;
   z-index: 10001;
   contain: strict;
+}
+
+/* Some Android Chrome builds report backdrop-filter support but render no blur. */
+html.android-glass-fallback :is(
+  .card,
+  .bet-close-card.is-open,
+  .board-player-stats,
+  .weekday-message-banner
+) {
+  background:linear-gradient(135deg,rgba(66,84,119,.94),rgba(38,55,89,.96)),#263759;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  border-color:rgba(var(--yellow-rgb),.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 -1px 0 rgba(0,0,0,.14),0 8px 24px rgba(15,25,45,.18);
+}
+html.android-glass-fallback .winner-banner {
+  background:linear-gradient(135deg,rgba(var(--green-rgb),.15),rgba(var(--green-rgb),.05)),linear-gradient(135deg,rgba(66,84,119,.94),rgba(38,55,89,.96)),#263759;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+html.android-glass-fallback .winner-banner.no-winner-banner,
+html.android-glass-fallback .bet-close-card.is-closed {
+  background:linear-gradient(135deg,rgba(var(--red-rgb),.17),rgba(var(--red-rgb),.06)),linear-gradient(135deg,rgba(66,84,119,.94),rgba(38,55,89,.96)),#263759;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+html.android-glass-fallback :is(.result-share-panel,.admin-dialog-panel) {
+  background:linear-gradient(135deg,rgba(66,84,119,.98),rgba(38,55,89,.99)),#263759;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
 }
