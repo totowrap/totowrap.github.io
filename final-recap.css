@@ -217,7 +217,7 @@
   .final-recap-podium-place,
   .final-recap-replay
 ) {
-  animation:final-recap-bubble-in .82s cubic-bezier(.2,.9,.25,1.18) calc(1.82s + var(--recap-reveal-index,0) * .52s) both;
+  animation:final-recap-bubble-in .68s cubic-bezier(.2,.9,.25,1.18) calc(1.82s + var(--recap-reveal-index,0) * .42s) both;
 }
 @keyframes final-recap-title-stage {
   0%,58% { transform:translateY(var(--recap-title-center-shift,0)) scale(1.06); }

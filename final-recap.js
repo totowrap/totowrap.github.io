@@ -100,6 +100,11 @@
     const match = text.match(/Day\s+(\d+)\s*\/\s*(\d+)/i);
     return Boolean(match && Number(match[1]) === Number(match[2]));
   };
+  const displayedProjectTotalDays = fallback => {
+    const text = document.querySelector('.hdr-day')?.textContent || '';
+    const match = text.match(/Day\s+\d+\s*\/\s*(\d+)/i);
+    return match ? Number(match[1]) : fallback;
+  };
   const isCogImageName = name => /\.(?:avif|gif|jpe?g|png|webp)$/i.test(String(name || ''));
   const fetchWithTimeout = (url, options={}, timeout=1800) => {
     const controller = new AbortController();
@@ -244,7 +249,7 @@
     </div>`;
     return `<div class="final-recap-showcase-card final-recap-furthest-card" data-tone="red">
       <span>Furthest from the official wrap</span>
-      <div>${row('No-winner day',noWinner)}${row('Winning day',winningDay)}</div>
+      <div>${row('Winning day',winningDay)}${row('No-winner day',noWinner)}</div>
     </div>`;
   }
   function reactionCard(label, file, tone) {
@@ -315,6 +320,9 @@
 
   function buildScreens(data) {
     const projectDays = data.days.length;
+    const projectMainDays = displayedProjectTotalDays(Math.max(0,projectDays - 1));
+    const projectDayCopy = `${projectMainDays} project ${word(projectMainDays,'day','days')} + 1 preshoot day`;
+    const projectDayTitle = `<span class="final-recap-number">${projectMainDays}</span> + 1 preshoot day`;
     const players = data.list.length;
     const podium = data.leaderboard.slice(0,3);
     const podiumOrder = [podium[1],podium[0],podium[2]];
@@ -339,8 +347,8 @@
         </div>`
       : '<div class="final-recap-empty">Nobody landed an exact bet.</div>';
     return [
-      screen('TonnoWrap final recap','The Final<br>Wrap',`${projectDays} completed ${word(projectDays,'day','days')}. ${players} ${word(players,'tuna','tunas')}. One final leaderboard.`),
-      screen('The project in numbers',`<span class="final-recap-number">${projectDays}</span> ${word(projectDays,'day','days')}`,'',`<div class="final-recap-stat-grid">${stat(players,word(players,'Tuna played','Tunas played'))}${stat(data.totalBets,word(data.totalBets,'Bet placed','Bets placed'))}${stat(data.totalForgot,word(data.totalForgot,'Forgotten bet','Forgotten bets'))}</div>`),
+      screen('TonnoWrap final recap','The Final<br>Wrap',`${projectDayCopy}. ${players} ${word(players,'tuna','tunas')}. One final leaderboard.`),
+      screen('The project in numbers',projectDayTitle,'',`<div class="final-recap-stat-grid">${stat(players,word(players,'Tuna played','Tunas played'))}${stat(data.totalBets,word(data.totalBets,'Bet placed','Bets placed'))}${stat(data.totalForgot,word(data.totalForgot,'Forgotten bet','Forgotten bets'))}</div>`),
       screen('Perfect timing',`<span class="final-recap-number">${data.exactDays}</span> exact ${word(data.exactDays,'bet','bets')}`,'',exactCards),
       screen('Nobody won',`<span class="final-recap-number">${data.noWinnerEntries.length}</span> no-winner ${word(data.noWinnerEntries.length,'day','days')}`,'Expected wrap compared with the official wrap.',noWinnerRows(data.noWinnerEntries)),
       screen('Accuracy award',esc(data.mostAccurate?.name || 'No winner'),accuracyCopy,`${accuracyGraph(data.mostAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.mostAccurate?.avgGap),'Average distance')}${stat(data.mostAccurate?.bets || 0,word(data.mostAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.mostAccurate?.wins || 0,word(data.mostAccurate?.wins || 0,'Win','Wins'))}</div>`),
@@ -486,6 +494,14 @@
         .final-recap-replay
       `);
       revealables.forEach((item,index) => item.style.setProperty('--recap-reveal-index',index));
+      const podiumPlaces = [...screen.querySelectorAll('.final-recap-podium-place')];
+      if (podiumPlaces.length) {
+        const podiumRevealOrder = {3:0,2:1,1:2};
+        podiumPlaces.forEach(item => {
+          const place = Number(item.dataset.place);
+          item.style.setProperty('--recap-reveal-index',podiumRevealOrder[place] ?? 0);
+        });
+      }
       prepareGraphDrawing(screen,revealables.length);
       screen.classList.add('is-active');
     });
