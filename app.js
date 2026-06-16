@@ -62,6 +62,7 @@ let _bootFadeStartedPromise = null;
 let _territoryRuleMigrationPending = false;
 let _territoryRuleMigrationSaving = false;
 let _historyRowScrollAnimation = null;
+let _crazyDayPanelOpen = false;
 const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
@@ -3035,31 +3036,34 @@ function renderToday() {
 
 function renderCrazyDaySetupCard(day) {
   const cfg = getCrazyDayConfig(day);
-  const regular = cfg ? cfg.regularPoints : 2;
-  const perfect = cfg ? cfg.perfectPoints : 5;
-  const penalty = cfg ? cfg.penaltyPoints : -1;
-  return `<div class="card crazy-day-card${cfg ? ' on' : ''}">
+  const regular = cfg ? String(cfg.regularPoints) : '';
+  const perfect = cfg ? String(cfg.perfectPoints) : '';
+  const penalty = cfg ? String(cfg.penaltyPoints) : '';
+  const statusText = cfg
+    ? `Crazy Day is active: ${cfg.regularPoints > 0 ? '+' : ''}${cfg.regularPoints} regular, ${cfg.perfectPoints > 0 ? '+' : ''}${cfg.perfectPoints} perfect wrap, ${cfg.penaltyPoints} no bet/furthest from wrap.`
+    : 'Tap to set special scoring for this day.';
+  return `<div class="card crazy-day-card${cfg ? ' is-saved' : ''}${_crazyDayPanelOpen ? ' expanded' : ''}">
     <div class="crazy-day-top">
       <div class="crazy-day-title">
         <strong>Crazy Day</strong>
-        <span>Use special scoring only for this current day.</span>
+        <span>${esc(statusText)}</span>
       </div>
-      <button class="crazy-day-toggle" id="crazy-day-toggle-btn" type="button" aria-label="Toggle Crazy Day" aria-pressed="${cfg ? 'true' : 'false'}"></button>
+      <button class="crazy-day-toggle" id="crazy-day-toggle-btn" type="button" aria-label="Show Crazy Day settings" aria-expanded="${_crazyDayPanelOpen ? 'true' : 'false'}"></button>
     </div>
     <div class="crazy-day-options">
       <div class="crazy-day-grid">
         <label for="crazy-regular-points">Regular winner gets</label>
-        <input type="number" id="crazy-regular-points" value="${esc(regular)}" step="1" inputmode="numeric">
+        <input type="number" id="crazy-regular-points" value="${esc(regular)}" placeholder="" step="1" inputmode="numeric">
         <label for="crazy-perfect-points">Perfect wrap winner gets</label>
-        <input type="number" id="crazy-perfect-points" value="${esc(perfect)}" step="1" inputmode="numeric">
+        <input type="number" id="crazy-perfect-points" value="${esc(perfect)}" placeholder="" step="1" inputmode="numeric">
         <label for="crazy-penalty-points">No bet or furthest from wrap loses</label>
-        <input type="number" id="crazy-penalty-points" value="${esc(penalty)}" step="1" inputmode="numeric">
+        <input type="number" id="crazy-penalty-points" value="${esc(penalty)}" placeholder="" step="1" inputmode="numeric">
       </div>
       <div class="crazy-day-summary">
-        Crazy Day${cfg ? ' is active' : ' preview'}: <b>${regular > 0 ? '+' : ''}${esc(regular)}</b> regular, <b>${perfect > 0 ? '+' : ''}${esc(perfect)}</b> perfect wrap, <b>${esc(penalty)}</b> no bet/furthest from wrap.
+        Save Crazy Day to apply special scoring. Cancel Crazy Day removes it from this day and clears these fields.
       </div>
       <div class="crazy-day-actions">
-        <button class="btn btn-s" id="clear-crazy-day-btn" type="button">${cfg ? 'Clear Crazy Day' : 'Cancel'}</button>
+        <button class="btn btn-s" id="clear-crazy-day-btn" type="button">Cancel Crazy Day</button>
         <button class="btn btn-p" id="save-crazy-day-btn" type="button">Save Crazy Day</button>
       </div>
     </div>
@@ -4188,6 +4192,7 @@ async function saveCrazyDaySettings() {
   }
   const prevS = cloneState();
   S.today.crazyDay = { enabled: true, regularPoints, perfectPoints, penaltyPoints };
+  _crazyDayPanelOpen = true;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Crazy Day saved', 'ok');
@@ -4198,11 +4203,13 @@ async function saveCrazyDaySettings() {
 async function clearCrazyDaySettings() {
   if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
   if (!S.today.crazyDay) {
+    _crazyDayPanelOpen = false;
     render();
     return true;
   }
   const prevS = cloneState();
   delete S.today.crazyDay;
+  _crazyDayPanelOpen = false;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Crazy Day cleared', 'ok');
@@ -4629,10 +4636,29 @@ ${hasCurrentDay ? `
 </div></div>`;
 }
 
-function showPreview() {
+async function cancelCrazyDayForSafety() {
+  if (!IS_ADMIN || !S.today?.crazyDay || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return true;
+  const prevS = cloneState();
+  delete S.today.crazyDay;
+  _crazyDayPanelOpen = false;
+  const saved = await saveS();
+  if (!saved) {
+    restoreAfterFailedSave(prevS);
+    return false;
+  }
+  toast('Crazy Day canceled', 'ok');
+  return true;
+}
+
+async function showPreview() {
   const inp = document.getElementById('paste-inp');
   const text = inp?.value || '';
   if (!text.trim()) { toast('Paste guesses first', 'err'); return; }
+  const crazyCardOpen = document.querySelector('.crazy-day-card')?.classList.contains('expanded');
+  if (S.today?.crazyDay && !crazyCardOpen) {
+    const cleared = await cancelCrazyDayForSafety();
+    if (!cleared) return;
+  }
   
   const { guesses: parsed, formatErrors } = parsePaste(text);
   if (!parsed.length && (!formatErrors || !formatErrors.length)) {
@@ -4888,11 +4914,16 @@ function bindMain() {
   document.getElementById('clear-est-wrap-btn')?.addEventListener('click', clearEstimatedWrapTime);
   document.getElementById('save-bet-close-btn')?.addEventListener('click', saveBetCloseTime);
   document.getElementById('clear-bet-close-btn')?.addEventListener('click', clearBetCloseTime);
-  document.getElementById('crazy-day-toggle-btn')?.addEventListener('click', () => {
+  document.getElementById('crazy-day-toggle-btn')?.addEventListener('click', async () => {
     const card = document.querySelector('.crazy-day-card');
-    const next = !card?.classList.contains('on');
-    card?.classList.toggle('on', next);
-    document.getElementById('crazy-day-toggle-btn')?.setAttribute('aria-pressed', String(next));
+    const next = !card?.classList.contains('expanded');
+    if (!next && S.today?.crazyDay) {
+      await cancelCrazyDayForSafety();
+      return;
+    }
+    _crazyDayPanelOpen = next;
+    card?.classList.toggle('expanded', next);
+    document.getElementById('crazy-day-toggle-btn')?.setAttribute('aria-expanded', String(next));
   });
   document.getElementById('save-crazy-day-btn')?.addEventListener('click', saveCrazyDaySettings);
   document.getElementById('clear-crazy-day-btn')?.addEventListener('click', clearCrazyDaySettings);
