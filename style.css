@@ -355,6 +355,23 @@ body::before {
 .admin-time-save-btn,
 .admin-time-delete-btn { width: 22px; height: 22px; }
 .admin-time-save-btn { font-size: .82rem; }
+.crazy-day-card { border-color:rgba(var(--yellow-rgb),.28); }
+.crazy-day-top { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; }
+.crazy-day-title { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.crazy-day-title strong { color:var(--accent); font-family:'Alte Haas Grotesk', sans-serif; font-size:.82rem; line-height:1; text-transform:uppercase; }
+.crazy-day-title span { color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.6rem; line-height:1.2; }
+.crazy-day-toggle { position:relative; width:52px; height:28px; border:1px solid rgba(var(--yellow-rgb),.42); border-radius:999px; background:rgba(38,55,89,.72); cursor:pointer; }
+.crazy-day-toggle::after { content:""; position:absolute; left:4px; top:3px; width:20px; height:20px; border-radius:50%; background:var(--dim); transition:transform .22s ease, background .22s ease; }
+.crazy-day-card.on .crazy-day-toggle::after { transform:translateX(23px); background:var(--accent); }
+.crazy-day-options { display:none; margin-top:13px; padding-top:12px; border-top:1px solid rgba(var(--neutral-rgb),.15); }
+.crazy-day-card.on .crazy-day-options { display:block; }
+.crazy-day-grid { display:grid; grid-template-columns:minmax(0,1fr) 62px; gap:8px; align-items:center; }
+.crazy-day-grid label { min-height:34px; display:flex; align-items:center; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.58rem; line-height:1.15; letter-spacing:.08em; text-transform:uppercase; }
+.crazy-day-grid input { width:62px; height:32px; padding:6px 8px; color:var(--accent); text-align:center; font-size:.84rem; font-variant-numeric:tabular-nums; }
+.crazy-day-summary { margin-top:10px; padding:9px; border:1px solid rgba(var(--yellow-rgb),.22); border-radius:7px; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.56rem; line-height:1.25; text-transform:uppercase; }
+.crazy-day-summary b { color:var(--accent); }
+.crazy-day-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.crazy-day-actions .btn + .btn { margin-top:0; }
 .bet-close-card { text-align: center; }
 .bet-close-card.is-open { position: relative; overflow: hidden; border-color: rgba(var(--neutral-rgb), .22); background: linear-gradient(135deg, rgba(62,79,112,.84), rgba(38,55,89,.88)), rgba(38,55,89,.88); }
 .bet-close-card.is-open::before { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: rgba(38,55,89,.3); pointer-events: none; }

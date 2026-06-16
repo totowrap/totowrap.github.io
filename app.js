@@ -1585,23 +1585,89 @@ function eliminated(guesses, curSec, day=S.today) {
   return out;
 }
 
+function getCrazyDayConfig(day=S.today) {
+  const cfg = day?.crazyDay;
+  if (!cfg?.enabled) return null;
+  const regularPoints = Number(cfg.regularPoints);
+  const perfectPoints = Number(cfg.perfectPoints);
+  const penaltyPoints = Number(cfg.penaltyPoints);
+  if (![regularPoints, perfectPoints, penaltyPoints].every(Number.isFinite)) return null;
+  return { enabled: true, regularPoints, perfectPoints, penaltyPoints };
+}
+
+function getDayScoring(day=S.today) {
+  return getCrazyDayConfig(day) || { enabled: false, regularPoints: 1, perfectPoints: 3, penaltyPoints: 0 };
+}
+
+function guessWrapDistanceSec(guess, wrapHMSInput, day, noWinner=false) {
+  if (!guess?.time || !wrapHMSInput) return null;
+  if (noWinner) return clockDistanceSec(guess.time, wrapHMSInput);
+  const guessSec = guessGameSec(guess, day);
+  const wrapSec = normalizeGameSec(wrapHMSInput, day);
+  return Math.abs(guessSec - wrapSec);
+}
+
+function calcCrazyDayPenalties(guesses, wrapHMSInput, day, noWinner=false, excludedNames=[]) {
+  const scoring = getDayScoring(day);
+  if (!scoring.enabled || !scoring.penaltyPoints) return [];
+  const penalties = [];
+  const seen = new Set();
+  const excluded = new Set(excludedNames.map(name => nameKey(name)));
+  const addPenalty = (name, reason) => {
+    const key = nameKey(name);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    penalties.push({ name, points: scoring.penaltyPoints, reason });
+  };
+
+  guesses.filter(guess => guess?.name && !guess.time).forEach(guess => {
+    addPenalty(guess.name, 'missed-bet');
+  });
+
+  const distances = guesses
+    .filter(guess => guess?.name && guess.time && !excluded.has(nameKey(guess.name)))
+    .map(guess => ({ name: guess.name, gap: guessWrapDistanceSec(guess, wrapHMSInput, day, noWinner) }))
+    .filter(item => Number.isFinite(item.gap));
+  const maxGap = distances.length ? Math.max(...distances.map(item => item.gap)) : null;
+  if (maxGap !== null) {
+    distances.filter(item => item.gap === maxGap).forEach(item => {
+      addPenalty(item.name, 'furthest-from-wrap');
+    });
+  }
+
+  return penalties;
+}
+
 function calcWinner(guesses, wrapHMSInput, day=S.today) {
   const wrapSec = normalizeGameSec(wrapHMSInput, day);
   const slices = boundaries(guesses, day);
+  const scoring = getDayScoring(day);
   
   const winningSlice = slices.find(s => wrapSec >= s.start && wrapSec <= s.end);
   
   if (!winningSlice) {
-    return { winner: "Nobody wins, everytuna's happy!", winners: [], points: 0, noWinner: true };
+    return {
+      winner: "Nobody wins, everytuna's happy!",
+      winners: [],
+      points: 0,
+      noWinner: true,
+      penalties: []
+    };
   }
 
   const winnerName = winningSlice.names[0];
   const winners = winningSlice.names.map(name => ({ name }));
   
   const firstWinnerGuess = guesses.find(g => g.name === winnerName).time;
-  const points = (wrapHMSInput.slice(0,5) === firstWinnerGuess) ? 3 : 1;
+  const points = (wrapHMSInput.slice(0,5) === firstWinnerGuess) ? scoring.perfectPoints : scoring.regularPoints;
 
-  return { winner: winnerName, winners, points, noWinner: false };
+  return {
+    winner: winnerName,
+    winners,
+    points,
+    noWinner: false,
+    penalties: calcCrazyDayPenalties(guesses, wrapHMSInput, day, false, winningSlice.names)
+  };
 }
 
 function boundaryRange(s) {
@@ -2952,6 +3018,7 @@ function renderToday() {
       </div>
       ${t.betCloseAt ? `<p class="mono dim center mt8">Time left: <span class="accent" data-bet-close-countdown>--</span></p>` : ''}
     </div>
+    ${renderCrazyDaySetupCard(t)}
     <div class="card">
       <div class="card-lbl">Paste Today's Guesses</div>
       <p class="mono dim" style="margin-bottom:10px">Format: Name - hh:mm (one per line).</p>
@@ -2962,6 +3029,39 @@ function renderToday() {
         <input class="chat-upload-input" id="chat-upload-input" type="file" accept=".txt,text/plain">
       </div>
       <button class="btn btn-p mt12" id="parse-btn">Preview Guesses</button>
+    </div>
+  </div>`;
+}
+
+function renderCrazyDaySetupCard(day) {
+  const cfg = getCrazyDayConfig(day);
+  const regular = cfg ? cfg.regularPoints : 2;
+  const perfect = cfg ? cfg.perfectPoints : 5;
+  const penalty = cfg ? cfg.penaltyPoints : -1;
+  return `<div class="card crazy-day-card${cfg ? ' on' : ''}">
+    <div class="crazy-day-top">
+      <div class="crazy-day-title">
+        <strong>Crazy Day</strong>
+        <span>Use special scoring only for this current day.</span>
+      </div>
+      <button class="crazy-day-toggle" id="crazy-day-toggle-btn" type="button" aria-label="Toggle Crazy Day" aria-pressed="${cfg ? 'true' : 'false'}"></button>
+    </div>
+    <div class="crazy-day-options">
+      <div class="crazy-day-grid">
+        <label for="crazy-regular-points">Regular winner gets</label>
+        <input type="number" id="crazy-regular-points" value="${esc(regular)}" step="1" inputmode="numeric">
+        <label for="crazy-perfect-points">Perfect wrap winner gets</label>
+        <input type="number" id="crazy-perfect-points" value="${esc(perfect)}" step="1" inputmode="numeric">
+        <label for="crazy-penalty-points">No bet or furthest from wrap loses</label>
+        <input type="number" id="crazy-penalty-points" value="${esc(penalty)}" step="1" inputmode="numeric">
+      </div>
+      <div class="crazy-day-summary">
+        Crazy Day${cfg ? ' is active' : ' preview'}: <b>${regular > 0 ? '+' : ''}${esc(regular)}</b> regular, <b>${perfect > 0 ? '+' : ''}${esc(perfect)}</b> perfect wrap, <b>${esc(penalty)}</b> no bet/furthest from wrap.
+      </div>
+      <div class="crazy-day-actions">
+        <button class="btn btn-s" id="clear-crazy-day-btn" type="button">${cfg ? 'Clear Crazy Day' : 'Cancel'}</button>
+        <button class="btn btn-p" id="save-crazy-day-btn" type="button">Save Crazy Day</button>
+      </div>
     </div>
   </div>`;
 }
@@ -3730,12 +3830,13 @@ async function updateHistoryWrapTime(date, nextWrap) {
 
   const prevS = cloneState();
   adjustCompletedDayScores(target.day, -1);
-  const { winner, winners, points, noWinner } = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
+  const { winner, winners, points, noWinner, penalties } = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
   target.day.wrapTime = normalizedWrap;
   target.day.winner = winner;
   target.day.winners = winners;
   target.day.points = points;
   target.day.noWinner = noWinner;
+  target.day.penalties = penalties || [];
   adjustCompletedDayScores(target.day, 1);
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
@@ -3973,20 +4074,22 @@ async function confirmTodayWrap(wrapTime) {
   if (!isValidHMS(normalizedWrap)) { toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err'); return false; }
 
   const prevS = cloneState();
-  const { winner, winners, points, noWinner } = calcWinner(S.today.guesses, normalizedWrap, S.today);
+  const { winner, winners, points, noWinner, penalties } = calcWinner(S.today.guesses, normalizedWrap, S.today);
   S.today.wrapTime = normalizedWrap;
   S.today.winner = winner;
   S.today.winners = winners;
   S.today.points = points;
   S.today.noWinner = noWinner;
+  S.today.penalties = penalties || [];
 
   if (!noWinner) {
     winners.forEach(w => { S.scores[w.name] = (S.scores[w.name] || 0) + points; });
-    const saved = await saveS();
-    if (!saved) { restoreAfterFailedSave(prevS); return false; }
-  } else {
-    const saved = await saveS();
-    if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  }
+  applyDayPenalties(S.today, 1);
+  const saved = await saveS();
+  if (!saved) {
+    restoreAfterFailedSave(prevS);
+    return false;
   }
   render();
   return true;
@@ -4065,6 +4168,44 @@ async function clearEstimatedWrapTime() {
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Wrap time cleared', 'ok');
+  render();
+  return true;
+}
+
+function readCrazyDayInput(id) {
+  const value = Number(document.getElementById(id)?.value);
+  return Number.isFinite(value) ? value : null;
+}
+
+async function saveCrazyDaySettings() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  const regularPoints = readCrazyDayInput('crazy-regular-points');
+  const perfectPoints = readCrazyDayInput('crazy-perfect-points');
+  const penaltyPoints = readCrazyDayInput('crazy-penalty-points');
+  if ([regularPoints, perfectPoints, penaltyPoints].some(value => value === null)) {
+    toast('Enter Crazy Day points', 'err');
+    return false;
+  }
+  const prevS = cloneState();
+  S.today.crazyDay = { enabled: true, regularPoints, perfectPoints, penaltyPoints };
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Crazy Day saved', 'ok');
+  render();
+  return true;
+}
+
+async function clearCrazyDaySettings() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  if (!S.today.crazyDay) {
+    render();
+    return true;
+  }
+  const prevS = cloneState();
+  delete S.today.crazyDay;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Crazy Day cleared', 'ok');
   render();
   return true;
 }
@@ -4156,18 +4297,29 @@ async function handleAdminDialogAction(btn) {
   }
 }
 
+function applyScoreDelta(name, delta) {
+  if (!name || !Number.isFinite(delta) || delta === 0) return;
+  const nextScore = (Number(S.scores[name]) || 0) + delta;
+  if (nextScore !== 0) {
+    S.scores[name] = nextScore;
+  } else {
+    delete S.scores[name];
+  }
+}
+
+function applyDayPenalties(day, direction) {
+  (day?.penalties || []).forEach(penalty => {
+    applyScoreDelta(penalty.name, direction * (Number(penalty.points) || 0));
+  });
+}
+
 function adjustCompletedDayScores(day, direction) {
   const points = Number(day?.points) || 0;
-  if (!points) return;
-  const names = day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : []);
+  const names = points ? (day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : [])) : [];
   names.forEach(name => {
-    const nextScore = (S.scores[name] || 0) + (direction * points);
-    if (nextScore > 0) {
-      S.scores[name] = nextScore;
-    } else {
-      delete S.scores[name];
-    }
+    applyScoreDelta(name, direction * points);
   });
+  applyDayPenalties(day, direction);
 }
 
 function completedDayOutcome(day) {
@@ -4175,7 +4327,8 @@ function completedDayOutcome(day) {
     winner: day?.winner || '',
     winners: Array.isArray(day?.winners) ? day.winners.map(w => w.name).filter(Boolean) : (day?.winner ? [day.winner] : []),
     points: Number(day?.points) || 0,
-    noWinner: Boolean(day?.noWinner)
+    noWinner: Boolean(day?.noWinner),
+    penalties: Array.isArray(day?.penalties) ? day.penalties.map(p => `${p.name}:${Number(p.points) || 0}:${p.reason || ''}`).sort() : []
   };
 }
 
@@ -4186,16 +4339,19 @@ function outcomesMatch(a, b) {
     && Number(a?.points || 0) === Number(b?.points || 0)
     && String(a?.winner || '') === String(b?.winner || '')
     && aWinners.length === bWinners.length
-    && aWinners.every((name, idx) => name === bWinners[idx]);
+    && aWinners.every((name, idx) => name === bWinners[idx])
+    && (a?.penalties || []).length === (b?.penalties || []).length
+    && (a?.penalties || []).every((item, idx) => item === (b?.penalties || [])[idx]);
 }
 
 function recalculateCompletedDay(day) {
   if (!day?.wrapTime) return;
-  const { winner, winners, points, noWinner } = calcWinner(day.guesses || [], day.wrapTime, day);
+  const { winner, winners, points, noWinner, penalties } = calcWinner(day.guesses || [], day.wrapTime, day);
   day.winner = winner;
   day.winners = winners;
   day.points = points;
   day.noWinner = noWinner;
+  day.penalties = penalties || [];
 }
 
 function recalculateCompletedResultsForCurrentBoundaryRule() {
@@ -4211,7 +4367,8 @@ function recalculateCompletedResultsForCurrentBoundaryRule() {
       winner: next.winner,
       winners: next.winners.map(w => w.name),
       points: next.points,
-      noWinner: next.noWinner
+      noWinner: next.noWinner,
+      penalties: (next.penalties || []).map(p => `${p.name}:${Number(p.points) || 0}:${p.reason || ''}`).sort()
     };
     if (outcomesMatch(previous, nextOutcome)) return;
 
@@ -4220,6 +4377,7 @@ function recalculateCompletedResultsForCurrentBoundaryRule() {
     day.winners = next.winners;
     day.points = next.points;
     day.noWinner = next.noWinner;
+    day.penalties = next.penalties || [];
     adjustCompletedDayScores(day, 1);
     changed = true;
   });
@@ -4730,6 +4888,14 @@ function bindMain() {
   document.getElementById('clear-est-wrap-btn')?.addEventListener('click', clearEstimatedWrapTime);
   document.getElementById('save-bet-close-btn')?.addEventListener('click', saveBetCloseTime);
   document.getElementById('clear-bet-close-btn')?.addEventListener('click', clearBetCloseTime);
+  document.getElementById('crazy-day-toggle-btn')?.addEventListener('click', () => {
+    const card = document.querySelector('.crazy-day-card');
+    const next = !card?.classList.contains('on');
+    card?.classList.toggle('on', next);
+    document.getElementById('crazy-day-toggle-btn')?.setAttribute('aria-pressed', String(next));
+  });
+  document.getElementById('save-crazy-day-btn')?.addEventListener('click', saveCrazyDaySettings);
+  document.getElementById('clear-crazy-day-btn')?.addEventListener('click', clearCrazyDaySettings);
   document.getElementById('admin-clock')?.addEventListener('click', () => {
     openLiveWrapActions(nowHMS());
   });
