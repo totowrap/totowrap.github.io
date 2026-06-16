@@ -16,14 +16,37 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
 .boot-phrase.is-loading { opacity: 0; }
 .boot-phrase.is-ready { opacity: 1; }
 .boot-phrase.is-exiting { opacity: 0; }
-.boot-crazy-day { position: absolute; top: var(--main-logo-center-y); left: 50%; display: grid; justify-items: center; gap: 14px; width: min(calc(100% - 36px), 360px); opacity: 0; transform: translate(-50%, -50%); transition: opacity .8s ease; pointer-events: none; }
+.boot-crazy-day { position: absolute; top: var(--main-logo-center-y); left: 50%; display: grid; justify-items: center; gap: 0; width: min(calc(100% - 28px), 390px); opacity: 0; transform: translate(-50%, -50%); transition: opacity .8s ease; pointer-events: none; }
 .boot-crazy-day.is-visible { opacity: 1; }
-.boot-crazy-title { color: var(--accent); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.18rem; font-weight: bold; line-height: 1; letter-spacing: .16em; text-transform: uppercase; }
-.boot-crazy-logo { display: block; width: min(62vw, 220px); height: auto; object-fit: contain; filter: brightness(95%); }
-.boot-crazy-rules { display: grid; gap: 7px; color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .78rem; font-weight: bold; line-height: 1.18; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+.boot-crazy-title { display: inline-flex; justify-content: center; width: min(calc(100vw - 28px), 390px); margin-bottom: 54px; color: var(--accent); font-family: 'Alte Haas Grotesk', sans-serif; font-size: clamp(2.55rem, 12.4vw, 3.28rem); font-weight: bold; line-height: 1; letter-spacing: .105em; text-transform: uppercase; }
+.boot-crazy-title span { display: inline-block; animation: crazy-title-wave 2.2s cubic-bezier(.33,0,.2,1) infinite; animation-delay: calc(var(--i) * .07s); }
+.boot-crazy-title .space { width: .38em; }
+.boot-crazy-logo-wrap { position: relative; width: min(78vw, 320px); height: min(78vw, 320px); transform-origin: center; animation: crazy-heartbeat 1.55s cubic-bezier(.34,0,.2,1) infinite; }
+.boot-crazy-logo { display: block; width: 100%; height: 100%; margin-top: 0; object-fit: contain; border-radius: 999px; filter: brightness(95%) drop-shadow(2px 0 0 var(--yellow)) drop-shadow(-2px 0 0 var(--yellow)) drop-shadow(0 2px 0 var(--yellow)) drop-shadow(0 -2px 0 var(--yellow)); }
+.boot-crazy-rules { display: grid; grid-template-columns: auto auto; gap: 13px 20px; justify-content: center; margin-top: 64px; width: min(calc(100vw - 28px), 390px); box-sizing: border-box; color: var(--accent); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .82rem; font-weight: bold; line-height: 1.18; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
+.boot-crazy-rule-label { justify-self: start; white-space: nowrap; }
+.boot-crazy-rule-points { display: grid; grid-template-columns: .55em .7em 1fr; column-gap: 3px; justify-self: end; min-width: 96px; text-align: left; white-space: nowrap; }
+.boot-crazy-rule-sign,
+.boot-crazy-rule-number,
+.boot-crazy-rule-word { display: inline-block; }
+.boot-crazy-rule-sign,
+.boot-crazy-rule-number { text-align: right; }
+.boot-crazy-rule-word { margin-left: 2.625px; text-align: left; }
 .boot-content.is-crazy-day .boot-logo-stage,
 .boot-content.is-crazy-day .boot-phrase { opacity: 0; pointer-events: none; }
 @keyframes boot-spin { to { transform: rotate(360deg); } }
+@keyframes crazy-title-wave {
+  0%, 100% { opacity: .92; transform: translateY(0); }
+  28% { opacity: 1; transform: translateY(-13px); }
+  56% { opacity: .96; transform: translateY(4px); }
+}
+@keyframes crazy-heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.07); }
+  24% { transform: scale(.985); }
+  38% { transform: scale(1.045); }
+  58% { transform: scale(1); }
+}
 
 /* Custom Font Declaration */
 @font-face {

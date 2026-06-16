@@ -149,12 +149,17 @@
     const perfect = detail.perfect || '+0 points';
     const penalty = detail.penalty || '0 points';
     crazy.innerHTML = `
-      <div class="boot-crazy-title">Crazy Day</div>
-      <img class="boot-crazy-logo" src="imgs/crazylogo.png" alt="">
+      <div class="boot-crazy-title" aria-label="Crazy Day">
+        <span style="--i:0">C</span><span style="--i:1">r</span><span style="--i:2">a</span><span style="--i:3">z</span><span style="--i:4">y</span><span class="space" style="--i:5"></span><span style="--i:6">D</span><span style="--i:7">a</span><span style="--i:8">y</span>
+      </div>
+      <div class="boot-crazy-logo-wrap" aria-hidden="true">
+        <img class="boot-crazy-logo" src="imgs/crazylogo.png" alt="">
+      </div>
       <div class="boot-crazy-rules">
-        <div>Regular winner: ${escapeHTML(regular)}</div>
-        <div>Perfect wrap: ${escapeHTML(perfect)}</div>
-        <div>No bet or furthest from wrap: ${escapeHTML(penalty)}</div>
+        ${renderCrazyRule('Regular winner', regular)}
+        ${renderCrazyRule('Perfect wrap', perfect)}
+        ${renderCrazyRule('No bet', penalty)}
+        ${renderCrazyRule('Furthest bet', penalty)}
       </div>
     `;
     bootContent.classList.add('is-crazy-day');
@@ -162,6 +167,25 @@
       if (!loaderIsActive()) return;
       crazy.classList.add('is-visible');
     });
+  }
+
+  function renderCrazyRule(label, value) {
+    const points = splitPointText(value);
+    return `
+      <div class="boot-crazy-rule-label">${escapeHTML(label)}</div>
+      <div class="boot-crazy-rule-points"><span class="boot-crazy-rule-sign">${escapeHTML(points.sign)}</span><span class="boot-crazy-rule-number">${escapeHTML(points.number)}</span><span class="boot-crazy-rule-word">${escapeHTML(points.word)}</span></div>
+    `;
+  }
+
+  function splitPointText(value) {
+    const text = String(value || '0 points').trim();
+    const match = text.match(/^([+-]?)(\d+(?:\.\d+)?)\s*(.*)$/);
+    if (!match) return { sign: '', number: text, word: '' };
+    return {
+      sign: match[1] || '',
+      number: match[2] || '0',
+      word: match[3] || ''
+    };
   }
 
   function showRegularLoader() {
