@@ -3888,11 +3888,12 @@ async function addHistoryPlayerBet(date, name, betTime, betDate='') {
   nextGuess.time = normalizedBet;
   nextGuess.date = normalizedDate || inferBetDate(normalizedBet, target.day);
   if (!existingGuess) target.day.guesses.push(nextGuess);
-  const { winner, winners, points, noWinner } = calcWinner(target.day.guesses, target.day.wrapTime, target.day);
+  const { winner, winners, points, noWinner, penalties } = calcWinner(target.day.guesses, target.day.wrapTime, target.day);
   target.day.winner = winner;
   target.day.winners = winners;
   target.day.points = points;
   target.day.noWinner = noWinner;
+  target.day.penalties = penalties || [];
   adjustCompletedDayScores(target.day, 1);
 
   const saved = await saveS();
