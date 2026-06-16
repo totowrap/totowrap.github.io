@@ -33,6 +33,7 @@
     () => 'I love the smell of TotoWrap in the morning',
     () => 'Facciamo un referendum?',
     () => 'Viva la Edocrazia!',
+    () => 'Vita sprecata che sei...',
     () => {
       const storedNames = getPlayerNames();
       const name = storedNames[randomInt(storedNames.length)];
