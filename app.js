@@ -2301,7 +2301,7 @@ function getShareResultInfo(day) {
     ? 'Outside all bets'
     : points === 3
       ? 'Exact bet'
-      : wrapGap === null ? 'Winner' : `${formatBoardGap(wrapGap)} from wrap`;
+      : wrapGap === null ? 'Winner' : `${formatBoardGap(wrapGap)} from official wrap`;
   const dayNum = S.days.length + (S.today ? 1 : 0);
 
   return {
@@ -3516,7 +3516,7 @@ function renderBoardPlayerStats(name) {
   const stats = getBoardPlayerStats(name);
   const wrapGap = stats.lastGap === null
     ? 'No completed bets yet'
-    : `Last bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> off the official wrap`;
+    : `Last bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> from official wrap`;
   const closestWrongValue = stats.closestWrongGap === null ? '--' : formatBoardCompactGap(stats.closestWrongGap);
   const closestWrongStat = stats.closestWrongDate
     ? `<button class="board-stat board-stat-link" type="button" data-closest-wrong-date="${esc(stats.closestWrongDate)}" title="Open history day" aria-label="Open closest wrong bet history">
