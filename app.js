@@ -3197,7 +3197,7 @@ function renderBoardPie(pl) {
 
   const legendHtml = pl.map(p => {
     const pts = S.scores[p.name] || 0;
-    const pct = total ? ((pts / total) * 100).toFixed(1) : '0.0';
+    const pct = total && pts > 0 ? ((pts / total) * 100).toFixed(1) : '0.0';
     return `
     <div class="legend-item">
       <div class="legend-swatch" style="background:${colorOf(p.name)};"></div>
@@ -3499,7 +3499,7 @@ function renderBoard(view=_boardView) {
 }
 
 function countWord(value, singular, plural) {
-  return Number(value) === 1 ? singular : plural;
+  return Math.abs(Number(value)) === 1 ? singular : plural;
 }
 
 function formatBoardGap(totalSec) {
@@ -4087,7 +4087,7 @@ async function confirmTodayWrap(wrapTime) {
   S.today.penalties = penalties || [];
 
   if (!noWinner) {
-    winners.forEach(w => { S.scores[w.name] = (S.scores[w.name] || 0) + points; });
+    winners.forEach(w => applyScoreDelta(w.name, points));
   }
   applyDayPenalties(S.today, 1);
   const saved = await saveS();
@@ -4307,10 +4307,10 @@ async function handleAdminDialogAction(btn) {
 function applyScoreDelta(name, delta) {
   if (!name || !Number.isFinite(delta) || delta === 0) return;
   const nextScore = (Number(S.scores[name]) || 0) + delta;
-  if (nextScore !== 0) {
-    S.scores[name] = nextScore;
-  } else {
+  if (nextScore === 0) {
     delete S.scores[name];
+  } else {
+    S.scores[name] = nextScore;
   }
 }
 
