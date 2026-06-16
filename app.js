@@ -1043,6 +1043,14 @@ function normalizeGameSec(time, day=S.today, explicitDate=null) {
   return sec <= start ? sec + DAY_SEC : sec;
 }
 function guessGameSec(g, day=S.today) { return normalizeGameSec(g.time, day, g.date || null); }
+function betMinuteDistanceFromWrapSec(guess, day=S.today) {
+  if (!guess?.time || !day?.wrapTime) return null;
+  const wrapSec = normalizeGameSec(day.wrapTime, day);
+  const betStart = guessGameSec(guess, day);
+  const betEnd = betStart + 59;
+  if (wrapSec >= betStart && wrapSec <= betEnd) return 0;
+  return wrapSec < betStart ? betStart - wrapSec : wrapSec - betEnd;
+}
 function gameNowSec(day=S.today) {
   const sec = nowSec();
   const start = approvalSec(day);
@@ -2363,13 +2371,11 @@ function getShareResultInfo(day) {
   const noWinner = Boolean(day?.noWinner || !winnerNames.length);
   const winnerGuess = noWinner ? null : day.guesses?.find(g => winnerNames.includes(g.name) && g.time);
   const winnerBet = winnerGuess?.time || '--:--';
-  const wrapGap = winnerGuess?.time && day.wrapTime
-    ? Math.abs(guessGameSec(winnerGuess, day) - normalizeGameSec(day.wrapTime, day))
-    : null;
+  const wrapGap = betMinuteDistanceFromWrapSec(winnerGuess, day);
   const points = Number(day?.points) || 0;
   const detail = noWinner
     ? 'Outside all bets'
-    : points === 3
+    : wrapGap === 0
       ? 'Exact bet'
       : wrapGap === null ? 'Winner' : `${formatBoardGap(wrapGap)} from official wrap`;
   const dayNum = S.days.length + (S.today ? 1 : 0);
@@ -3597,7 +3603,8 @@ function getBoardPlayerStats(name) {
     const guess = day.guesses?.find(g => g.name === name);
     if (guess && !guess.time) forgot += 1;
     if (guess?.time && day.wrapTime) {
-      const gap = Math.abs(guessGameSec(guess, day) - normalizeGameSec(day.wrapTime, day));
+      const gap = betMinuteDistanceFromWrapSec(guess, day);
+      if (gap === null) return;
       if (lastGap === null) lastGap = gap;
       const wrongGap = wrongTerritoryGap(name, day);
       if (wrongGap !== null && (closestWrongGap === null || wrongGap < closestWrongGap)) {
