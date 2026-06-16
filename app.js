@@ -68,6 +68,7 @@ const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
 const BOOT_FADE_MS = 1500;
 const BOOT_PLAYER_NAMES_STORAGE_KEY = 'totowrap-boot-player-names';
+const BOOT_CRAZY_DAY_STORAGE_KEY = 'totowrap-boot-crazy-day';
 const BOOT_STARTED_AT = Date.now();
 let _bootHideQueued = false;
 const INNER_SCROLL_SELECTOR = '.today-scroll-list, .standings-scroll-list, .board-legend, .preview-card';
@@ -2281,6 +2282,33 @@ function renderFridayWrapBanner(day) {
 function renderMondayWaitingBanner(day) {
   if (new Date().getDay() !== 1) return '';
   return `<div class="weekday-message-banner">A full week of betting is waiting for you, but let's pretend to work so Colette doesn't get mad!</div>`;
+}
+
+function formatSignedPoints(value) {
+  const points = Number(value) || 0;
+  return `${points > 0 ? '+' : ''}${points} ${countWord(points, 'point', 'points')}`;
+}
+
+function syncCrazyDayBootLoader() {
+  const cfg = getCrazyDayConfig(S.today);
+  if (!cfg) {
+    try {
+      localStorage.removeItem(BOOT_CRAZY_DAY_STORAGE_KEY);
+    } catch (_) {}
+    document.dispatchEvent(new CustomEvent('totowrap:regular-loader'));
+    return;
+  }
+  const detail = {
+    regular: formatSignedPoints(cfg.regularPoints),
+    perfect: formatSignedPoints(cfg.perfectPoints),
+    penalty: formatSignedPoints(cfg.penaltyPoints)
+  };
+  try {
+    localStorage.setItem(BOOT_CRAZY_DAY_STORAGE_KEY, JSON.stringify(detail));
+  } catch (_) {}
+  document.dispatchEvent(new CustomEvent('totowrap:crazy-day-loader', {
+    detail
+  }));
 }
 
 function renderCompletedToday(t, canStartNextDay=false) {
@@ -4973,6 +5001,7 @@ onSnapshot(STATE_REF, (snap) => {
     _territoryRuleMigrationPending = true;
   }
   storeBootPlayerNames();
+  syncCrazyDayBootLoader();
   _stateReady = true;
   render();
   window.__TOTOWRAP_RECAP_STATE__ = JSON.parse(JSON.stringify(S));

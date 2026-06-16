@@ -4,6 +4,7 @@
   const regularLogoLayer = document.querySelector('[data-boot-logo-layer="regular"]');
   const edoardoLogoLayer = document.querySelector('[data-boot-logo-layer="edoardo"]');
   const edoardoLogo = document.querySelector('[data-boot-edoardo-logo]');
+  const bootContent = document.querySelector('.boot-content');
 
   if (phrase.dataset.bootPhraseReady === 'true') return;
   phrase.dataset.bootPhraseReady = 'true';
@@ -11,6 +12,7 @@
 
   const LAST_PHRASE_KEY = 'totowrap-last-boot-phrase';
   const PLAYER_NAMES_KEY = 'totowrap-boot-player-names';
+  const CRAZY_DAY_KEY = 'totowrap-boot-crazy-day';
   const PHRASE_VISIBLE_MS = 5000;
   const PHRASE_FADE_MS = 650;
   const PHRASE_CLEAN_MS = 500;
@@ -94,6 +96,15 @@
     }
   }
 
+  function getCachedCrazyDay() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CRAZY_DAY_KEY) || 'null');
+      return cached && typeof cached === 'object' ? cached : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   function storePhraseIndex(index) {
     try {
       localStorage.setItem(LAST_PHRASE_KEY, String(index));
@@ -117,6 +128,50 @@
   function loaderIsActive() {
     const loader = document.getElementById('boot-loader');
     return Boolean(loader && !loader.classList.contains('done'));
+  }
+
+  function showCrazyDayLoader(detail={}) {
+    if (!loaderIsActive() || !bootContent) return;
+    stopPhraseRotation();
+    regularLogoLayer?.classList.remove('is-visible');
+    edoardoLogoLayer?.classList.remove('is-visible');
+    phrase.classList.remove('is-ready', 'is-exiting');
+    phrase.classList.add('is-loading');
+    phrase.innerHTML = '';
+    let crazy = bootContent.querySelector('[data-boot-crazy-day]');
+    if (!crazy) {
+      crazy = document.createElement('div');
+      crazy.className = 'boot-crazy-day';
+      crazy.setAttribute('data-boot-crazy-day', '');
+      bootContent.appendChild(crazy);
+    }
+    const regular = detail.regular || '+0 points';
+    const perfect = detail.perfect || '+0 points';
+    const penalty = detail.penalty || '0 points';
+    crazy.innerHTML = `
+      <div class="boot-crazy-title">Crazy Day</div>
+      <img class="boot-crazy-logo" src="imgs/crazylogo.png" alt="">
+      <div class="boot-crazy-rules">
+        <div>Regular winner: ${escapeHTML(regular)}</div>
+        <div>Perfect wrap: ${escapeHTML(perfect)}</div>
+        <div>No bet or furthest from wrap: ${escapeHTML(penalty)}</div>
+      </div>
+    `;
+    bootContent.classList.add('is-crazy-day');
+    requestAnimationFrame(() => {
+      if (!loaderIsActive()) return;
+      crazy.classList.add('is-visible');
+    });
+  }
+
+  function showRegularLoader() {
+    if (!loaderIsActive() || !bootContent?.classList.contains('is-crazy-day')) return;
+    const crazy = bootContent.querySelector('[data-boot-crazy-day]');
+    crazy?.classList.remove('is-visible');
+    bootContent.classList.remove('is-crazy-day');
+    regularLogoLayer?.classList.add('is-visible');
+    edoardoLogoLayer?.classList.remove('is-visible');
+    if (!phraseTimer) showNextPhrase();
   }
 
   function choosePhrase() {
@@ -183,5 +238,12 @@
     }).observe(loader, { attributes: true, attributeFilter: ['class'] });
   }
 
-  showNextPhrase();
+  document.addEventListener('totowrap:crazy-day-loader', event => {
+    showCrazyDayLoader(event.detail || {});
+  });
+  document.addEventListener('totowrap:regular-loader', showRegularLoader);
+
+  const cachedCrazyDay = getCachedCrazyDay();
+  if (cachedCrazyDay) showCrazyDayLoader(cachedCrazyDay);
+  else showNextPhrase();
 })();
