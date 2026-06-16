@@ -627,7 +627,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .today-scroll-list .today-live-name-text { color:var(--dim); transition:color .75s ease; }
 .today-scroll-list .row-name.territory-active .today-live-name-text { color:var(--accent); }
 .today-scroll-list .row { opacity:1; }
-.today-scroll-list .row:has(.badge.b-out) { opacity:.85; }
+.today-scroll-list .row.territory-ended { opacity:.85; }
 .today-scroll-list .today-result-winner-name { color:var(--accent); }
 .today-scroll-list,
 .standings-scroll-list,

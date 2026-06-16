@@ -1839,12 +1839,14 @@ function refreshStatusBadges() {
     const el=document.getElementById('st-'+id);
     const nameEl = document.getElementById('name-span-'+id);
     const nameRow = nameEl?.closest('.row-name');
+    const playerRow = nameEl?.closest('.row');
     const isActive = activeNames.has(g.name);
     nameRow?.classList.toggle('territory-active', isActive);
     if(!el || !nameEl) return;
     const nameTextEl = nameEl.querySelector('.today-live-name-text');
     const nameEmojiEl = nameEl.querySelector('.today-live-name-emoji');
     if(out.has(g.name)){
+      playerRow?.classList.add('territory-ended');
       el.className = el instanceof HTMLButtonElement ? 'badge b-out current-bet-edit-action' : 'badge b-out';
       el.textContent='OUT';
       el.removeAttribute('data-current-bet-player');
@@ -1858,6 +1860,7 @@ function refreshStatusBadges() {
       }
     }
     else{
+      playerRow?.classList.remove('territory-ended');
       el.className = el instanceof HTMLButtonElement && IS_ADMIN ? 'badge b-in current-bet-edit-action' : 'badge b-in';
       el.textContent='IN';
       if (nameTextEl && nameEmojiEl) {
@@ -2844,7 +2847,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
     const boundaryInfo = slice ? boundaryRangeWithDuration(slice) : '';
 
     return `
-    <div class="row${boundaryInfo ? ' row-with-boundary' : ''}">
+    <div class="row${boundaryInfo ? ' row-with-boundary' : ''}${isOut ? ' territory-ended' : ''}">
       <div class="row-name row-name-stack${activeNames.has(g.name) ? ' territory-active' : ''}" data-today-accuracy-player="${esc(g.name)}">
         <div class="row-name-main">
           <span id="name-span-${playerId}"><span class="today-live-name-text">${esc(g.name)}</span><span class="today-live-name-emoji"> ${displayEmoji}</span></span>
