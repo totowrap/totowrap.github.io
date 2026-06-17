@@ -1330,7 +1330,8 @@ function extractExplicitChatBets(body, duplicateFirstNames) {
 
 function extractChatBetsFromBody(body, sender, duplicateFirstNames) {
   const senderOnly = extractSenderOnlyChatBet(body, sender, duplicateFirstNames);
-  return senderOnly ? [senderOnly] : extractExplicitChatBets(body, duplicateFirstNames);
+  if (senderOnly) return [senderOnly];
+  return isLuigiVacchelli(sender) ? extractExplicitChatBets(body, duplicateFirstNames) : [];
 }
 
 function chatBodyIsExactTime(body) {
