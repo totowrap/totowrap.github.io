@@ -150,7 +150,7 @@
     const penalty = detail.penalty || '0 points';
     crazy.innerHTML = `
       <div class="boot-crazy-title" aria-label="Crazy Day">
-        <span style="--i:0">C</span><span style="--i:1">r</span><span style="--i:2">a</span><span style="--i:3">z</span><span style="--i:4">y</span><span class="space" style="--i:5"></span><span style="--i:6">D</span><span style="--i:7">a</span><span style="--i:8">y</span>
+        <span style="--i:0;--wave-color:#5bc8f5">C</span><span style="--i:1;--wave-color:#6dd87a">r</span><span style="--i:2;--wave-color:#e06c6c">a</span><span style="--i:3;--wave-color:#a374f7">z</span><span style="--i:4;--wave-color:#f07dba">y</span><span class="space" style="--i:5"></span><span style="--i:6;--wave-color:#a374f7">D</span><span style="--i:7;--wave-color:#fb8c5f">a</span><span style="--i:8;--wave-color:#40e4e4">y</span>
       </div>
       <div class="boot-crazy-logo-wrap" aria-hidden="true">
         <img class="boot-crazy-logo" src="imgs/crazylogo.png" alt="">

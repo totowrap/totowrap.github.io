@@ -2,7 +2,7 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
 #boot-loader { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: var(--bg); opacity: 1; visibility: visible; transition: opacity 1.5s ease, visibility 1.5s ease; }
 #boot-loader.done { opacity: 0; visibility: hidden; pointer-events: none; }
 .boot-content { position: fixed; inset: 0; width: 100%; text-align: center; }
-.boot-logo-stage { position: absolute; top: var(--main-logo-center-y); left: 50%; width: 320px; height: 320px; transform: translate(-50%, -50%); }
+.boot-logo-stage { position: absolute; top: var(--main-logo-center-y); left: 50%; width: 320px; height: 320px; transform: translate(-50%, -50%); transition: opacity 1.5s cubic-bezier(.45,0,.25,1); }
 .boot-logo-layer { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transition: opacity 1.5s cubic-bezier(.45,0,.25,1); pointer-events: none; }
 .boot-logo-layer.is-visible { opacity: 1; }
 .boot-logo-image { display: block; object-fit: contain; transform-origin: center; }
@@ -16,7 +16,7 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
 .boot-phrase.is-loading { opacity: 0; }
 .boot-phrase.is-ready { opacity: 1; }
 .boot-phrase.is-exiting { opacity: 0; }
-.boot-crazy-day { position: absolute; top: var(--main-logo-center-y); left: 50%; display: grid; justify-items: center; gap: 0; width: min(calc(100% - 28px), 390px); opacity: 0; transform: translate(-50%, -50%); transition: opacity .8s ease; pointer-events: none; }
+.boot-crazy-day { position: absolute; top: var(--main-logo-center-y); left: 50%; display: grid; justify-items: center; gap: 0; width: min(calc(100% - 28px), 390px); opacity: 0; transform: translate(-50%, -50%); transition: opacity 1.5s cubic-bezier(.45,0,.25,1); pointer-events: none; }
 .boot-crazy-day.is-visible { opacity: 1; }
 .boot-crazy-title { display: inline-flex; justify-content: center; width: min(calc(100vw - 28px), 390px); margin-bottom: 54px; color: var(--accent); font-family: 'Alte Haas Grotesk', sans-serif; font-size: clamp(2.55rem, 12.4vw, 3.28rem); font-weight: bold; line-height: 1; letter-spacing: .105em; text-transform: uppercase; }
 .boot-crazy-title span { display: inline-block; animation: crazy-title-wave 2.2s cubic-bezier(.33,0,.2,1) infinite; animation-delay: calc(var(--i) * .07s); }
@@ -36,9 +36,9 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
 .boot-content.is-crazy-day .boot-phrase { opacity: 0; pointer-events: none; }
 @keyframes boot-spin { to { transform: rotate(360deg); } }
 @keyframes crazy-title-wave {
-  0%, 100% { opacity: .92; transform: translateY(0); }
-  28% { opacity: 1; transform: translateY(-13px); }
-  56% { opacity: .96; transform: translateY(4px); }
+  0%, 100% { opacity: .92; color: var(--accent); transform: translateY(0); }
+  28% { opacity: 1; color: var(--wave-color, var(--accent)); transform: translateY(-13px); }
+  56% { opacity: .96; color: var(--accent); transform: translateY(4px); }
 }
 @keyframes crazy-heartbeat {
   0%, 100% { transform: scale(1); }
