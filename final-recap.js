@@ -4,6 +4,22 @@
   let recap = null;
   let screenIndex = 0;
   let swipeStartX = null;
+  const fallbackCogImages = [
+    'cog/cog1.jpeg',
+    'cog/cog2.jpeg',
+    'cog/cog3.jpeg',
+    'cog/cog4.jpeg',
+    'cog/cog5.jpeg',
+    'cog/cog6.jpeg',
+    'cog/cog7.jpeg',
+    'cog/cog8.jpeg',
+    'cog/cog9.jpeg',
+    'cog/cog10.jpeg',
+    'cog/cog11.jpeg',
+    'cog/cog12.jpeg',
+    'cog/cog13.jpeg',
+    'cog/cog14.jpeg'
+  ];
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
@@ -125,15 +141,23 @@
     const timer = setTimeout(() => controller.abort(),timeout);
     return fetch(url,{...options,signal:controller.signal}).finally(() => clearTimeout(timer));
   };
-  async function countCogImages() {
+  async function loadCogImages() {
     try {
       const api = await fetchWithTimeout('https://api.github.com/repos/totowrap/totowrap.github.io/contents/cog',{cache:'no-store'});
-      if (!api.ok) return 0;
+      if (!api.ok) return fallbackCogImages;
       const entries = await api.json();
-      return Array.isArray(entries) ? entries.filter(item => item?.type === 'file' && isCogImageName(item.name)).length : 0;
+      if (!Array.isArray(entries)) return fallbackCogImages;
+      const images = entries
+        .filter(item => item?.type === 'file' && isCogImageName(item.name))
+        .sort((a,b) => String(a.name).localeCompare(String(b.name), undefined, { numeric:true, sensitivity:'base' }))
+        .map(item => item.download_url || `cog/${item.name}`);
+      return images.length ? images : fallbackCogImages;
     } catch (_) {
-      return 0;
+      return fallbackCogImages;
     }
+  }
+  async function countCogImages() {
+    return (await loadCogImages()).length;
   }
 
   function calculate(source) {
@@ -381,15 +405,18 @@
         ${reactionCard('Best reaction','media/best_reaction.mp4','green')}
         ${reactionCard('Worst reaction','media/worst_reaction.mp4','red')}
       </div>`),
-      screen('A very specific statistic','Enemies to lovers','',`<div class="final-recap-showcase-grid final-recap-single-showcase">
-        <div class="final-recap-specific-stat">
+      screen('A very specific statistic','Enemies to lovers','',`<div class="final-recap-showcase-grid final-recap-single-showcase final-recap-cog-scene">
+        <div class="final-recap-cog-stack" aria-hidden="true">
+          ${(data.cogImages || []).map((src,index) => `<img src="${esc(src)}" alt="" style="--cog-index:${index};--cog-rotate:${[-7,5,-4,8,-9,3,6,-5,10,-2,4,-8,7,-3][index % 14]}deg;--cog-x:${[-18,14,2,-9,20,-2,-15,10,5,-20,16,-4,12,-12][index % 14]}px;--cog-y:${[0,8,-3,12,5,16,2,11,-5,14,6,18,1,9][index % 14]}px;">`).join('')}
+        </div>
+        <div class="final-recap-specific-stat" data-cog-stat-card>
           <span>Word of encouragement</span>
           <div>
             <strong>${data.coglioneCount}</strong>
             <b>Times Marco called Edoardo “coglione”</b>
           </div>
         </div>
-      </div>`),
+      </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
       screen('TonnoWrap','That was a real<br>mattanza!','The final standings are ready to save, share, and remember.',`<div class="final-recap-stat-grid">${data.leaderboard.slice(0,3).map((item,index) => stat(`${index+1}. ${item.name}`,`${item.score} ${word(item.score,'point','points')}`)).join('')}</div><button class="final-recap-replay" type="button" data-recap-replay>Replay recap</button>`)
@@ -524,7 +551,33 @@
       if (video.closest('.final-recap-screen') === screens[screenIndex] && video.readyState >= 2) video.play().catch(() => {});
       else video.pause();
     });
-    recap.querySelector('.final-recap-hint').textContent = screenIndex === screens.length - 1 ? 'Tap replay or close' : 'Tap or swipe to continue';
+  }
+  function currentScreen() {
+    return recap?.querySelectorAll('.final-recap-screen')?.[screenIndex] || null;
+  }
+  function shouldInterceptCogScreen() {
+    const screen = currentScreen();
+    return Boolean(screen?.classList.contains('final-recap-cog-screen') && !screen.classList.contains('cog-stack-complete'));
+  }
+  function playCogStack() {
+    const screen = currentScreen();
+    if (!screen) return;
+    const images = [...screen.querySelectorAll('.final-recap-cog-stack img')];
+    if (!images.length) {
+      screen.classList.add('cog-stack-complete');
+      return;
+    }
+    const nextImage = images.find(image => !image.classList.contains('is-dropped'));
+    if (!nextImage) {
+      screen.classList.add('cog-stack-complete');
+      return;
+    }
+    nextImage.classList.add('is-dropped');
+    const droppedCount = images.filter(image => image.classList.contains('is-dropped')).length;
+    setTimeout(() => {
+      if (currentScreen() !== screen) return;
+      if (droppedCount >= images.length) screen.classList.add('cog-stack-complete');
+    }, 1250);
   }
   function closeRecap() {
     if (!recap) return;
@@ -538,14 +591,15 @@
   async function openRecap() {
     if (!state || recap) return;
     const data = calculate(state);
-    data.coglioneCount = await countCogImages();
+    data.cogImages = await loadCogImages();
+    data.coglioneCount = data.cogImages.length;
     const screens = buildScreens(data);
     recap = document.createElement('div');
     recap.className = 'final-recap';
     recap.innerHTML = `
-      <div class="final-recap-top"><img class="final-recap-logo" src="imgs/totowrap.png" alt="TotoWrap"><button class="final-recap-close" type="button" aria-label="Close recap">×</button></div>
+      <div class="final-recap-top"><img class="final-recap-logo" src="imgs/totowrap.png" alt="TotoWrap"></div>
       <div class="final-recap-track">${screens.join('')}</div>
-      <div class="final-recap-hint">Tap or swipe to continue</div>
+      <img class="final-recap-bottom-logo" src="imgs/tonnowrap.png" alt="TonnoWrap">
       <div class="final-recap-progress">${screens.map((_,index) => `<button class="final-recap-dot${index===0?' on':''}" type="button" data-recap-screen="${index}" aria-label="Open recap screen ${index+1}"></button>`).join('')}</div>`;
     document.body.appendChild(recap);
     recap.querySelectorAll('.final-recap-reaction-media').forEach(media => {
@@ -584,10 +638,14 @@
     updateScreen(0);
     requestAnimationFrame(() => recap?.classList.add('is-open'));
     recap.addEventListener('click', event => {
-      if (event.target.closest('.final-recap-close')) return closeRecap();
       const dot = event.target.closest('[data-recap-screen]');
-      if (dot) return updateScreen(Number(dot.dataset.recapScreen));
+      if (dot) {
+        const requestedScreen = Number(dot.dataset.recapScreen);
+        if (requestedScreen > screenIndex && shouldInterceptCogScreen()) return playCogStack();
+        return updateScreen(requestedScreen);
+      }
       if (event.target.closest('[data-recap-replay]')) return updateScreen(0);
+      if (shouldInterceptCogScreen()) return playCogStack();
       updateScreen(screenIndex + 1);
     });
     recap.addEventListener('touchstart', event => { swipeStartX = event.touches[0]?.clientX ?? null; }, {passive:true});
@@ -596,6 +654,7 @@
       const end = event.changedTouches[0]?.clientX ?? swipeStartX;
       const delta = end - swipeStartX;
       swipeStartX = null;
+      if (delta < -45 && shouldInterceptCogScreen()) return playCogStack();
       if (Math.abs(delta) > 45) updateScreen(screenIndex + (delta < 0 ? 1 : -1));
     }, {passive:true});
   }
@@ -621,8 +680,10 @@
   window.addEventListener('totowrap-open-final-recap', openRecap);
   window.addEventListener('keydown', event => {
     if (!recap) return;
-    if (event.key === 'Escape') closeRecap();
-    if (event.key === 'ArrowRight') updateScreen(screenIndex + 1);
+    if (event.key === 'ArrowRight') {
+      if (shouldInterceptCogScreen()) return playCogStack();
+      updateScreen(screenIndex + 1);
+    }
     if (event.key === 'ArrowLeft') updateScreen(screenIndex - 1);
   });
   if (window.__TOTOWRAP_RECAP_STATE__) receiveState();
