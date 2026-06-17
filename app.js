@@ -67,6 +67,7 @@ const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
 const BOOT_FADE_MS = 1500;
+const BOOT_RENDER_WAIT_TIMEOUT_MS = 5000;
 const BOOT_PLAYER_NAMES_STORAGE_KEY = 'totowrap-boot-player-names';
 const BOOT_CRAZY_DAY_STORAGE_KEY = 'totowrap-boot-crazy-day';
 const BOOT_STARTED_AT = Date.now();
@@ -75,6 +76,13 @@ const INNER_SCROLL_SELECTOR = '.today-scroll-list, .standings-scroll-list, .boar
 
 function waitMs(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function waitWithTimeout(promise, timeoutMs) {
+  return Promise.race([
+    promise,
+    waitMs(timeoutMs)
+  ]);
 }
 
 function nextFrame() {
@@ -182,7 +190,7 @@ async function scheduleBootLoaderHide() {
   _bootHideQueued = true;
   const fadeStartAt = Math.max(0, BOOT_TOTAL_MS - BOOT_FADE_MS);
   const remaining = Math.max(0, fadeStartAt - (Date.now() - BOOT_STARTED_AT));
-  await Promise.all([waitMs(remaining), waitForRenderedApp()]);
+  await Promise.all([waitMs(remaining), waitWithTimeout(waitForRenderedApp(), BOOT_RENDER_WAIT_TIMEOUT_MS)]);
   const loader = document.getElementById('boot-loader');
   if (!loader) return;
   loader.classList.add('done');
