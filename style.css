@@ -548,6 +548,12 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .weekday-message-banner { -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); }
 }
+.crazy-day-indicator { flex:0 0 auto; margin:0 0 12px; border:1px solid rgba(var(--yellow-rgb), .42); border-radius:var(--radius); padding:9px 12px 8px; background:linear-gradient(135deg, rgba(var(--yellow-rgb), .12), rgba(var(--yellow-rgb), .035)), linear-gradient(135deg, rgba(46,60,87,.62), rgba(46,60,87,.42)); color:var(--accent); font-family:'Alte Haas Grotesk', sans-serif; text-align:center; text-transform:uppercase; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+.crazy-day-indicator-title { display:block; font-size:.7rem; line-height:1; letter-spacing:.16em; }
+.crazy-day-indicator-rules { display:block; margin-top:5px; color:var(--dim); font-size:.56rem; line-height:1.15; letter-spacing:.075em; white-space:nowrap; }
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .crazy-day-indicator { -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); }
+}
 .bnd-duration { color: inherit; margin-left: 8px; }
 #toast { position: fixed; bottom: 125px; left: 50%; transform: translateX(-50%) translateY(12px); background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 18px; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .72rem; white-space: nowrap; max-width: 90vw; opacity: 0; transition: opacity .25s, transform .25s; z-index: 9000; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }

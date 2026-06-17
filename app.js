@@ -2311,6 +2311,20 @@ function syncCrazyDayBootLoader() {
   }));
 }
 
+function renderCrazyDayIndicator(day=S.today) {
+  const cfg = getCrazyDayConfig(day);
+  if (!cfg) return '';
+  const regular = formatSignedPoints(cfg.regularPoints).replace(' points', '').replace(' point', '');
+  const perfect = formatSignedPoints(cfg.perfectPoints).replace(' points', '').replace(' point', '');
+  const penalty = formatSignedPoints(cfg.penaltyPoints).replace(' points', '').replace(' point', '');
+  return `
+    <div class="crazy-day-indicator" role="note" aria-label="Crazy Day scoring">
+      <span class="crazy-day-indicator-title">Crazy Day</span>
+      <span class="crazy-day-indicator-rules">${regular} regular / ${perfect} perfect / ${penalty} no bet / ${penalty} furthest</span>
+    </div>
+  `;
+}
+
 function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
   const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
@@ -2327,6 +2341,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
         <span class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</span>
 	        <span class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</span>
       </${winnerCloseTag}>
+      ${renderCrazyDayIndicator(t)}
       ${fridayBanner}
       <div class="card today-scroll-card"><div class="card-lbl">Results</div>
         <div class="today-scroll-list">
@@ -2359,6 +2374,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
     <span class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</span>
 	    <span class="winner-pts">+${t.points} ${countWord(t.points, 'pt', 'pts')} · Wrap at ${esc(t.wrapTime)}</span>
   </${winnerCloseTag}>
+  ${renderCrazyDayIndicator(t)}
   ${fridayBanner}
   <div class="card today-scroll-card"><div class="card-lbl">Results</div>
     <div class="today-scroll-list">
@@ -2933,6 +2949,7 @@ function renderPlayerToday() {
     return `
   <div class="tab-page-frame pregame-boundary-frame">
   ${renderBetClosePlayerCard(t)}
+  ${renderCrazyDayIndicator(t)}
   ${renderMondayWaitingBanner(t)}
   <div class="card waiting-guesses-card">
     <p class="mono dim center">Waiting for admin to submit today's guesses…</p>
@@ -2953,6 +2970,7 @@ function renderPlayerToday() {
     <div class="big-clock-lbl">Live Time</div>
     <div id="next-out-countdown" class="countdown-txt"></div>
   </div>
+  ${renderCrazyDayIndicator(t)}
   <div class="card today-scroll-card"><div class="card-lbl">${statusHeader}</div>
     <div class="today-scroll-list">${renderActiveTodayRows(t, sg, out, slices)}</div>
   </div>
@@ -3028,6 +3046,7 @@ function renderToday() {
     return `
       <div class="today-fixed-view">
       ${clockCard}
+      ${renderCrazyDayIndicator(t)}
       <div class="card today-scroll-card"><div class="card-lbl">${statusHeader}</div>
         <div class="today-scroll-list">${renderActiveTodayRows(t, sg, out, slices)}</div>
       </div>
@@ -3056,6 +3075,7 @@ function renderToday() {
       </div>
       ${t.betCloseAt ? `<p class="mono dim center mt8">Time left: <span class="accent" data-bet-close-countdown>--</span></p>` : ''}
     </div>
+    ${renderCrazyDayIndicator(t)}
     ${renderCrazyDaySetupCard(t)}
     <div class="card">
       <div class="card-lbl">Paste Today's Guesses</div>
