@@ -1052,6 +1052,20 @@ function betMinuteDistanceFromWrapSec(guess, day=S.today) {
   if (wrapSec >= betStart && wrapSec <= betEnd) return 0;
   return wrapSec < betStart ? betStart - wrapSec : wrapSec - betEnd;
 }
+function betMinuteDistanceFromWrapInputSec(guess, wrapHMSInput, day=S.today) {
+  if (!guess?.time || !wrapHMSInput) return null;
+  const wrapSec = normalizeGameSec(wrapHMSInput, day);
+  const betStart = guessGameSec(guess, day);
+  const betEnd = betStart + 59;
+  if (wrapSec >= betStart && wrapSec <= betEnd) return 0;
+  return wrapSec < betStart ? betStart - wrapSec : wrapSec - betEnd;
+}
+function isExactBetForWrap(guess, wrapHMSInput, day=S.today) {
+  return betMinuteDistanceFromWrapInputSec(guess, wrapHMSInput, day) === 0;
+}
+function isExactBetForDay(guess, day=S.today) {
+  return betMinuteDistanceFromWrapSec(guess, day) === 0;
+}
 function gameNowSec(day=S.today) {
   const sec = nowSec();
   const start = approvalSec(day);
@@ -1668,8 +1682,8 @@ function calcWinner(guesses, wrapHMSInput, day=S.today) {
   const winnerName = winningSlice.names[0];
   const winners = winningSlice.names.map(name => ({ name }));
   
-  const firstWinnerGuess = guesses.find(g => g.name === winnerName).time;
-  const points = (wrapHMSInput.slice(0,5) === firstWinnerGuess) ? scoring.perfectPoints : scoring.regularPoints;
+  const firstWinnerGuess = guesses.find(g => g.name === winnerName);
+  const points = isExactBetForWrap(firstWinnerGuess, wrapHMSInput, day) ? scoring.perfectPoints : scoring.regularPoints;
 
   return {
     winner: winnerName,
@@ -1996,11 +2010,15 @@ function confetti() {
 }
 
 function getWinnerConfettiKey() {
-  if (!S.today || !S.today.wrapTime || S.today.points !== 3) return null;
-  const winnerNames = S.today.winners
-    ? S.today.winners.map(w => w.name).join(',')
-    : S.today.winner;
-  return S.today.date + '_' + winnerNames;
+  if (!S.today || !S.today.wrapTime || S.today.noWinner) return null;
+  const winnerNameList = S.today.winners
+    ? S.today.winners.map(w => w.name).filter(Boolean)
+    : (S.today.winner ? [S.today.winner] : []);
+  const exactWinner = (S.today.guesses || []).some(guess =>
+    winnerNameList.includes(guess.name) && isExactBetForDay(guess, S.today)
+  );
+  if (!exactWinner) return null;
+  return S.today.date + '_' + winnerNameList.join(',');
 }
 
 function scheduleWinnerConfetti() {
@@ -3645,7 +3663,8 @@ function getBoardPlayerStats(name) {
     const won = !day.noWinner && winnerNames.includes(name);
     if (won) {
       wins += 1;
-      if (Number(day.points) === 3) exact += 1;
+      const exactGuess = day.guesses?.find(g => g.name === name);
+      if (isExactBetForDay(exactGuess, day)) exact += 1;
     }
 
     const guess = day.guesses?.find(g => g.name === name);

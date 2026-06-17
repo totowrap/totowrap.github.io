@@ -46,6 +46,20 @@
     const wrap = gameSec(day?.wrapTime, day);
     return bet === null || wrap === null ? null : Math.abs(bet - wrap);
   };
+  const betMinuteGap = (guess, day) => {
+    if (!guess?.time || !day?.wrapTime) return null;
+    const bet = gameSec(guess.time, day, guess.date || null);
+    const wrap = gameSec(day.wrapTime, day);
+    if (bet === null || wrap === null) return null;
+    const betEnd = bet + 59;
+    if (wrap >= bet && wrap <= betEnd) return 0;
+    return wrap < bet ? bet - wrap : wrap - betEnd;
+  };
+  const isExactWinner = (name, day) => {
+    if (!name || day?.noWinner) return false;
+    const guess = (day?.guesses || []).find(item => item.name === name);
+    return betMinuteGap(guess, day) === 0;
+  };
   const territoryBoundaries = day => {
     const valid = (day?.guesses || []).filter(guess => guess?.time).map(guess => ({
       name:guess.name,
@@ -153,12 +167,12 @@
         wrapTime:day.wrapTime || '—',
         dayIndex
       });
-      if (Number(day.points) === 3 && winners.size) exactDays += 1;
+      if ([...winners].some(name => isExactWinner(name, day))) exactDays += 1;
 
       stats.forEach(player => {
         if (winners.has(player.name)) {
           player.wins += 1;
-          if (Number(day.points) === 3) player.exact += 1;
+          if (isExactWinner(player.name, day)) player.exact += 1;
           player.winStreak += 1;
           player.longestWinStreak = Math.max(player.longestWinStreak, player.winStreak);
           runningScores.set(player.name, (runningScores.get(player.name) || 0) + Number(day.points || 0));
