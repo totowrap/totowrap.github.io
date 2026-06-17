@@ -1622,8 +1622,9 @@ function getCrazyDayConfig(day=S.today) {
   if (!cfg?.enabled) return null;
   const regularPoints = Number(cfg.regularPoints);
   const perfectPoints = Number(cfg.perfectPoints);
-  const penaltyPoints = Number(cfg.penaltyPoints);
-  if (![regularPoints, perfectPoints, penaltyPoints].every(Number.isFinite)) return null;
+  const penaltyAmount = Math.abs(Number(cfg.penaltyPoints));
+  if (![regularPoints, perfectPoints, penaltyAmount].every(Number.isFinite)) return null;
+  const penaltyPoints = penaltyAmount ? -penaltyAmount : 0;
   return { enabled: true, regularPoints, perfectPoints, penaltyPoints };
 }
 
@@ -3121,7 +3122,7 @@ function renderCrazyDaySetupCard(day) {
   const cfg = getCrazyDayConfig(day);
   const regular = cfg ? String(cfg.regularPoints) : '';
   const perfect = cfg ? String(cfg.perfectPoints) : '';
-  const penalty = cfg ? String(cfg.penaltyPoints) : '';
+  const penalty = cfg ? String(Math.abs(cfg.penaltyPoints)) : '';
   const statusText = cfg
     ? `Crazy Day is active: ${cfg.regularPoints > 0 ? '+' : ''}${cfg.regularPoints} regular, ${cfg.perfectPoints > 0 ? '+' : ''}${cfg.perfectPoints} perfect wrap, ${cfg.penaltyPoints} no bet/furthest from wrap.`
     : 'Tap to set special scoring for this day.';
@@ -3140,7 +3141,10 @@ function renderCrazyDaySetupCard(day) {
         <label for="crazy-perfect-points">Perfect wrap winner gets</label>
         <input type="number" id="crazy-perfect-points" value="${esc(perfect)}" placeholder="" step="1" inputmode="numeric">
         <label for="crazy-penalty-points">No bet or furthest from wrap loses</label>
-        <input type="number" id="crazy-penalty-points" value="${esc(penalty)}" placeholder="" step="1" inputmode="numeric">
+        <div class="crazy-penalty-input-wrap">
+          <span aria-hidden="true">-</span>
+          <input type="number" id="crazy-penalty-points" value="${esc(penalty)}" placeholder="" min="0" step="1" inputmode="numeric">
+        </div>
       </div>
       <div class="crazy-day-summary">
         Save Crazy Day to apply special scoring. Cancel Crazy Day removes it from this day and clears these fields.
@@ -4267,11 +4271,16 @@ function readCrazyDayInput(id) {
   return Number.isFinite(value) ? value : null;
 }
 
+function readCrazyDayPenaltyInput(id) {
+  const value = readCrazyDayInput(id);
+  return value === null ? null : -Math.abs(value);
+}
+
 async function saveCrazyDaySettings() {
   if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
   const regularPoints = readCrazyDayInput('crazy-regular-points');
   const perfectPoints = readCrazyDayInput('crazy-perfect-points');
-  const penaltyPoints = readCrazyDayInput('crazy-penalty-points');
+  const penaltyPoints = readCrazyDayPenaltyInput('crazy-penalty-points');
   if ([regularPoints, perfectPoints, penaltyPoints].some(value => value === null)) {
     toast('Enter Crazy Day points', 'err');
     return false;
