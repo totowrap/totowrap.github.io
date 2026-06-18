@@ -4688,7 +4688,10 @@ function renderHistory() {
                   <div class="badge b-prob">${prob.text}</div>
                   <div class="row-time">${esc(g.time)}</div>
                   <div class="badge ${penaltyPoints ? 'b-penalty' : 'b-out'}">${penaltyPoints ? compactSignedPoints(penaltyPoints) : '—'}</div>
-                ` : `<div class="badge ${penaltyPoints ? 'b-penalty' : 'b-missing'}">${penaltyPoints ? compactSignedPoints(penaltyPoints) : 'This tuna forgot to bet today'}</div>`}
+                ` : penaltyPoints ? `
+                  <div class="badge b-history-forgot">Forgot to bet</div>
+                  <div class="badge b-penalty">${compactSignedPoints(penaltyPoints)}</div>
+                ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
               </div>`;
             }).join('')}
           </div>
@@ -4739,7 +4742,10 @@ function renderHistory() {
               <div class="badge ${isWinner ? 'b-win' : (penaltyPoints ? 'b-penalty' : 'b-out')}">
                 ${isWinner ? `+${d.points}` : (penaltyPoints ? compactSignedPoints(penaltyPoints) : '—')}
               </div>
-            ` : `<div class="badge ${penaltyPoints ? 'b-penalty' : 'b-missing'}">${penaltyPoints ? compactSignedPoints(penaltyPoints) : 'This tuna forgot to bet today'}</div>`}
+            ` : penaltyPoints ? `
+              <div class="badge b-history-forgot">Forgot to bet</div>
+              <div class="badge b-penalty">${compactSignedPoints(penaltyPoints)}</div>
+            ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
           </div>`;
         }).join('')}
       </div>
