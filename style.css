@@ -353,7 +353,7 @@ body::before {
 .b-streak { display: inline-flex; align-items: center; justify-content: center; background: rgba(var(--yellow-rgb), .12); color: var(--accent); border: none; font-weight: bold; font-size: 0.52rem; letter-spacing: 0.02em; transform: translateY(-2px); }
 .b-missing { background: rgba(var(--neutral-rgb), .1); color: var(--dim); font-size: .56rem; font-style: italic; }
 .b-missing-penalty { color: var(--red); }
-.b-history-forgot { min-width: 92px; text-align: center; background: rgba(var(--neutral-rgb), .1); color: var(--red); font-size: .50rem; }
+.b-history-forgot { min-width: 0; text-align: center; background: rgba(var(--neutral-rgb), .1); color: var(--dim); font-size: .56rem; font-style: italic; }
 .row:not(.preview-row) > .badge:not(.b-prob) { transform: translateY(-2px); }
 .missing-bet-action { border: 0; font-family: 'Alte Haas Grotesk', sans-serif; cursor: pointer; }
 .current-bet-edit-action { border: 0; appearance: none; -webkit-appearance: none; font-family: 'Alte Haas Grotesk', sans-serif; cursor: pointer; }
