@@ -407,7 +407,7 @@
       </div>`),
       screen('A very specific statistic','Enemies to lovers','',`<div class="final-recap-showcase-grid final-recap-single-showcase final-recap-cog-scene">
         <div class="final-recap-cog-stack" aria-hidden="true">
-          ${(data.cogImages || []).map((src,index) => `<img src="${esc(src)}" alt="" style="--cog-index:${index};--cog-rotate:${[-7,5,-4,8,-9,3,6,-5,10,-2,4,-8,7,-3][index % 14]}deg;--cog-x:${[-18,14,2,-9,20,-2,-15,10,5,-20,16,-4,12,-12][index % 14]}px;--cog-y:${[0,8,-3,12,5,16,2,11,-5,14,6,18,1,9][index % 14]}px;">`).join('')}
+          ${(data.cogImages || []).map((src,index,images) => `<img src="${esc(src)}" alt="" style="--cog-index:${index};--cog-scale:${index === images.length - 1 ? '1.55' : '1'};--cog-rotate:${[-7,5,-4,8,-9,3,6,-5,10,-2,4,-8,7,-3][index % 14]}deg;--cog-x:${[-18,14,2,-9,20,-2,-15,10,5,-20,16,-4,12,-12][index % 14]}px;--cog-y:${[0,8,-3,12,5,16,2,11,-5,14,6,18,1,9][index % 14]}px;">`).join('')}
         </div>
         <div class="final-recap-specific-stat" data-cog-stat-card>
           <span>Word of encouragement</span>
@@ -641,7 +641,7 @@
       const dot = event.target.closest('[data-recap-screen]');
       if (dot) {
         const requestedScreen = Number(dot.dataset.recapScreen);
-        if (requestedScreen > screenIndex && shouldInterceptCogScreen()) return playCogStack();
+        if (requestedScreen !== screenIndex && shouldInterceptCogScreen()) return playCogStack();
         return updateScreen(requestedScreen);
       }
       if (event.target.closest('[data-recap-replay]')) return updateScreen(0);
@@ -654,7 +654,7 @@
       const end = event.changedTouches[0]?.clientX ?? swipeStartX;
       const delta = end - swipeStartX;
       swipeStartX = null;
-      if (delta < -45 && shouldInterceptCogScreen()) return playCogStack();
+      if (Math.abs(delta) > 45 && shouldInterceptCogScreen()) return playCogStack();
       if (Math.abs(delta) > 45) updateScreen(screenIndex + (delta < 0 ? 1 : -1));
     }, {passive:true});
   }
