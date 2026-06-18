@@ -1705,9 +1705,7 @@ function calcWinner(guesses, wrapHMSInput, day=S.today) {
 }
 
 function dayPenaltyMap(day) {
-  const penalties = Array.isArray(day?.penalties) && day.penalties.length
-    ? day.penalties
-    : (day?.wrapTime ? calcWinner(day.guesses || [], day.wrapTime, day).penalties || [] : []);
+  const penalties = dayPenalties(day);
   const map = new Map();
   penalties.forEach(penalty => {
     const key = nameKey(penalty?.name);
@@ -1718,9 +1716,36 @@ function dayPenaltyMap(day) {
   return map;
 }
 
+function dayPenaltyDetailsMap(day) {
+  const map = new Map();
+  dayPenalties(day).forEach(penalty => {
+    const key = nameKey(penalty?.name);
+    const points = Number(penalty?.points) || 0;
+    if (!key || !points) return;
+    const prev = map.get(key);
+    map.set(key, {
+      points: (prev?.points || 0) + points,
+      reason: penalty?.reason || prev?.reason || ''
+    });
+  });
+  return map;
+}
+
+function dayPenalties(day) {
+  return Array.isArray(day?.penalties) && day.penalties.length
+    ? day.penalties
+    : (day?.wrapTime ? calcWinner(day.guesses || [], day.wrapTime, day).penalties || [] : []);
+}
+
 function compactSignedPoints(value) {
   const points = Number(value) || 0;
   return `${points > 0 ? '+' : ''}${points}`;
+}
+
+function todayPenaltyStatus(penalty) {
+  if (!penalty?.points) return null;
+  if (penalty.reason === 'furthest-from-wrap') return { cls: 'b-penalty', text: 'FAR' };
+  return { cls: 'b-penalty', text: compactSignedPoints(penalty.points) };
 }
 
 function boundaryRange(s) {
@@ -2374,6 +2399,7 @@ function renderCrazyDayIndicator(day=S.today) {
 
 function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
+  const penaltiesByPlayer = dayPenaltyDetailsMap(t);
   const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
   const winnerCloseTag = canStartNextDay ? 'button' : 'div';
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p next-day-btn" id="new-day-btn">Start Next Day</button>' : '';
@@ -2394,6 +2420,8 @@ function renderCompletedToday(t, canStartNextDay=false) {
         <div class="today-scroll-list">
         ${sg.map(g => {
           const st = getPreviousStreak(g.name);
+          const penalty = penaltiesByPlayer.get(nameKey(g.name));
+          const penaltyStatus = todayPenaltyStatus(penalty);
           return `
           <div class="row">
             <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
@@ -2402,8 +2430,8 @@ function renderCompletedToday(t, canStartNextDay=false) {
             </div>
             ${g.time ? `
 	              <div class="row-time">${esc(g.time)}</div>
-	              <div class="badge b-out">OUT</div>
-            ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+	              <div class="badge ${penaltyStatus ? penaltyStatus.cls : 'b-out'}">${penaltyStatus ? penaltyStatus.text : 'OUT'}</div>
+            ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This tuna forgot to bet today</div>`}
           </div>`;
         }).join('')}
         </div>
@@ -2428,6 +2456,8 @@ function renderCompletedToday(t, canStartNextDay=false) {
     ${sg.map(g => {
       const st = getPreviousStreak(g.name);
       const isWinner = todayWinnerNames.includes(g.name);
+      const penalty = penaltiesByPlayer.get(nameKey(g.name));
+      const penaltyStatus = todayPenaltyStatus(penalty);
       const displayEmoji = isWinner ? '🦈' : (!g.time ? '🎣' : '🍣');
       const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
 
@@ -2443,12 +2473,12 @@ function renderCompletedToday(t, canStartNextDay=false) {
             ${prob.text}
           </div>
           
-	          <div class="row-time">${esc(g.time)}</div>
+          <div class="row-time">${esc(g.time)}</div>
           
-          <div class="badge ${isWinner ? 'b-win' : 'b-out'}">
-            ${isWinner ? 'WIN' : 'OUT'}
+          <div class="badge ${isWinner ? 'b-win' : (penaltyStatus ? penaltyStatus.cls : 'b-out')}">
+            ${isWinner ? 'WIN' : (penaltyStatus ? penaltyStatus.text : 'OUT')}
           </div>
-        ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+        ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This tuna forgot to bet today</div>`}
       </div>`;
     }).join('')}
     </div>
