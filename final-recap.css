@@ -792,9 +792,9 @@
   background:var(--dim);
   opacity:.42;
   cursor:pointer;
-  transition:width .25s ease,opacity .25s ease,background .25s ease;
+  transition:opacity .25s ease,background .25s ease;
 }
-.final-recap-dot.on { width:18px; opacity:1; background:var(--accent); }
+.final-recap-dot.on { opacity:1; background:var(--accent); }
 .final-recap-bottom-logo {
   position:absolute;
   z-index:5;
