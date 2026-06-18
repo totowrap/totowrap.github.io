@@ -345,10 +345,11 @@ body::before {
 .row-boundary { color: var(--dim); font-size: .62rem; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .row-time { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .9rem; color: var(--accent); min-width: auto; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .badge { font-family: 'Alte Haas Grotesk', sans-serif; font-size: .50rem; letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; border-radius: 20px; white-space: nowrap; font-weight: bold; }
-.b-in, .b-out, .b-win { min-width: 36px; text-align: center; }
+.b-in, .b-out, .b-win, .b-penalty { min-width: 36px; text-align: center; }
 .b-in { background: rgba(var(--green-rgb), .12); color: var(--green); }
 .b-out   { background: rgba(var(--red-rgb), .12); color: var(--red); }
-.b-win   { background: rgba(var(--green-rgb), .12); color: var(--green); }
+.b-win   { background: rgba(var(--green-rgb), .12); color: var(--green); font-size: .50rem; }
+.b-penalty { background: rgba(var(--red-rgb), .12); color: var(--red); font-size: .50rem; }
 .b-streak { display: inline-flex; align-items: center; justify-content: center; background: rgba(var(--yellow-rgb), .12); color: var(--accent); border: none; font-weight: bold; font-size: 0.52rem; letter-spacing: 0.02em; transform: translateY(-2px); }
 .b-missing { background: rgba(var(--neutral-rgb), .1); color: var(--dim); font-size: .56rem; font-style: italic; }
 .row:not(.preview-row) > .badge:not(.b-prob) { transform: translateY(-2px); }
@@ -776,7 +777,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .hist-bet { flex: 0 0 auto; white-space: nowrap; line-height: 1; }
 .hist-meta { display: grid; grid-template-columns: 58px 32px 8px; align-items: baseline; gap: 5px; font-size: 0.8rem; white-space: nowrap; }
 .hist-wrap-time { grid-column: 1; display: inline-flex; align-items: baseline; justify-content: flex-start; font-variant-numeric: tabular-nums; }
-.hist-points { grid-column: 2; display: inline-flex; align-items: baseline; justify-content: flex-start; font-size: 0.7rem; text-align: left; font-variant-numeric: tabular-nums; }
+.hist-points { grid-column: 2; display: inline-flex; align-items: baseline; justify-content: flex-start; font-size: .50rem; text-align: left; font-variant-numeric: tabular-nums; }
 .hist-arrow { grid-column: 3; display: inline-flex; align-items: baseline; justify-content: center; font-size: 0.6rem; transition: transform 0.3s ease; color: var(--accent); opacity: 0.7; }
 .hist-row.open .hist-arrow { transform: rotate(90deg); }
 .hist-details-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: 12px 0 8px 0; border-bottom: 1px solid rgba(var(--yellow-rgb), 0.1); padding-bottom: 4px; }

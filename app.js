@@ -1704,6 +1704,25 @@ function calcWinner(guesses, wrapHMSInput, day=S.today) {
   };
 }
 
+function dayPenaltyMap(day) {
+  const penalties = Array.isArray(day?.penalties) && day.penalties.length
+    ? day.penalties
+    : (day?.wrapTime ? calcWinner(day.guesses || [], day.wrapTime, day).penalties || [] : []);
+  const map = new Map();
+  penalties.forEach(penalty => {
+    const key = nameKey(penalty?.name);
+    const points = Number(penalty?.points) || 0;
+    if (!key || !points) return;
+    map.set(key, (map.get(key) || 0) + points);
+  });
+  return map;
+}
+
+function compactSignedPoints(value) {
+  const points = Number(value) || 0;
+  return `${points > 0 ? '+' : ''}${points}`;
+}
+
 function boundaryRange(s) {
   return `${s.startStr} → ${s.endStr}`;
 }
@@ -4600,6 +4619,7 @@ function renderHistory() {
     const historyDate = esc(d.date);
     const historyDetailsLabel = `${esc(displayDate(d.date) || d.date)} Leaderboard`;
     const dayLabel = displayDayLabel(num);
+    const penaltiesByPlayer = dayPenaltyMap(d);
     const historyDayTag = canManage
       ? `<button class="hist-day-tag hist-day-edit" type="button" title="Edit ${dayLabel}" aria-label="Edit ${dayLabel}" data-history-edit="${historyDate}">${dayLabel}</button>`
       : `<span class="hist-day-tag">${dayLabel}</span>`;
@@ -4627,6 +4647,7 @@ function renderHistory() {
             ${sg.map(g => {
               const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
               const prob  = g.time ? getWinProbability(g.name, d.guesses, d) : null;
+              const penaltyPoints = penaltiesByPlayer.get(nameKey(g.name)) || 0;
               return `
               <div class="row${slice ? ' row-with-boundary' : ''}">
                 <div class="row-name row-name-stack">
@@ -4636,8 +4657,8 @@ function renderHistory() {
                 ${g.time ? `
                   <div class="badge b-prob">${prob.text}</div>
                   <div class="row-time">${esc(g.time)}</div>
-                  <div class="badge b-out">—</div>
-                ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+                  <div class="badge ${penaltyPoints ? 'b-penalty' : 'b-out'}">${penaltyPoints ? compactSignedPoints(penaltyPoints) : '—'}</div>
+                ` : `<div class="badge ${penaltyPoints ? 'b-penalty' : 'b-missing'}">${penaltyPoints ? compactSignedPoints(penaltyPoints) : 'This tuna forgot to bet today'}</div>`}
               </div>`;
             }).join('')}
           </div>
@@ -4675,6 +4696,7 @@ function renderHistory() {
           const isWinner = histNames.includes(g.name);
           const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
           const prob  = g.time ? getWinProbability(g.name, d.guesses, d) : null;
+          const penaltyPoints = penaltiesByPlayer.get(nameKey(g.name)) || 0;
           return `
           <div class="row${slice ? ' row-with-boundary' : ''}${isWinner ? ' golden-winner-row' : ''}">
             <div class="row-name row-name-stack${isWinner ? ' history-winner-name' : ''}">
@@ -4684,10 +4706,10 @@ function renderHistory() {
             ${g.time ? `
               <div class="badge b-prob">${prob.text}</div>
               <div class="row-time">${esc(g.time)}</div>
-              <div class="badge ${isWinner ? 'b-win' : 'b-out'}">
-                ${isWinner ? `+${d.points}` : '—'}
+              <div class="badge ${isWinner ? 'b-win' : (penaltyPoints ? 'b-penalty' : 'b-out')}">
+                ${isWinner ? `+${d.points}` : (penaltyPoints ? compactSignedPoints(penaltyPoints) : '—')}
               </div>
-            ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+            ` : `<div class="badge ${penaltyPoints ? 'b-penalty' : 'b-missing'}">${penaltyPoints ? compactSignedPoints(penaltyPoints) : 'This tuna forgot to bet today'}</div>`}
           </div>`;
         }).join('')}
       </div>
