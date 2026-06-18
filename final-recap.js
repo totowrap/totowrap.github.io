@@ -278,6 +278,50 @@
       <b>${esc(names)}</b>
     </div>`;
   }
+  function rankedFinalLeaderboard(data) {
+    let previousRank = 0;
+    let previousScore = null;
+    let previousWins = null;
+    return [...(data.leaderboard || [])].map((entry,index) => {
+      const score = Number(entry.score) || 0;
+      const wins = Number(entry.wins) || 0;
+      const rank = score > 0
+        ? (score === previousScore && wins === previousWins ? previousRank : index + 1)
+        : '—';
+      if (score > 0) {
+        previousRank = rank;
+        previousScore = score;
+        previousWins = wins;
+      }
+      return {...entry,score,wins,rank};
+    });
+  }
+  function finalStandingsBoard(data) {
+    const entries = rankedFinalLeaderboard(data);
+    const podium = entries.slice(0,3);
+    const scoring = entries.slice(3).filter(entry => entry.score > 0);
+    const zeroNames = entries.filter(entry => entry.score <= 0).map(entry => entry.name);
+    const leftCount = Math.ceil(scoring.length / 2);
+    const columns = [scoring.slice(0,leftCount), scoring.slice(leftCount)];
+    const podiumRow = entry => `<div class="final-recap-shirt-podium-row" data-rank="${esc(entry.rank)}">
+      <span class="final-recap-shirt-rank">${esc(entry.rank)}</span>
+      <strong>${esc(entry.name)}</strong>
+      <span>${entry.wins} ${word(entry.wins,'game','games')} won</span>
+      <b>${entry.score} ${word(entry.score,'pt','pts')}</b>
+    </div>`;
+    const compactRow = entry => `<div class="final-recap-shirt-row">
+      <span class="final-recap-shirt-rank">${esc(entry.rank)}</span>
+      <strong>${esc(entry.name)}</strong>
+      <span>${entry.wins} ${word(entry.wins,'game','games')} won</span>
+      <b>${entry.score} ${word(entry.score,'pt','pts')}</b>
+    </div>`;
+    return `<div class="final-recap-shirt-board">
+      <div class="final-recap-shirt-podium">${podium.map(podiumRow).join('')}</div>
+      <div class="final-recap-shirt-columns">${columns.map(column => `<div>${column.map(compactRow).join('')}</div>`).join('')}</div>
+      ${zeroNames.length ? `<div class="final-recap-shirt-zero">${zeroNames.map(esc).join(' - ')}</div>` : ''}
+      <div class="final-recap-shirt-slogan">La ludopatia è un problema solo se perdi</div>
+    </div>`;
+  }
   function furthestComparisonCard(noWinner, winningDay) {
     const row = (label, item) => `<div class="final-recap-furthest-row">
       <span>${esc(label)}</span>
@@ -419,7 +463,7 @@
       </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('TonnoWrap','That was a real<br>mattanza!','The final standings are ready to save, share, and remember.',`<div class="final-recap-stat-grid">${data.leaderboard.slice(0,3).map((item,index) => stat(`${index+1}. ${item.name}`,`${item.score} ${word(item.score,'point','points')}`)).join('')}</div><button class="final-recap-replay" type="button" data-recap-replay>Replay recap</button>`)
+      screen('TonnoWrap','Final standings','The final board, ready for the back of the shirt.',finalStandingsBoard(data),'final-recap-shirt-screen')
     ];
   }
 
@@ -531,6 +575,7 @@
         .final-recap-showcase-card,
         .final-recap-reaction-card,
         .final-recap-specific-stat,
+        .final-recap-shirt-board,
         .final-recap-podium-place,
         .final-recap-replay
       `);
@@ -554,6 +599,14 @@
   }
   function currentScreen() {
     return recap?.querySelectorAll('.final-recap-screen')?.[screenIndex] || null;
+  }
+  function isLastScreen() {
+    const screens = recap?.querySelectorAll('.final-recap-screen');
+    return Boolean(screens?.length && screenIndex === screens.length - 1);
+  }
+  function advanceRecap() {
+    if (isLastScreen()) return closeRecap();
+    updateScreen(screenIndex + 1);
   }
   function shouldInterceptCogScreen() {
     const screen = currentScreen();
@@ -646,7 +699,7 @@
       }
       if (event.target.closest('[data-recap-replay]')) return updateScreen(0);
       if (shouldInterceptCogScreen()) return playCogStack();
-      updateScreen(screenIndex + 1);
+      advanceRecap();
     });
     recap.addEventListener('touchstart', event => { swipeStartX = event.touches[0]?.clientX ?? null; }, {passive:true});
     recap.addEventListener('touchend', event => {
@@ -655,7 +708,8 @@
       const delta = end - swipeStartX;
       swipeStartX = null;
       if (Math.abs(delta) > 45 && shouldInterceptCogScreen()) return playCogStack();
-      if (Math.abs(delta) > 45) updateScreen(screenIndex + (delta < 0 ? 1 : -1));
+      if (delta < -45) return advanceRecap();
+      if (delta > 45) updateScreen(screenIndex - 1);
     }, {passive:true});
   }
   function showEntry() {
@@ -682,7 +736,7 @@
     if (!recap) return;
     if (event.key === 'ArrowRight') {
       if (shouldInterceptCogScreen()) return playCogStack();
-      updateScreen(screenIndex + 1);
+      advanceRecap();
     }
     if (event.key === 'ArrowLeft') updateScreen(screenIndex - 1);
   });
