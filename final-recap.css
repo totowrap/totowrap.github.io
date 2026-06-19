@@ -669,6 +669,9 @@
 [data-place="2"] .final-recap-place-num { color:#c5ccd3; }
 [data-place="3"] .final-recap-place-num { color:#b87955; }
 .final-recap-place-name { margin-top:13px; color:var(--text); font-size:clamp(.76rem,3.7vw,1.2rem); font-weight:bold; overflow-wrap:anywhere; }
+.final-recap-place-name span,
+.final-recap-shirt-podium-row strong span,
+.final-recap-shirt-row strong span { display:block; }
 .final-recap-place-points { margin-top:6px; color:var(--accent); font-size:.68rem; }
 .final-recap-shirt-screen .final-recap-title { font-size:clamp(1.55rem,7vw,3.4rem); }
 .final-recap-shirt-screen .final-recap-copy { margin-top:10px; }
@@ -711,10 +714,8 @@
 .final-recap-shirt-rank { text-align:center; font-size:.8rem; }
 .final-recap-shirt-podium-row strong {
   min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
   font-size:1.02rem;
+  line-height:1.08;
   text-align:left;
 }
 .final-recap-shirt-podium-row span:not(.final-recap-shirt-rank) {
@@ -741,11 +742,9 @@
 }
 .final-recap-shirt-row strong {
   min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
   color:var(--dim);
   font-size:.58rem;
+  line-height:1.08;
   text-align:left;
 }
 .final-recap-shirt-row span:not(.final-recap-shirt-rank) {

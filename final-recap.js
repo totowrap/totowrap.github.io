@@ -302,24 +302,42 @@
       return {...entry,score,wins,rank};
     });
   }
+  function groupedFinalLeaderboard(data) {
+    return rankedFinalLeaderboard(data).reduce((groups,entry) => {
+      if (entry.score <= 0) return groups;
+      const previous = groups[groups.length - 1];
+      if (previous && previous.rank === entry.rank) {
+        previous.players.push(entry);
+      } else {
+        groups.push({ rank:entry.rank, score:entry.score, wins:entry.wins, players:[entry] });
+      }
+      return groups;
+    }, []);
+  }
+  function rankedGroupNames(group) {
+    return group?.players?.length
+      ? group.players.map(player => `<span>${esc(player.name)}</span>`).join('')
+      : '<span>—</span>';
+  }
   function finalStandingsBoard(data) {
     const entries = rankedFinalLeaderboard(data);
-    const podium = entries.slice(0,3);
-    const scoring = entries.slice(3).filter(entry => entry.score > 0);
+    const groups = groupedFinalLeaderboard(data);
+    const podium = groups.filter(group => group.rank <= 3);
+    const scoring = groups.filter(group => group.rank > 3);
     const zeroNames = entries.filter(entry => entry.score <= 0).map(entry => entry.name);
     const leftCount = Math.ceil(scoring.length / 2);
     const columns = [scoring.slice(0,leftCount), scoring.slice(leftCount)];
-    const podiumRow = entry => `<div class="final-recap-shirt-podium-row" data-rank="${esc(entry.rank)}">
-      <span class="final-recap-shirt-rank">${esc(entry.rank)}</span>
-      <strong>${esc(entry.name)}</strong>
-      <span>${entry.wins} ${word(entry.wins,'game','games')} won</span>
-      <b>${entry.score} ${word(entry.score,'pt','pts')}</b>
+    const podiumRow = group => `<div class="final-recap-shirt-podium-row" data-rank="${esc(group.rank)}">
+      <span class="final-recap-shirt-rank">${esc(group.rank)}</span>
+      <strong>${rankedGroupNames(group)}</strong>
+      <span>${group.wins} ${word(group.wins,'game','games')} won</span>
+      <b>${group.score} ${word(group.score,'pt','pts')}</b>
     </div>`;
-    const compactRow = entry => `<div class="final-recap-shirt-row">
-      <span class="final-recap-shirt-rank">${esc(entry.rank)}</span>
-      <strong>${esc(entry.name)}</strong>
-      <span>${entry.wins} ${word(entry.wins,'game','games')} won</span>
-      <b>${entry.score} ${word(entry.score,'pt','pts')}</b>
+    const compactRow = group => `<div class="final-recap-shirt-row">
+      <span class="final-recap-shirt-rank">${esc(group.rank)}</span>
+      <strong>${rankedGroupNames(group)}</strong>
+      <span>${group.wins} ${word(group.wins,'game','games')} won</span>
+      <b>${group.score} ${word(group.score,'pt','pts')}</b>
     </div>`;
     return `<div class="final-recap-shirt-board">
       <div class="final-recap-shirt-podium">${podium.map(podiumRow).join('')}</div>
@@ -412,14 +430,14 @@
     const projectDayCopy = `${projectMainDays} project ${word(projectMainDays,'day','days')} + 1 preshoot day`;
     const projectDayTitle = `<span class="final-recap-number">${projectMainDays}</span> + 1 preshoot day`;
     const players = data.list.length;
-    const podium = data.leaderboard.slice(0,3);
-    const podiumOrder = [podium[1],podium[0],podium[2]];
-    const podiumHtml = `<div class="final-recap-podium">${podiumOrder.map((player,index) => {
+    const podiumByRank = new Map(groupedFinalLeaderboard(data).filter(group => group.rank <= 3).map(group => [group.rank,group]));
+    const podiumOrder = [podiumByRank.get(2),podiumByRank.get(1),podiumByRank.get(3)];
+    const podiumHtml = `<div class="final-recap-podium">${podiumOrder.map((group,index) => {
       const place = [2,1,3][index];
       return `<div class="final-recap-podium-place" data-place="${place}">
         <span class="final-recap-place-num">${place}</span>
-        <strong class="final-recap-place-name">${esc(player?.name || '—')}</strong>
-        <span class="final-recap-place-points">${player ? `${player.score} ${word(player.score,'pt','pts')} · ${player.wins} ${word(player.wins,'win','wins')}` : '—'}</span>
+        <strong class="final-recap-place-name">${rankedGroupNames(group)}</strong>
+        <span class="final-recap-place-points">${group ? `${group.score} ${word(group.score,'pt','pts')} · ${group.wins} ${word(group.wins,'win','wins')}` : '—'}</span>
       </div>`;
     }).join('')}</div>`;
     const accuracyCopy = data.mostAccurate
