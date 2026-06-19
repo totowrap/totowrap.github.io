@@ -63,6 +63,7 @@ let _territoryRuleMigrationPending = false;
 let _territoryRuleMigrationSaving = false;
 let _historyRowScrollAnimation = null;
 let _crazyDayPanelOpen = false;
+let _shareResultInfo = null;
 const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
@@ -592,6 +593,15 @@ document.addEventListener('click', e => {
   const shareResultBtn = e.target.closest?.('[data-share-result]');
   if (shareResultBtn) {
     openShareResult();
+    return;
+  }
+
+  const historyShareResultBtn = e.target.closest?.('[data-history-share-result]');
+  if (historyShareResultBtn) {
+    e.stopPropagation();
+    const historyIndex = Number(historyShareResultBtn.dataset.historyShareResult);
+    const day = getHistoryEntries()[historyIndex];
+    if (day) openShareResult(day, historyIndex + 1);
     return;
   }
 
@@ -2487,7 +2497,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
   </div>`;
 }
 
-function getShareResultInfo(day) {
+function getShareResultInfo(day, dayNumber=null) {
   const winnerNames = day?.winners ? day.winners.map(w => w.name).filter(Boolean) : (day?.winner ? [day.winner] : []);
   const noWinner = Boolean(day?.noWinner || !winnerNames.length);
   const winnerGuess = noWinner ? null : day.guesses?.find(g => winnerNames.includes(g.name) && g.time);
@@ -2499,7 +2509,7 @@ function getShareResultInfo(day) {
     : wrapGap === 0
       ? 'Exact bet'
       : wrapGap === null ? 'Winner' : `${formatBoardGap(wrapGap)} from official wrap`;
-  const dayNum = S.days.length + (S.today ? 1 : 0);
+  const dayNum = dayNumber || (S.days.length + (S.today ? 1 : 0));
 
   return {
     noWinner,
@@ -2539,10 +2549,11 @@ function renderShareResultCard(info) {
   </article>`;
 }
 
-function openShareResult() {
-  if (!IS_ADMIN || !S.today?.wrapTime) return;
+function openShareResult(day=S.today, dayNumber=null) {
+  if (!day?.wrapTime) return;
   closeShareResult();
-  const info = getShareResultInfo(S.today);
+  const info = getShareResultInfo(day, dayNumber);
+  _shareResultInfo = info;
   const modal = document.createElement('div');
   modal.id = 'share-result-modal';
   modal.className = 'result-share-modal';
@@ -2561,6 +2572,7 @@ function openShareResult() {
 }
 
 function closeShareResult() {
+  _shareResultInfo = null;
   document.getElementById('share-result-modal')?.remove();
 }
 
@@ -2599,8 +2611,8 @@ function loadShareImage(src) {
 }
 
 async function renderShareResultBlob() {
-  if (!S.today?.wrapTime) throw new Error('No completed result');
-  const info = getShareResultInfo(S.today);
+  const info = _shareResultInfo || (S.today?.wrapTime ? getShareResultInfo(S.today) : null);
+  if (!info) throw new Error('No completed result');
   if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
   const yellow = themeVar('--accent', '#f0b428');
   const red = themeVar('--red', '#d65656');
@@ -4464,6 +4476,7 @@ function renderHistory() {
 
   const historyRows = [...all].reverse().map((d, i) => {
     const num = all.length - i;
+    const historyIndex = all.length - i - 1;
     const sg = sortedGuesses(d.guesses, d);
     const canManage = IS_ADMIN;
     const estWrapInfo = `<div class="hist-est-wrap">Estimated Wrap - <span>${esc(d.estWrap || '--:--')}</span></div>`;
@@ -4482,7 +4495,7 @@ function renderHistory() {
           <div class="hist-summary">
             <div class="hist-main-info">
               ${historyDayTag}
-              <span class="hist-title red" style="font-weight:bold">No Winner</span>
+              <button class="hist-title hist-share-trigger red" style="font-weight:bold" type="button" data-history-share-result="${historyIndex}">No Winner</button>
             </div>
             <div class="hist-meta">
               <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
@@ -4532,7 +4545,7 @@ function renderHistory() {
       <div class="hist-summary">
         <div class="hist-main-info">
           ${historyDayTag}
-          <span class="${histWinnerClass}" style="font-weight:bold">${histWinnerMarkup}</span>
+          <button class="${histWinnerClass} hist-share-trigger" style="font-weight:bold" type="button" data-history-share-result="${historyIndex}">${histWinnerMarkup}</button>
           <span class="hist-bet mono dim" style="font-size:0.75rem">(${esc(winnerBet)})</span>
         </div>
         <div class="hist-meta">
