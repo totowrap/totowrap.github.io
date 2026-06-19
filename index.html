@@ -21,7 +21,7 @@ if (/(?:^|[?&])admin(?:=|&|$)/.test(location.search)) {
 <link rel="preload" as="image" href="imgs/Edoardo.png">
 <link rel="preload" as="image" href="imgs/crazylogo.png">
 <link rel="stylesheet" href="style.css?missing-penalty-red=1">
-<link rel="stylesheet" href="final-recap.css?project-days-title=1">
+<link rel="stylesheet" href="final-recap.css?shared-standings-renderer=1">
 <meta name="apple-mobile-web-app-title" content="TotoWrap">
 </head>
 <body>
@@ -41,7 +41,8 @@ if (/(?:^|[?&])admin(?:=|&|$)/.test(location.search)) {
 <script src="boot.js?crazy-penalty=1"></script>
 <div id="app"></div>
 <div id="toast"></div>
-<script type="module" src="app.js?podium-only-grouping=1"></script>
-<script src="final-recap.js?project-days-title=1"></script>
+<script src="finalstandings-export.js?shared-renderer=1"></script>
+<script type="module" src="app.js?shared-standings-renderer=1"></script>
+<script src="final-recap.js?shared-standings-renderer=1"></script>
 </body>
 </html>
