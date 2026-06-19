@@ -100,9 +100,9 @@
 }
 .final-recap-number {
   color:var(--accent);
-  font-size:clamp(3rem,17vw,7rem);
+  font-size:inherit;
   font-weight:bold;
-  line-height:.9;
+  line-height:inherit;
 }
 .final-recap-stat-grid {
   width:min(640px,100%);
@@ -314,8 +314,10 @@
 .final-recap-lead-names { margin-top:12px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; }
 .final-recap-lead-names div { display:flex; flex-direction:column; gap:6px; }
 .final-recap-lead-names small { color:var(--dim); font-size:.5rem; letter-spacing:.08em; text-transform:uppercase; }
-.final-recap-lead-names b { color:var(--text); font-size:.9rem; }
-.final-recap-lead-names strong { color:var(--accent); font-size:1.18rem; }
+.final-recap-lead-names b,
+.final-recap-lead-names strong { font-size:1rem; line-height:1; }
+.final-recap-lead-names b { color:var(--text); }
+.final-recap-lead-names strong { color:var(--accent); }
 .final-recap-lead-names i { color:var(--accent); font-size:1rem; font-style:normal; }
 .final-recap-official-accuracy {
   width:min(620px,100%);
