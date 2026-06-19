@@ -408,6 +408,11 @@
       return groups;
     }, []);
   }
+  function rankedGroupNames(group) {
+    return group?.players?.length
+      ? group.players.map(player => `<span>${esc(player.name)}</span>`).join('')
+      : '<span>—</span>';
+  }
   function finalStandingsImageFrame() {
     return '<div class="final-recap-standings-image-frame" data-final-standings-image><span>Loading final standings...</span></div>';
   }
@@ -619,7 +624,7 @@
     const projectDays = data.days.length;
     const projectMainDays = displayedProjectTotalDays(Math.max(0,projectDays - 1));
     const projectDayCopy = `${projectMainDays} project ${word(projectMainDays,'day','days')} + 1 preshoot day`;
-    const projectDayTitle = `<span class="final-recap-number">${projectMainDays}</span> + 1 preshoot day`;
+    const projectDayTitle = `<span class="final-recap-title-line">${projectMainDays} ${word(projectMainDays,'Day','Days')}</span><span class="final-recap-title-line">1 Preshoot day</span>`;
     const players = data.list.length;
     const podiumByRank = new Map(groupedFinalLeaderboard(data).filter(group => group.rank <= 3).map(group => [group.rank,group]));
     const podiumOrder = [podiumByRank.get(2),podiumByRank.get(1),podiumByRank.get(3)];
