@@ -674,17 +674,14 @@
 .final-recap-place-name { margin-top:13px; color:var(--text); font-size:clamp(.76rem,3.7vw,1.2rem); font-weight:bold; overflow-wrap:anywhere; }
 .final-recap-place-name span { display:block; }
 .final-recap-place-points { margin-top:6px; color:var(--accent); font-size:.68rem; }
-.final-recap-shirt-screen .final-recap-kicker,
-.final-recap-shirt-screen .final-recap-title,
-.final-recap-shirt-screen .final-recap-copy { display:none; }
 .final-recap-standings-image-frame {
   width:min(76vw,480px);
   aspect-ratio:3000 / 3900;
-  max-height:calc(100vh - 214px);
+  max-height:calc(100vh - 300px);
   margin:0 auto;
   display:grid;
   place-items:center;
-  background:#000;
+  background:transparent;
   color:var(--dim);
   font-size:.62rem;
   font-weight:bold;

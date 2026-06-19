@@ -319,24 +319,24 @@
       ? group.players.map(player => `<span>${esc(player.name)}</span>`).join('')
       : '<span>—</span>';
   }
-  function finalStandingsImageFrame() {
-    return '<div class="final-recap-standings-image-frame" data-final-standings-image><span>Loading final standings...</span></div>';
+  function finalStandingsImageFrame(data) {
+    if (data.finalStandingsImageSrc) {
+      return `<div class="final-recap-standings-image-frame" data-final-standings-image><img class="final-recap-standings-image" src="${esc(data.finalStandingsImageSrc)}" alt="Final TonnoWrap standings"></div>`;
+    }
+    return '<div class="final-recap-standings-image-frame" data-final-standings-image><span>Could not create final standings image.</span></div>';
   }
-  async function renderFinalStandingsImage(data) {
-    const holder = recap?.querySelector('[data-final-standings-image]');
-    if (!holder) return;
+  async function createFinalStandingsImageSrc(data) {
     try {
       const renderer = window.TotoWrapFinalStandingsExport;
       if (!renderer?.renderDataUrl) throw new Error('Standings renderer is not available');
       const src = await renderer.renderDataUrl(rankedFinalLeaderboard(data));
       const img = new Image();
-      img.className = 'final-recap-standings-image';
-      img.alt = 'Final TonnoWrap standings';
       img.src = src;
-      holder.replaceChildren(img);
+      await img.decode?.().catch(() => {});
+      return src;
     } catch (error) {
       console.error('Final standings image failed:', error);
-      holder.textContent = 'Could not create final standings image.';
+      return '';
     }
   }
   function furthestComparisonCard(noWinner, winningDay) {
@@ -486,7 +486,7 @@
       </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('TonnoWrap','Final standings','',`${finalStandingsImageFrame()}<button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
+      screen('TonnoWrap','Final standings','',`${finalStandingsImageFrame(data)}<button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
     ];
   }
 
@@ -685,6 +685,7 @@
     const data = calculate(state);
     data.cogImages = await loadCogImages();
     data.coglioneCount = data.cogImages.length;
+    data.finalStandingsImageSrc = await createFinalStandingsImageSrc(data);
     const screens = buildScreens(data);
     recap = document.createElement('div');
     recap.className = 'final-recap';
@@ -694,7 +695,6 @@
       <img class="final-recap-bottom-logo" src="imgs/tonnowrap.png" alt="TonnoWrap">
       <div class="final-recap-progress">${screens.map((_,index) => `<button class="final-recap-dot${index===0?' on':''}" type="button" data-recap-screen="${index}" aria-label="Open recap screen ${index+1}"></button>`).join('')}</div>`;
     document.body.appendChild(recap);
-    renderFinalStandingsImage(data);
     recap.querySelectorAll('.final-recap-reaction-media').forEach(media => {
       const video = media.querySelector('video');
       const soundToggle = media.querySelector('.final-recap-sound-toggle');
