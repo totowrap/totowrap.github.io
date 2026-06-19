@@ -154,7 +154,7 @@
   .final-recap-showcase-card,
   .final-recap-reaction-card,
   .final-recap-specific-stat,
-  .final-recap-shirt-board,
+  .final-recap-standings-image-frame,
   .final-recap-podium-place,
   .final-recap-replay
 ) {
@@ -171,7 +171,7 @@
   .final-recap-showcase-card,
   .final-recap-reaction-card,
   .final-recap-specific-stat,
-  .final-recap-shirt-board,
+  .final-recap-standings-image-frame,
   .final-recap-podium-place,
   .final-recap-replay
 ) {
@@ -194,7 +194,7 @@
   .final-recap-showcase-card,
   .final-recap-reaction-card,
   .final-recap-specific-stat,
-  .final-recap-shirt-board,
+  .final-recap-standings-image-frame,
   .final-recap-podium-place,
   .final-recap-replay
 ) {
@@ -671,108 +671,29 @@
 [data-place="2"] .final-recap-place-num { color:#c5ccd3; }
 [data-place="3"] .final-recap-place-num { color:#b87955; }
 .final-recap-place-name { margin-top:13px; color:var(--text); font-size:clamp(.76rem,3.7vw,1.2rem); font-weight:bold; overflow-wrap:anywhere; }
-.final-recap-place-name span,
-.final-recap-shirt-podium-row strong span,
-.final-recap-shirt-row strong span { display:block; }
+.final-recap-place-name span { display:block; }
 .final-recap-place-points { margin-top:6px; color:var(--accent); font-size:.68rem; }
-.final-recap-shirt-screen .final-recap-title { font-size:clamp(1.55rem,7vw,3.4rem); }
-.final-recap-shirt-screen .final-recap-copy { margin-top:10px; }
-.final-recap-shirt-board {
-  width:min(760px,100%);
-  margin-top:18px;
+.final-recap-shirt-screen .final-recap-kicker,
+.final-recap-shirt-screen .final-recap-title,
+.final-recap-shirt-screen .final-recap-copy { display:none; }
+.final-recap-standings-image-frame {
+  width:min(76vw,480px);
+  aspect-ratio:3000 / 3900;
+  max-height:calc(100vh - 214px);
+  margin:0 auto;
+  display:grid;
+  place-items:center;
   color:var(--dim);
-  text-transform:uppercase;
-}
-.final-recap-shirt-podium {
-  display:grid;
-  gap:8px;
-}
-.final-recap-shirt-podium-row,
-.final-recap-shirt-row {
-  display:grid;
-  align-items:baseline;
-  font-family:'Alte Haas Grotesk',sans-serif;
-  font-weight:bold;
-  line-height:1;
-}
-.final-recap-shirt-podium-row {
-  grid-template-columns:36px minmax(0,1fr) 120px 74px;
-  gap:12px;
-  min-height:52px;
-  padding:0 16px;
-  border:1px solid rgba(255,255,255,.28);
-  border-radius:7px;
-  color:var(--bg);
-}
-.final-recap-shirt-podium-row[data-rank="1"] {
-  background:linear-gradient(90deg,#f6c85f,#d6ad45 48%,#f0b428);
-}
-.final-recap-shirt-podium-row[data-rank="2"] {
-  background:linear-gradient(90deg,#d9e0e5,#aeb8c2 48%,#c5ccd3);
-}
-.final-recap-shirt-podium-row[data-rank="3"] {
-  background:linear-gradient(90deg,#d9a06e,#b87955 48%,#c88860);
-}
-.final-recap-shirt-rank { text-align:center; font-size:.8rem; }
-.final-recap-shirt-podium-row strong {
-  min-width:0;
-  font-size:1.02rem;
-  line-height:1.08;
-  text-align:left;
-}
-.final-recap-shirt-podium-row span:not(.final-recap-shirt-rank) {
-  font-size:.48rem;
-  text-align:left;
-}
-.final-recap-shirt-podium-row b {
-  color:var(--bg);
-  font-size:.84rem;
-  text-align:right;
-  white-space:nowrap;
-}
-.final-recap-shirt-columns {
-  margin-top:20px;
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:20px;
-}
-.final-recap-shirt-row {
-  grid-template-columns:24px minmax(0,1fr) 86px 52px;
-  gap:8px;
-  min-height:34px;
-  border-bottom:1px solid rgba(var(--neutral-rgb),.25);
-}
-.final-recap-shirt-row strong {
-  min-width:0;
-  color:var(--dim);
-  font-size:.58rem;
-  line-height:1.08;
-  text-align:left;
-}
-.final-recap-shirt-row span:not(.final-recap-shirt-rank) {
-  font-size:.38rem;
-  text-align:left;
-}
-.final-recap-shirt-row b {
-  color:var(--accent);
-  font-size:.58rem;
-  text-align:right;
-  white-space:nowrap;
-}
-.final-recap-shirt-zero {
-  margin:18px auto 0;
-  max-width:92%;
-  color:rgba(var(--neutral-rgb),.72);
-  font-size:.48rem;
-  font-weight:bold;
-  line-height:1.45;
-}
-.final-recap-shirt-slogan {
-  margin-top:18px;
-  color:var(--accent);
-  font-size:.46rem;
+  font-size:.62rem;
   font-weight:bold;
   letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.final-recap-standings-image {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
 }
 .final-recap-progress {
   position:absolute;
@@ -841,20 +762,7 @@
   .final-recap-specific-stat > div { gap:14px; }
   .final-recap-specific-stat strong { font-size:3.2rem; }
   .final-recap-specific-stat b { font-size:.6rem; }
-  .final-recap-shirt-screen .final-recap-title { font-size:1.46rem; }
-  .final-recap-shirt-screen .final-recap-copy { font-size:.64rem; margin-top:8px; }
-  .final-recap-shirt-board { margin-top:12px; }
-  .final-recap-shirt-podium-row { grid-template-columns:25px minmax(0,1fr) 76px 48px; gap:7px; min-height:38px; padding:0 9px; }
-  .final-recap-shirt-podium-row strong { font-size:.72rem; }
-  .final-recap-shirt-podium-row span:not(.final-recap-shirt-rank) { font-size:.34rem; }
-  .final-recap-shirt-podium-row b { font-size:.58rem; }
-  .final-recap-shirt-columns { margin-top:13px; gap:10px; }
-  .final-recap-shirt-row { grid-template-columns:18px minmax(0,1fr) 55px 35px; gap:5px; min-height:26px; }
-  .final-recap-shirt-row strong { font-size:.43rem; }
-  .final-recap-shirt-row span:not(.final-recap-shirt-rank) { font-size:.28rem; }
-  .final-recap-shirt-row b { font-size:.43rem; }
-  .final-recap-shirt-zero { margin-top:12px; font-size:.35rem; }
-  .final-recap-shirt-slogan { margin-top:12px; font-size:.34rem; }
+  .final-recap-standings-image-frame { width:min(82vw,410px); max-height:calc(100vh - 206px); }
 }
 @media (prefers-reduced-motion:reduce) {
   .final-recap,
@@ -873,7 +781,7 @@
     .final-recap-showcase-card,
     .final-recap-reaction-card,
     .final-recap-specific-stat,
-    .final-recap-shirt-board,
+    .final-recap-standings-image-frame,
     .final-recap-podium-place,
     .final-recap-replay
   ) { opacity:1; transform:none; }
@@ -890,7 +798,7 @@
     .final-recap-showcase-card,
     .final-recap-reaction-card,
     .final-recap-specific-stat,
-    .final-recap-shirt-board,
+    .final-recap-standings-image-frame,
     .final-recap-podium-place,
     .final-recap-replay
   ) { animation:none; }
@@ -907,7 +815,7 @@ html.android-glass-fallback .final-recap :is(
   .final-recap-no-winner-day,
   .final-recap-lead-change,
   .final-recap-specific-stat,
-  .final-recap-shirt-board,
+  .final-recap-standings-image-frame,
   .final-recap-showcase-card,
   .final-recap-reaction-card,
   .final-recap-podium-place

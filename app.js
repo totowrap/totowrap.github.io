@@ -2878,7 +2878,7 @@ async function renderStandingsExportBlob() {
   const contentWidth = 2400;
   const groupedEntries = groupStandingsExportEntries(entries);
   const podium = groupedEntries.filter(entry => entry.rank <= 3);
-  const scoring = groupedEntries.filter(entry => entry.rank > 3);
+  const scoring = entries.filter(entry => entry.score > 0 && entry.rank > 3);
   const zeroNames = entries.filter(entry => entry.score <= 0).map(entry => entry.player.name.toUpperCase());
 
   const logo = await loadShareImage('imgs/tonnowrapbig.png');
@@ -2943,7 +2943,7 @@ async function renderStandingsExportBlob() {
       ctx.font = "bold 48px 'Alte Haas Grotesk', sans-serif";
       ctx.fillText(entry.rank, x + 55, rowY + rowHeight / 2);
       ctx.textAlign = 'left';
-      drawStandingsExportNames(ctx, entry.players.map(player => player.name), x + 120, rowY + rowHeight / 2, 480, 52, 28, 4);
+      drawStandingsExportNames(ctx, [entry.player.name], x + 120, rowY + rowHeight / 2, 480, 52, 28, 4);
       ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
       ctx.fillText(`${entry.wins} ${countWord(entry.wins, 'GAME', 'GAMES')} WON`, x + 660, rowY + rowHeight / 2);
       ctx.fillStyle = yellow;
