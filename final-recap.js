@@ -25,6 +25,12 @@
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
   }[char]));
   const word = (value, singular, plural) => Number(value) === 1 ? singular : plural;
+  const nameList = names => {
+    const list = (names || []).filter(Boolean).map(esc);
+    if (list.length <= 1) return list[0] || '';
+    if (list.length === 2) return `${list[0]} and ${list[1]}`;
+    return `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
+  };
   const clockSec = value => {
     const parts = String(value || '').split(':').map(Number);
     if (parts.length < 2 || parts.some(Number.isNaN)) return null;
@@ -422,10 +428,16 @@
     const leastAccuracyCopy = data.leastAccurate
       ? `${esc(data.leastAccurate.name)} finished an average of ${esc(compactTime(data.leastAccurate.avgGap))} from the official wrap across ${data.leastAccurate.bets} ${word(data.leastAccurate.bets,'bet','bets')}.`
       : 'There is not enough completed data to calculate accuracy yet.';
-    const exactCards = data.exactPlayers.length
+    const exactGroups = data.exactPlayers.reduce((groups,item) => {
+      const group = groups.find(entry => entry.exact === item.exact);
+      if (group) group.names.push(item.name);
+      else groups.push({ exact:item.exact, names:[item.name] });
+      return groups;
+    }, []);
+    const exactCards = exactGroups.length
       ? `<div class="final-recap-exact-stage">
-          <div class="final-recap-exact-winner"><span>Most exact bets</span><strong>${esc(data.exactPlayers[0].name)}</strong><b>${data.exactPlayers[0].exact} exact ${word(data.exactPlayers[0].exact,'day','days')}</b></div>
-          ${data.exactPlayers.length > 1 ? `<div class="final-recap-exact-others">${data.exactPlayers.slice(1).map(item => `<div><strong>${esc(item.name)}</strong><span>${item.exact} exact ${word(item.exact,'day','days')}</span></div>`).join('')}</div>` : ''}
+          <div class="final-recap-exact-winner"><span>Most exact bets</span><strong>${nameList(exactGroups[0].names)}</strong><b>${exactGroups[0].exact} exact ${word(exactGroups[0].exact,'day','days')}</b></div>
+          ${exactGroups.length > 1 ? `<div class="final-recap-exact-others">${exactGroups.slice(1).map(item => `<div><strong>${nameList(item.names)}</strong><span>${item.exact} exact ${word(item.exact,'day','days')}</span></div>`).join('')}</div>` : ''}
         </div>`
       : '<div class="final-recap-empty">Nobody landed an exact bet.</div>';
     return [
