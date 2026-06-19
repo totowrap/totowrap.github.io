@@ -493,7 +493,7 @@
       </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('TonnoWrap','Final standings','',finalStandingsBoard(data),'final-recap-shirt-screen')
+      screen('TonnoWrap','Final standings','',`${finalStandingsBoard(data)}<button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
     ];
   }
 
@@ -585,9 +585,25 @@
   function updateScreen(next) {
     if (!recap) return;
     const screens = recap.querySelectorAll('.final-recap-screen');
-    screenIndex = Math.max(0, Math.min(next, screens.length - 1));
+    const previousScreen = screens[screenIndex] || null;
+    const nextIndex = Math.max(0, Math.min(next, screens.length - 1));
+    screenIndex = nextIndex;
+    const nextScreen = screens[screenIndex] || null;
     recap.querySelector('.final-recap-track').style.transform = `translateX(-${screenIndex * 100}%)`;
-    screens.forEach(screen => screen.classList.remove('is-active'));
+    screens.forEach(screen => {
+      if (screen !== previousScreen && screen !== nextScreen) screen.classList.remove('is-active','is-leaving');
+    });
+    if (previousScreen && previousScreen !== nextScreen) {
+      previousScreen.classList.add('is-leaving');
+      clearTimeout(previousScreen._recapLeavingTimer);
+      previousScreen._recapLeavingTimer = setTimeout(() => {
+        previousScreen.classList.remove('is-active','is-leaving');
+      }, 680);
+    }
+    if (nextScreen) {
+      clearTimeout(nextScreen._recapLeavingTimer);
+      nextScreen.classList.remove('is-leaving');
+    }
     requestAnimationFrame(() => {
       const screen = screens[screenIndex];
       const title = screen?.querySelector('.final-recap-title');

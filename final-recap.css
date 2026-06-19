@@ -141,7 +141,7 @@
   border-color:rgba(var(--yellow-rgb),.5);
   background:linear-gradient(135deg,rgba(var(--yellow-rgb),.18),rgba(38,55,89,.58));
 }
-.final-recap-screen:not(.is-active) :is(
+.final-recap-screen:not(.is-active):not(.is-leaving) :is(
   .final-recap-kicker,
   .final-recap-copy,
   .final-recap-official-accuracy,
@@ -160,7 +160,7 @@
 ) {
   opacity:0;
 }
-.final-recap-screen:not(.is-active) :is(
+.final-recap-screen:not(.is-active):not(.is-leaving) :is(
   .final-recap-official-accuracy,
   .final-recap-stat,
   .final-recap-exact-winner,
@@ -860,7 +860,7 @@
   .final-recap,
   .final-recap-track,
   .final-recap-dot { transition:none; }
-  .final-recap-screen:not(.is-active) :is(
+  .final-recap-screen:not(.is-active):not(.is-leaving) :is(
     .final-recap-kicker,
     .final-recap-copy,
     .final-recap-official-accuracy,
