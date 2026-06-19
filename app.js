@@ -2344,10 +2344,10 @@ function getWrapDateISO(day) {
 }
 
 function renderFridayWrapBanner(day) {
-  const wrapDateISO = getWrapDateISO(day);
-  const wrapDate = dateFromISO(wrapDateISO);
-  const daysSinceWrap = dateDiffDays(wrapDateISO, localDateISO());
-  if (!wrapDate || wrapDate.getDay() !== 5 || daysSinceWrap < 0 || daysSinceWrap > 2) return '';
+  const startDateISO = approvalDateISO(day);
+  const startDate = dateFromISO(startDateISO);
+  const daysSinceStart = dateDiffDays(startDateISO, localDateISO());
+  if (!startDate || startDate.getDay() !== 5 || daysSinceStart < 0 || daysSinceStart > 2) return '';
   return `<div class="weekday-message-banner">Have a good weekend and get some rest, even though you spent the whole workweek betting, as usual!</div>`;
 }
 
@@ -2362,7 +2362,7 @@ function formatSignedPoints(value) {
 }
 
 function syncCrazyDayBootLoader() {
-  const cfg = getCrazyDayConfig(S.today);
+  const cfg = S.today?.wrapTime ? null : getCrazyDayConfig(S.today);
   if (!cfg) {
     try {
       localStorage.removeItem(BOOT_CRAZY_DAY_STORAGE_KEY);

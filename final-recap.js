@@ -675,8 +675,10 @@
       }));
       video.addEventListener('error', () => media.classList.remove('has-video'));
       media.addEventListener('click', event => {
+        const activeScreen = recap.querySelectorAll('.final-recap-screen')[screenIndex];
+        const isActiveMedia = media.closest('.final-recap-screen') === activeScreen;
+        if (!isActiveMedia || !media.classList.contains('has-video') || video.readyState < 2) return;
         event.stopPropagation();
-        if (!media.classList.contains('has-video')) return;
         video.muted = !video.muted;
         updateSoundToggle();
         playWhenVisible();
