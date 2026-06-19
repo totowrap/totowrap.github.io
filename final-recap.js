@@ -493,7 +493,7 @@
       </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('TonnoWrap','Final standings','The final board, ready for the back of the shirt.',finalStandingsBoard(data),'final-recap-shirt-screen')
+      screen('TonnoWrap','Final standings','',finalStandingsBoard(data),'final-recap-shirt-screen')
     ];
   }
 

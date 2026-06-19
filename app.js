@@ -2824,6 +2824,40 @@ function standingsExportLines(ctx, names, maxWidth) {
   return findBalancedLines(0, lineCount)?.lines || greedyLines;
 }
 
+function groupStandingsExportEntries(entries) {
+  return entries.reduce((groups, entry) => {
+    if (entry.score <= 0) return groups;
+    const previous = groups[groups.length - 1];
+    if (previous && previous.rank === entry.rank) {
+      previous.players.push(entry.player);
+    } else {
+      groups.push({
+        rank: entry.rank,
+        score: entry.score,
+        wins: entry.wins,
+        players: [entry.player]
+      });
+    }
+    return groups;
+  }, []);
+}
+
+function drawStandingsExportNames(ctx, names, x, y, maxWidth, maxFontSize, minFontSize, lineGap) {
+  const lines = names.map(name => String(name || '').toUpperCase()).filter(Boolean);
+  if (!lines.length) return;
+  let fontSize = maxFontSize;
+  while (fontSize > minFontSize) {
+    ctx.font = `bold ${fontSize}px 'Alte Haas Grotesk', sans-serif`;
+    const widest = Math.max(...lines.map(line => ctx.measureText(line).width));
+    if (widest <= maxWidth) break;
+    fontSize -= 2;
+  }
+  ctx.font = `bold ${fontSize}px 'Alte Haas Grotesk', sans-serif`;
+  const step = fontSize + lineGap;
+  const top = y - ((lines.length - 1) * step) / 2;
+  lines.forEach((line, index) => ctx.fillText(line, x, top + index * step));
+}
+
 async function renderStandingsExportBlob() {
   const entries = getStandingsEntries();
   if (!entries.length) throw new Error('No standings available');
@@ -2842,8 +2876,9 @@ async function renderStandingsExportBlob() {
   const navy = '#263759';
   const left = 300;
   const contentWidth = 2400;
-  const podium = entries.slice(0, 3);
-  const scoring = entries.slice(3).filter(entry => entry.score > 0);
+  const groupedEntries = groupStandingsExportEntries(entries);
+  const podium = groupedEntries.filter(entry => entry.rank <= 3);
+  const scoring = groupedEntries.filter(entry => entry.rank > 3);
   const zeroNames = entries.filter(entry => entry.score <= 0).map(entry => entry.player.name.toUpperCase());
 
   const logo = await loadShareImage('imgs/tonnowrapbig.png');
@@ -2878,7 +2913,7 @@ async function renderStandingsExportBlob() {
     ctx.textAlign = 'center';
     ctx.fillText(entry.rank, left + 140, y + podiumHeight / 2);
     ctx.textAlign = 'left';
-    drawShareText(ctx, entry.player.name.toUpperCase(), left + 280, y + podiumHeight / 2, 1080, 100, 62);
+    drawStandingsExportNames(ctx, entry.players.map(player => player.name), left + 280, y + podiumHeight / 2, 1080, 96, 48, 8);
     ctx.font = "bold 42px 'Alte Haas Grotesk', sans-serif";
     ctx.fillText(`${entry.wins} ${countWord(entry.wins, 'GAME', 'GAMES')} WON`, left + 1540, y + podiumHeight / 2);
     ctx.font = "bold 82px 'Alte Haas Grotesk', sans-serif";
@@ -2908,7 +2943,7 @@ async function renderStandingsExportBlob() {
       ctx.font = "bold 48px 'Alte Haas Grotesk', sans-serif";
       ctx.fillText(entry.rank, x + 55, rowY + rowHeight / 2);
       ctx.textAlign = 'left';
-      drawShareText(ctx, entry.player.name.toUpperCase(), x + 120, rowY + rowHeight / 2, 480, 52, 36);
+      drawStandingsExportNames(ctx, entry.players.map(player => player.name), x + 120, rowY + rowHeight / 2, 480, 52, 28, 4);
       ctx.font = "bold 27px 'Alte Haas Grotesk', sans-serif";
       ctx.fillText(`${entry.wins} ${countWord(entry.wins, 'GAME', 'GAMES')} WON`, x + 660, rowY + rowHeight / 2);
       ctx.fillStyle = yellow;
