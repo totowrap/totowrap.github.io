@@ -90,7 +90,8 @@
   text-transform:uppercase;
   transform-origin:center;
 }
-.final-recap-title-line { display:block; }
+.final-recap-title-left { display:inline-block; text-align:left; }
+.final-recap-title-line { display:block; white-space:nowrap; }
 .final-recap-title.neutral { color:var(--text); }
 .final-recap-copy {
   max-width:560px;

@@ -648,7 +648,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .board-fixed-card .board-pie-graphic { height:313px; align-items:flex-start; padding:0; pointer-events:none; }
 .board-fixed-card .board-pie-svg { filter:none; }
 .board-fixed-card .accuracy-sort { flex:0 0 auto; }
-.board-fixed-card .board-legend { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:-4px; padding-top:32px; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px, #000 calc(100% - 18px), rgba(0,0,0,.55) calc(100% - 8px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px, #000 calc(100% - 18px), rgba(0,0,0,.55) calc(100% - 8px), transparent 100%); }
+.board-fixed-card .board-legend { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:-4px; padding-top:32px; padding-bottom:30px; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px, #000 calc(100% - 18px), rgba(0,0,0,.55) calc(100% - 8px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px, #000 calc(100% - 18px), rgba(0,0,0,.55) calc(100% - 8px), transparent 100%); }
 .tab-page-frame { min-height:100%; }
 .tab-page-frame > :last-child { margin-bottom:0; }
 .pregame-boundary-frame { display:flex; flex-direction:column; }
