@@ -1105,6 +1105,15 @@ function betMinuteDistanceFromWrapSec(guess, day=S.today) {
   if (wrapSec >= betStart && wrapSec <= betEnd) return 0;
   return wrapSec < betStart ? betStart - wrapSec : wrapSec - betEnd;
 }
+function betMinuteOffsetFromWrap(guess, day=S.today) {
+  if (!guess?.time || !day?.wrapTime) return null;
+  const wrapSec = normalizeGameSec(day.wrapTime, day);
+  const betStart = guessGameSec(guess, day);
+  const betEnd = betStart + 59;
+  if (wrapSec >= betStart && wrapSec <= betEnd) return { distance: 0, direction: 'exact' };
+  if (wrapSec < betStart) return { distance: betStart - wrapSec, direction: 'after' };
+  return { distance: wrapSec - betEnd, direction: 'before' };
+}
 function betMinuteDistanceFromWrapInputSec(guess, wrapHMSInput, day=S.today) {
   if (!guess?.time || !wrapHMSInput) return null;
   const wrapSec = normalizeGameSec(wrapHMSInput, day);
@@ -2382,6 +2391,16 @@ function renderDesktopProjectProgress() {
   const displayDay = Number(displayDayNumber(internalDay));
   const current = Number.isFinite(displayDay) ? Math.max(0, Math.min(DISPLAY_TOTAL_DAYS, displayDay)) : 0;
   const pct = DISPLAY_TOTAL_DAYS ? (current / DISPLAY_TOTAL_DAYS) * 100 : 0;
+  const topEntries = getStandingsEntries()
+    .filter(entry => typeof entry.rank === 'number' && entry.rank <= 3)
+    .slice(0, 3);
+  const topRows = topEntries.length
+    ? topEntries.map(entry => `<div class="desktop-project-leader">
+        <span>${esc(entry.rank)}</span>
+        <strong>${esc(entry.player.name)}</strong>
+        <b>${esc(entry.score)} ${countWord(entry.score, 'pt', 'pts')}</b>
+      </div>`).join('')
+    : '<div class="desktop-project-leader is-empty">No points yet</div>';
   return `
   <div class="desktop-project-progress" aria-label="Project progress">
     <div class="desktop-project-progress-top">
@@ -2390,6 +2409,9 @@ function renderDesktopProjectProgress() {
     </div>
     <div class="desktop-project-progress-track" aria-hidden="true">
       <span style="width:${pct.toFixed(2)}%"></span>
+    </div>
+    <div class="desktop-project-top3" aria-label="Leaderboard top three">
+      ${topRows}
     </div>
   </div>`;
 }
@@ -2592,13 +2614,11 @@ function getShareResultInfo(day, dayNumber=null) {
   const noWinner = Boolean(day?.noWinner || !winnerNames.length);
   const winnerGuess = noWinner ? null : day.guesses?.find(g => winnerNames.includes(g.name) && g.time);
   const winnerBet = winnerGuess?.time || '--:--';
-  const wrapGap = betMinuteDistanceFromWrapSec(winnerGuess, day);
+  const wrapOffset = betMinuteOffsetFromWrap(winnerGuess, day);
   const points = Number(day?.points) || 0;
   const detail = noWinner
     ? 'Outside all bets'
-    : wrapGap === 0
-      ? 'Exact bet'
-      : wrapGap === null ? 'Winner' : `${formatBoardGap(wrapGap)} from official wrap`;
+    : formatOfficialWrapOffset(wrapOffset);
   const dayNum = dayNumber || (S.days.length + (S.today ? 1 : 0));
 
   return {
@@ -3579,6 +3599,12 @@ function formatBoardGap(totalSec) {
   return parts.join(', ') || '0 sec';
 }
 
+function formatOfficialWrapOffset(offset) {
+  if (!offset) return 'Winner';
+  if (offset.direction === 'exact' || offset.distance === 0) return 'Exact bet';
+  return `${formatBoardGap(offset.distance)} ${offset.direction} official wrap`;
+}
+
 function formatBoardCompactGap(totalSec) {
   const sec = Math.max(0, Math.round(totalSec));
   if (sec < 60) return `${sec}s`;
@@ -3645,6 +3671,8 @@ function getBoardPlayerStats(name) {
   let exact = 0;
   let forgot = 0;
   let lastGap = null;
+  let lastGuess = null;
+  let lastDay = null;
   let closestWrongGap = null;
   let closestWrongDate = null;
 
@@ -3662,7 +3690,11 @@ function getBoardPlayerStats(name) {
     if (guess?.time && day.wrapTime) {
       const gap = betMinuteDistanceFromWrapSec(guess, day);
       if (gap === null) return;
-      if (lastGap === null) lastGap = gap;
+      if (lastGap === null) {
+        lastGap = gap;
+        lastGuess = guess;
+        lastDay = day;
+      }
       const wrongGap = wrongTerritoryGap(name, day);
       if (wrongGap !== null && (closestWrongGap === null || wrongGap < closestWrongGap)) {
         closestWrongGap = wrongGap;
@@ -3678,6 +3710,8 @@ function getBoardPlayerStats(name) {
     days: completed.length,
     rate: completed.length ? `${Math.round((wins / completed.length) * 100)}%` : '0%',
     lastGap,
+    lastGuess,
+    lastDay,
     closestWrongGap,
     closestWrongDate
   };
@@ -3685,9 +3719,14 @@ function getBoardPlayerStats(name) {
 
 function renderBoardPlayerStats(name) {
   const stats = getBoardPlayerStats(name);
+  const lastOffset = stats.lastGuess && stats.lastDay ? betMinuteOffsetFromWrap(stats.lastGuess, stats.lastDay) : null;
   const wrapGap = stats.lastGap === null
     ? 'No completed bets yet'
-    : `Last bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> from official wrap`;
+    : lastOffset?.direction === 'exact' || lastOffset?.distance === 0
+      ? 'Last bet was <span class="accent">an exact bet</span>'
+      : lastOffset?.direction
+        ? `Last bet was <span class="accent">${formatBoardGap(lastOffset.distance)}</span> ${lastOffset.direction} official wrap`
+        : `Last bet was <span class="accent">${formatBoardGap(stats.lastGap)}</span> from official wrap`;
   const closestWrongValue = stats.closestWrongGap === null ? '--' : formatBoardCompactGap(stats.closestWrongGap);
   const closestWrongStat = stats.closestWrongDate
     ? `<button class="board-stat board-stat-link" type="button" data-closest-wrong-date="${esc(stats.closestWrongDate)}" title="Open history day" aria-label="Open closest wrong bet history">

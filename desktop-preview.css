@@ -143,6 +143,58 @@ body.desktop-preview-active #app > .desktop-live-bar,
     background: linear-gradient(90deg, rgba(var(--yellow-rgb), .72), rgba(var(--yellow-rgb), 1));
   }
 
+  .desktop-project-top3 {
+    display: grid;
+    gap: 7px;
+    margin-top: 12px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(205, 225, 191, .12);
+  }
+
+  .desktop-project-leader {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr) max-content;
+    align-items: baseline;
+    gap: 7px;
+    color: var(--dim);
+    font-family: 'Alte Haas Grotesk', sans-serif;
+    line-height: 1;
+  }
+
+  .desktop-project-leader span {
+    color: var(--accent);
+    font-size: .72rem;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .desktop-project-leader strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: .76rem;
+    font-weight: bold;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .desktop-project-leader b {
+    color: var(--accent);
+    font-size: .7rem;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  .desktop-project-leader.is-empty {
+    display: block;
+    color: var(--dim);
+    font-size: .72rem;
+    font-weight: bold;
+    letter-spacing: .08em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
   .desktop-rail-logo {
     display: grid;
     place-items: center;
