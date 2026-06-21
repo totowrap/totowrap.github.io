@@ -2392,12 +2392,12 @@ function renderDesktopProjectProgress() {
   const current = Number.isFinite(displayDay) ? Math.max(0, Math.min(DISPLAY_TOTAL_DAYS, displayDay)) : 0;
   const pct = DISPLAY_TOTAL_DAYS ? (current / DISPLAY_TOTAL_DAYS) * 100 : 0;
   const topEntries = getStandingsEntries()
-    .filter(entry => typeof entry.rank === 'number' && entry.rank <= 3)
-    .slice(0, 3);
+    .filter(entry => typeof entry.rank === 'number' && entry.rank <= 3);
   const topRows = topEntries.length
     ? topEntries.map(entry => `<div class="desktop-project-leader">
         <span>${esc(entry.rank)}</span>
         <strong>${esc(entry.player.name)}</strong>
+        <em>${esc(entry.wins)} ${countWord(entry.wins, 'game', 'games')} won</em>
         <b>${esc(entry.score)} ${countWord(entry.score, 'pt', 'pts')}</b>
       </div>`).join('')
     : '<div class="desktop-project-leader is-empty">No points yet</div>';

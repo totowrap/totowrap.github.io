@@ -170,15 +170,28 @@ body.desktop-preview-active #app > .desktop-live-bar,
 
   .desktop-project-leader strong {
     min-width: 0;
-    overflow: hidden;
     color: var(--text);
     font-size: .76rem;
     font-weight: bold;
-    text-overflow: ellipsis;
+    line-height: 1.08;
+  }
+
+  .desktop-project-leader em {
+    grid-column: 2;
+    color: var(--dim);
+    font-size: .5rem;
+    font-style: normal;
+    font-weight: bold;
+    letter-spacing: .04em;
+    line-height: 1;
+    text-transform: uppercase;
     white-space: nowrap;
   }
 
   .desktop-project-leader b {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: center;
     color: var(--accent);
     font-size: .7rem;
     font-weight: bold;
