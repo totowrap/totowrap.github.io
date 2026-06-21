@@ -1,6 +1,21 @@
 @media (min-width: 900px) {
+  .boot-logo-stage {
+    width: 430px;
+    height: 430px;
+  }
+
+  .boot-logo-regular {
+    width: 430px;
+    height: 430px;
+  }
+
+  .boot-logo-edoardo {
+    height: 326px;
+  }
+
   .boot-phrase {
-    width: calc(100vw - 96px);
+    top: calc(var(--main-logo-center-y) + 230px);
+    width: calc(100vw - 128px);
     max-width: none;
   }
 
