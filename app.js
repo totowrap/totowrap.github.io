@@ -550,6 +550,16 @@ document.addEventListener('click', e => {
     return;
   }
 
+  const desktopWinnerLogo = e.target.closest?.('[data-desktop-winner-logo]');
+  if (desktopWinnerLogo) {
+    desktopWinnerLogo.classList.add('is-flipped');
+    clearTimeout(desktopWinnerLogo._flipTimer);
+    desktopWinnerLogo._flipTimer = setTimeout(() => {
+      desktopWinnerLogo.classList.remove('is-flipped');
+    }, 3000);
+    return;
+  }
+
   const adminDialogCloseBtn = e.target.closest?.('[data-admin-dialog-close]');
   if (adminDialogCloseBtn || e.target.id === 'admin-dialog-modal') {
     closeAdminDialog();
@@ -742,6 +752,26 @@ function formatNames(names) {
   if (names.length === 1) return names[0];
   if (names.length === 2) return names[0] + ' and ' + names[1];
   return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+}
+
+function faceIconSrc(name) {
+  const fileBase = String(name || '').replace(/[.\s]/g, '');
+  return fileBase ? `faceicons/${encodeURIComponent(fileBase)}.png` : 'imgs/tunacan.png';
+}
+
+function latestWinnerName() {
+  const completed = [];
+  if (S.today?.wrapTime) completed.push(S.today);
+  completed.push(...(S.days || []).slice().reverse());
+  for (const day of completed) {
+    if (day?.noWinner) continue;
+    const winners = Array.isArray(day?.winners)
+      ? day.winners.map(w => typeof w === 'string' ? w : w?.name).filter(Boolean)
+      : [];
+    if (winners.length) return winners[0];
+    if (day?.winner) return day.winner;
+  }
+  return '';
 }
 
 function esc(value) {
@@ -2313,10 +2343,13 @@ function renderDesktopLiveBar() {
   const dayLabel = dayNum ? displayDayProgressHeader(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`;
   const estWrap = S.today?.estWrap || '--:--';
   const wrapStatusClass = S.today?.wrapTime ? 'off' : 'live';
+  const dayContent = IS_ADMIN
+    ? `<button class="desktop-day-trigger" type="button" data-final-recap-trigger>${dayLabel}</button>`
+    : `<strong>${dayLabel}</strong>`;
   return `
   <div class="desktop-live-bar">
     <div class="desktop-day">
-      <strong>${dayLabel}</strong>
+      ${dayContent}
     </div>
     <div class="desktop-clock">
       <span>Official Live Time</span>
@@ -2327,6 +2360,17 @@ function renderDesktopLiveBar() {
       <strong class="${wrapStatusClass}">${esc(estWrap)}</strong>
     </div>
   </div>`;
+}
+
+function renderDesktopRailLogo() {
+  const winnerName = latestWinnerName();
+  return `
+  <button class="desktop-rail-logo" type="button" data-desktop-winner-logo aria-label="Show last winner face">
+    <span class="desktop-rail-logo-inner">
+      <img class="desktop-rail-logo-face desktop-rail-logo-front" src="imgs/tunacan.png" alt="">
+      <img class="desktop-rail-logo-face desktop-rail-logo-back" src="${esc(faceIconSrc(winnerName))}" alt="" onerror="this.src='imgs/tunacan.png'">
+    </span>
+  </button>`;
 }
 
 function renderPlayerMain() {
@@ -2345,6 +2389,7 @@ function renderPlayerMain() {
   <button class="nav-btn ${_tab==='today'?'on':''}" data-tab="today">Today</button>
   <button class="nav-btn ${_tab==='board'?'on':''}" data-tab="board">Boards</button>
   <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
+  ${renderDesktopRailLogo()}
 </nav>
 ${renderDesktopLiveBar()}
 
@@ -2938,6 +2983,7 @@ function renderMain() {
   <button class="nav-btn ${_tab==='board'?'on':''}" data-tab="board">Boards</button>
   <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
   <button class="nav-btn ${_tab==='settings'?'on':''}" data-tab="settings">Settings</button>
+  ${renderDesktopRailLogo()}
 </nav>
 ${renderDesktopLiveBar()}
 
@@ -4915,8 +4961,10 @@ function bindMain() {
   });
   document.getElementById('player-version-btn')?.addEventListener('click', openPlayerVersion);
   document.getElementById('export-backup-btn')?.addEventListener('click', exportProjectBackup);
-  document.querySelector('[data-final-recap-trigger]')?.addEventListener('click', () => {
-    window.dispatchEvent(new CustomEvent('totowrap-open-final-recap'));
+  document.querySelectorAll('[data-final-recap-trigger]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('totowrap-open-final-recap'));
+    });
   });
   document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>setMainTab(btn.dataset.tab)));
   document.getElementById('new-day-btn')?.addEventListener('click', async () => {
