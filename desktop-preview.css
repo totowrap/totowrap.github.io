@@ -123,16 +123,16 @@ body.desktop-preview-active #app > .desktop-live-bar,
 
   .desktop-project-progress-face {
     display: block;
-    border: 1px solid rgba(var(--yellow-rgb), .14);
     border-radius: 7px;
-    background: linear-gradient(135deg, rgba(46, 60, 87, .46), rgba(46, 60, 87, .28));
-    -webkit-backdrop-filter: blur(12px) saturate(125%);
-    backdrop-filter: blur(12px) saturate(125%);
     backface-visibility: hidden;
   }
 
   .desktop-project-progress-front {
     padding: 12px 12px 13px;
+    border: 1px solid rgba(var(--yellow-rgb), .14);
+    background: linear-gradient(135deg, rgba(46, 60, 87, .46), rgba(46, 60, 87, .28));
+    -webkit-backdrop-filter: blur(12px) saturate(125%);
+    backdrop-filter: blur(12px) saturate(125%);
   }
 
   .desktop-project-progress-back {
