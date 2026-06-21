@@ -2377,6 +2377,23 @@ function renderDesktopRailLogo() {
   </button>`;
 }
 
+function renderDesktopProjectProgress() {
+  const internalDay = S.days.length + (S.today ? 1 : 0);
+  const displayDay = Number(displayDayNumber(internalDay));
+  const current = Number.isFinite(displayDay) ? Math.max(0, Math.min(DISPLAY_TOTAL_DAYS, displayDay)) : 0;
+  const pct = DISPLAY_TOTAL_DAYS ? (current / DISPLAY_TOTAL_DAYS) * 100 : 0;
+  return `
+  <div class="desktop-project-progress" aria-label="Project progress">
+    <div class="desktop-project-progress-top">
+      <span>Project progress</span>
+      <strong>${esc(current)}/${DISPLAY_TOTAL_DAYS}</strong>
+    </div>
+    <div class="desktop-project-progress-track" aria-hidden="true">
+      <span style="width:${pct.toFixed(2)}%"></span>
+    </div>
+  </div>`;
+}
+
 function renderPlayerMain() {
   const dayNum = S.days.length + (S.today ? 1 : 0);
   const wrapStatusClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
@@ -2393,6 +2410,7 @@ function renderPlayerMain() {
   <button class="nav-btn ${_tab==='today'?'on':''}" data-tab="today">Today</button>
   <button class="nav-btn ${_tab==='board'?'on':''}" data-tab="board">Boards</button>
   <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
+  ${renderDesktopProjectProgress()}
   ${renderDesktopRailLogo()}
 </nav>
 ${renderDesktopLiveBar()}
@@ -2987,6 +3005,7 @@ function renderMain() {
   <button class="nav-btn ${_tab==='board'?'on':''}" data-tab="board">Boards</button>
   <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
   <button class="nav-btn ${_tab==='settings'?'on':''}" data-tab="settings">Settings</button>
+  ${renderDesktopProjectProgress()}
   ${renderDesktopRailLogo()}
 </nav>
 ${renderDesktopLiveBar()}
