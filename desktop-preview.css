@@ -164,7 +164,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
   .desktop-clock span,
   .desktop-est-wrap span {
     color: var(--dim);
-    font-size: .52rem;
+    font-size: .62rem;
     letter-spacing: .15em;
     text-transform: uppercase;
   }
@@ -173,7 +173,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
   .desktop-day-trigger {
     color: var(--dim);
     font-family: 'Alte Haas Grotesk', sans-serif;
-    font-size: 1rem;
+    font-size: 1.22rem;
     font-weight: bold;
     line-height: 1;
   }
@@ -193,7 +193,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
 
   .desktop-clock strong {
     color: var(--accent);
-    font-size: 1.75rem;
+    font-size: 2.18rem;
     font-variant-numeric: tabular-nums;
     line-height: 1;
   }
@@ -201,14 +201,14 @@ body.desktop-preview-active #app > .desktop-live-bar,
   .desktop-est-wrap {
     justify-self: end;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: flex-end;
-    gap: 2px;
+    gap: 8px;
   }
 
   .desktop-est-wrap strong {
     color: var(--dim);
-    font-size: 1rem;
+    font-size: 1.22rem;
     font-variant-numeric: tabular-nums;
   }
 
