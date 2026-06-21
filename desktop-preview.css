@@ -140,17 +140,17 @@ body.desktop-preview-active #app > .desktop-live-bar,
     inset: 0;
     display: grid;
     place-items: center;
-    padding: 12px;
+    padding: 0;
     transform: rotateY(180deg);
+    overflow: hidden;
   }
 
   .desktop-project-progress-back img {
     display: block;
-    width: min(100%, 132px);
-    height: min(100%, 132px);
-    object-fit: contain;
-    border-radius: 999px;
-    filter: brightness(95%) drop-shadow(1px 0 0 var(--yellow)) drop-shadow(-1px 0 0 var(--yellow)) drop-shadow(0 1px 0 var(--yellow)) drop-shadow(0 -1px 0 var(--yellow));
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(95%);
   }
 
   .desktop-project-progress-top {
@@ -177,6 +177,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
   }
 
   .desktop-project-progress-track {
+    display: block;
     height: 6px;
     overflow: hidden;
     border: 1px solid rgba(var(--yellow-rgb), .22);
@@ -184,7 +185,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
     background: rgba(17, 27, 49, .38);
   }
 
-  .desktop-project-progress-track span {
+  .desktop-project-progress-track > span {
     display: block;
     height: 100%;
     border-radius: inherit;
