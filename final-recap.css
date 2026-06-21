@@ -676,9 +676,9 @@
 .final-recap-place-name span { display:block; }
 .final-recap-place-points { margin-top:6px; color:var(--accent); font-size:.68rem; }
 .final-recap-standings-image-frame {
-  width:min(76vw,480px);
-  aspect-ratio:3000 / 3900;
-  max-height:calc(100vh - 300px);
+  width:min(calc(100vw - 28px),680px);
+  aspect-ratio:1;
+  max-height:calc(100vh - 238px);
   margin:0 auto;
   display:grid;
   place-items:center;

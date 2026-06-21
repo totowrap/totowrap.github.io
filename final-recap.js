@@ -329,7 +329,11 @@
     try {
       const renderer = window.TotoWrapFinalStandingsExport;
       if (!renderer?.renderDataUrl) throw new Error('Standings renderer is not available');
-      const src = await renderer.renderDataUrl(rankedFinalLeaderboard(data));
+      const src = await renderer.renderDataUrl(rankedFinalLeaderboard(data), {
+        omitLogo: true,
+        canvasHeight: 3000,
+        contentTop: 190
+      });
       const img = new Image();
       img.src = src;
       await img.decode?.().catch(() => {});
@@ -410,7 +414,7 @@
   }
   function screen(kicker, title, copy='', content='', className='') {
     return `<section class="final-recap-screen ${className}">
-      <div class="final-recap-kicker">${esc(kicker)}</div>
+      ${kicker ? `<div class="final-recap-kicker">${esc(kicker)}</div>` : ''}
       <div class="final-recap-title">${title}</div>
       ${copy ? `<p class="final-recap-copy">${copy}</p>` : ''}
       ${content}
@@ -486,7 +490,7 @@
       </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('TonnoWrap','Final standings','',`${finalStandingsImageFrame(data)}<button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
+      screen('','Final standings','',`${finalStandingsImageFrame(data)}<button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
     ];
   }
 

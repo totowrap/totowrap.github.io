@@ -136,7 +136,7 @@
 
     const canvas = document.createElement('canvas');
     canvas.width = 3000;
-    canvas.height = 3900;
+    canvas.height = Number(options.canvasHeight) || 3900;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not create image');
     ctx.textBaseline = 'middle';
@@ -156,19 +156,21 @@
     const scoring = entries.filter(entry => entry.score > 0 && Number(entry.rank) > 3);
     const zeroNames = entries.filter(entry => entry.score <= 0).map(entry => entry.name.toUpperCase());
 
-    const logo = await loadImage(options.logoSrc || 'imgs/tonnowrapbig.png');
-    if (logo) {
-      const logoWidth = 860;
-      const logoHeight = logoWidth * logo.height / logo.width;
-      ctx.drawImage(logo, (canvas.width - logoWidth) / 2, 180, logoWidth, logoHeight);
-    } else {
-      ctx.fillStyle = yellow;
-      ctx.textAlign = 'center';
-      ctx.font = "bold 150px 'Alte Haas Grotesk', sans-serif";
-      ctx.fillText('TonnoWrap', canvas.width / 2, 300);
+    if (!options.omitLogo) {
+      const logo = await loadImage(options.logoSrc || 'imgs/tonnowrapbig.png');
+      if (logo) {
+        const logoWidth = 860;
+        const logoHeight = logoWidth * logo.height / logo.width;
+        ctx.drawImage(logo, (canvas.width - logoWidth) / 2, 180, logoWidth, logoHeight);
+      } else {
+        ctx.fillStyle = yellow;
+        ctx.textAlign = 'center';
+        ctx.font = "bold 150px 'Alte Haas Grotesk', sans-serif";
+        ctx.fillText('TonnoWrap', canvas.width / 2, 300);
+      }
     }
 
-    let y = 1050;
+    let y = Number(options.contentTop) || (options.omitLogo ? 220 : 1050);
     const podiumHeight = 245;
     const podiumGap = 38;
     podium.forEach(entry => {
