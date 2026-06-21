@@ -550,15 +550,15 @@ document.addEventListener('click', e => {
     return;
   }
 
-  const desktopWinnerLogo = e.target.closest?.('[data-desktop-winner-logo]');
-  if (desktopWinnerLogo) {
-    clearTimeout(desktopWinnerLogo._flipTimer);
-    desktopWinnerLogo.classList.remove('is-flipped');
-    void desktopWinnerLogo.offsetWidth;
+  const desktopProjectProgress = e.target.closest?.('[data-desktop-project-progress]');
+  if (desktopProjectProgress) {
+    clearTimeout(desktopProjectProgress._flipTimer);
+    desktopProjectProgress.classList.remove('is-flipped');
+    void desktopProjectProgress.offsetWidth;
     requestAnimationFrame(() => {
-      desktopWinnerLogo.classList.add('is-flipped');
-      desktopWinnerLogo._flipTimer = setTimeout(() => {
-        desktopWinnerLogo.classList.remove('is-flipped');
+      desktopProjectProgress.classList.add('is-flipped');
+      desktopProjectProgress._flipTimer = setTimeout(() => {
+        desktopProjectProgress.classList.remove('is-flipped');
       }, 3000);
     });
     return;
@@ -2375,45 +2375,41 @@ function renderDesktopLiveBar() {
   </div>`;
 }
 
-function renderDesktopRailLogo() {
-  const winnerName = latestWinnerName();
-  return `
-  <button class="desktop-rail-logo" type="button" data-desktop-winner-logo aria-label="Show last winner face">
-    <span class="desktop-rail-logo-inner">
-      <img class="desktop-rail-logo-face desktop-rail-logo-front" src="imgs/tunacan.png" alt="">
-      <img class="desktop-rail-logo-face desktop-rail-logo-back" src="${esc(faceIconSrc(winnerName))}" alt="" onerror="this.onerror=null;this.src='imgs/tunacan.png'">
-    </span>
-  </button>`;
-}
-
 function renderDesktopProjectProgress() {
   const internalDay = S.days.length + (S.today ? 1 : 0);
   const displayDay = Number(displayDayNumber(internalDay));
   const current = Number.isFinite(displayDay) ? Math.max(0, Math.min(DISPLAY_TOTAL_DAYS, displayDay)) : 0;
   const pct = DISPLAY_TOTAL_DAYS ? (current / DISPLAY_TOTAL_DAYS) * 100 : 0;
+  const winnerName = latestWinnerName();
   const topEntries = getStandingsEntries()
     .filter(entry => typeof entry.rank === 'number' && entry.rank <= 3);
   const topRows = topEntries.length
-    ? topEntries.map(entry => `<div class="desktop-project-leader">
-        <span>${esc(entry.rank)}</span>
+    ? topEntries.map(entry => `<span class="desktop-project-leader">
+        <span class="desktop-project-rank-${esc(entry.rank)}">${esc(entry.rank)}</span>
         <strong>${esc(entry.player.name)}</strong>
-        <em>${esc(entry.wins)} ${countWord(entry.wins, 'game', 'games')} won</em>
         <b>${esc(entry.score)} ${countWord(entry.score, 'pt', 'pts')}</b>
-      </div>`).join('')
-    : '<div class="desktop-project-leader is-empty">No points yet</div>';
+      </span>`).join('')
+    : '<span class="desktop-project-leader is-empty">No points yet</span>';
   return `
-  <div class="desktop-project-progress" aria-label="Project progress">
-    <div class="desktop-project-progress-top">
-      <span>Project progress</span>
-      <strong>${esc(current)}/${DISPLAY_TOTAL_DAYS}</strong>
-    </div>
-    <div class="desktop-project-progress-track" aria-hidden="true">
-      <span style="width:${pct.toFixed(2)}%"></span>
-    </div>
-    <div class="desktop-project-top3" aria-label="Leaderboard top three">
-      ${topRows}
-    </div>
-  </div>`;
+  <button class="desktop-project-progress" type="button" data-desktop-project-progress aria-label="Project progress and top leaderboard">
+    <span class="desktop-project-progress-inner">
+      <span class="desktop-project-progress-face desktop-project-progress-front">
+        <span class="desktop-project-progress-top">
+          <span>Project progress</span>
+          <strong>${esc(current)}/${DISPLAY_TOTAL_DAYS}</strong>
+        </span>
+        <span class="desktop-project-progress-track" aria-hidden="true">
+          <span style="width:${pct.toFixed(2)}%"></span>
+        </span>
+        <span class="desktop-project-top3" aria-label="Leaderboard top three">
+          ${topRows}
+        </span>
+      </span>
+      <span class="desktop-project-progress-face desktop-project-progress-back">
+        <img src="${esc(faceIconSrc(winnerName))}" alt="" onerror="this.onerror=null;this.src='imgs/tunacan.png'">
+      </span>
+    </span>
+  </button>`;
 }
 
 function renderPlayerMain() {
@@ -2433,7 +2429,6 @@ function renderPlayerMain() {
   <button class="nav-btn ${_tab==='board'?'on':''}" data-tab="board">Boards</button>
   <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
   ${renderDesktopProjectProgress()}
-  ${renderDesktopRailLogo()}
 </nav>
 ${renderDesktopLiveBar()}
 
@@ -3026,7 +3021,6 @@ function renderMain() {
   <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
   <button class="nav-btn ${_tab==='settings'?'on':''}" data-tab="settings">Settings</button>
   ${renderDesktopProjectProgress()}
-  ${renderDesktopRailLogo()}
 </nav>
 ${renderDesktopLiveBar()}
 

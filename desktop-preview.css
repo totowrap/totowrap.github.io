@@ -1,6 +1,5 @@
 body.desktop-preview-active #app > .desktop-live-bar,
-.desktop-project-progress,
-.desktop-rail-logo {
+.desktop-project-progress {
   display: none;
 }
 
@@ -26,7 +25,10 @@ body.desktop-preview-active #app > .desktop-live-bar,
   }
 
   body::before {
-    display: none;
+    display: block;
+    left: calc(230px + (100vw - 230px) / 2);
+    width: 440px;
+    height: 440px;
   }
 
   body.desktop-preview-active #app {
@@ -96,13 +98,59 @@ body.desktop-preview-active #app > .desktop-live-bar,
 
   .desktop-project-progress {
     display: block;
+    width: 100%;
     margin: 14px 0 0;
-    padding: 12px 12px 13px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    perspective: 900px;
+    cursor: pointer;
+  }
+
+  .desktop-project-progress-inner {
+    position: relative;
+    display: block;
+    width: 100%;
+    transform-style: preserve-3d;
+    transition: transform .7s cubic-bezier(.33, 0, .2, 1);
+  }
+
+  .desktop-project-progress.is-flipped .desktop-project-progress-inner {
+    transform: rotateY(180deg);
+  }
+
+  .desktop-project-progress-face {
+    display: block;
     border: 1px solid rgba(var(--yellow-rgb), .14);
     border-radius: 7px;
     background: linear-gradient(135deg, rgba(46, 60, 87, .46), rgba(46, 60, 87, .28));
     -webkit-backdrop-filter: blur(12px) saturate(125%);
     backdrop-filter: blur(12px) saturate(125%);
+    backface-visibility: hidden;
+  }
+
+  .desktop-project-progress-front {
+    padding: 12px 12px 13px;
+  }
+
+  .desktop-project-progress-back {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 12px;
+    transform: rotateY(180deg);
+  }
+
+  .desktop-project-progress-back img {
+    display: block;
+    width: min(100%, 132px);
+    height: min(100%, 132px);
+    object-fit: contain;
+    border-radius: 999px;
+    filter: brightness(95%) drop-shadow(1px 0 0 var(--yellow)) drop-shadow(-1px 0 0 var(--yellow)) drop-shadow(0 1px 0 var(--yellow)) drop-shadow(0 -1px 0 var(--yellow));
   }
 
   .desktop-project-progress-top {
@@ -154,7 +202,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
   .desktop-project-leader {
     display: grid;
     grid-template-columns: 16px minmax(0, 1fr) max-content;
-    align-items: baseline;
+    align-items: center;
     gap: 7px;
     color: var(--dim);
     font-family: 'Alte Haas Grotesk', sans-serif;
@@ -168,6 +216,18 @@ body.desktop-preview-active #app > .desktop-live-bar,
     text-align: center;
   }
 
+  .desktop-project-leader .desktop-project-rank-1 {
+    color: #f6c24a;
+  }
+
+  .desktop-project-leader .desktop-project-rank-2 {
+    color: #dce6f1;
+  }
+
+  .desktop-project-leader .desktop-project-rank-3 {
+    color: #c98b5a;
+  }
+
   .desktop-project-leader strong {
     min-width: 0;
     color: var(--text);
@@ -176,22 +236,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
     line-height: 1.08;
   }
 
-  .desktop-project-leader em {
-    grid-column: 2;
-    color: var(--dim);
-    font-size: .5rem;
-    font-style: normal;
-    font-weight: bold;
-    letter-spacing: .04em;
-    line-height: 1;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
   .desktop-project-leader b {
-    grid-column: 3;
-    grid-row: 1 / span 2;
-    align-self: center;
     color: var(--accent);
     font-size: .7rem;
     font-weight: bold;
@@ -206,52 +251,6 @@ body.desktop-preview-active #app > .desktop-live-bar,
     letter-spacing: .08em;
     text-align: center;
     text-transform: uppercase;
-  }
-
-  .desktop-rail-logo {
-    display: grid;
-    place-items: center;
-    width: 178px;
-    height: 178px;
-    margin: auto auto 22px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    perspective: 900px;
-    cursor: pointer;
-  }
-
-  .desktop-rail-logo-inner {
-    position: relative;
-    display: block;
-    width: 178px;
-    height: 178px;
-    transform-style: preserve-3d;
-    transition: transform .7s cubic-bezier(.33, 0, .2, 1);
-  }
-
-  .desktop-rail-logo.is-flipped .desktop-rail-logo-inner {
-    transform: rotateY(180deg);
-  }
-
-  .desktop-rail-logo-face {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    backface-visibility: hidden;
-    filter: brightness(95%);
-  }
-
-  .desktop-rail-logo-front {
-    transform: rotateY(0deg);
-  }
-
-  .desktop-rail-logo-back {
-    border-radius: 999px;
-    transform: rotateY(180deg);
-    filter: brightness(95%) drop-shadow(1px 0 0 var(--yellow)) drop-shadow(-1px 0 0 var(--yellow)) drop-shadow(0 1px 0 var(--yellow)) drop-shadow(0 -1px 0 var(--yellow));
   }
 
   body.desktop-preview-active #app > .desktop-live-bar {
