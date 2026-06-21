@@ -2308,6 +2308,27 @@ function renderPlayer(app) {
   bindPlayerNav();
 }
 
+function renderDesktopLiveBar() {
+  const dayNum = S.days.length + (S.today ? 1 : 0);
+  const dayLabel = dayNum ? displayDayProgressHeader(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`;
+  const estWrap = S.today?.estWrap || '--:--';
+  const wrapStatusClass = S.today?.wrapTime ? 'off' : 'live';
+  return `
+  <div class="desktop-live-bar">
+    <div class="desktop-day">
+      <strong>${dayLabel}</strong>
+    </div>
+    <div class="desktop-clock">
+      <span>Official Live Time</span>
+      <strong class="js-clock">--:--:--</strong>
+    </div>
+    <div class="desktop-est-wrap">
+      <span>Est. Wrap</span>
+      <strong class="${wrapStatusClass}">${esc(estWrap)}</strong>
+    </div>
+  </div>`;
+}
+
 function renderPlayerMain() {
   const dayNum = S.days.length + (S.today ? 1 : 0);
   const wrapStatusClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
@@ -2325,6 +2346,7 @@ function renderPlayerMain() {
   <button class="nav-btn ${_tab==='board'?'on':''}" data-tab="board">Boards</button>
   <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
 </nav>
+${renderDesktopLiveBar()}
 
 <div class="tab-viewport">
   <div class="tab-strip" style="--view-count:3">
@@ -2917,6 +2939,7 @@ function renderMain() {
   <button class="nav-btn ${_tab==='history'?'on':''}" data-tab="history">History</button>
   <button class="nav-btn ${_tab==='settings'?'on':''}" data-tab="settings">Settings</button>
 </nav>
+${renderDesktopLiveBar()}
 
 <div class="tab-viewport">
   <div class="tab-strip" style="--view-count:4">
