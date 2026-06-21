@@ -164,7 +164,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
   .desktop-clock span,
   .desktop-est-wrap span {
     color: var(--dim);
-    font-size: .62rem;
+    font-size: .72rem;
     letter-spacing: .15em;
     text-transform: uppercase;
   }
@@ -193,7 +193,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
 
   .desktop-clock strong {
     color: var(--accent);
-    font-size: 2.18rem;
+    font-size: 2.55rem;
     font-variant-numeric: tabular-nums;
     line-height: 1;
   }
@@ -202,7 +202,7 @@ body.desktop-preview-active #app > .desktop-live-bar,
     justify-self: end;
     display: flex;
     flex-direction: row;
-    align-items: flex-end;
+    align-items: baseline;
     gap: 8px;
   }
 
