@@ -552,11 +552,15 @@ document.addEventListener('click', e => {
 
   const desktopWinnerLogo = e.target.closest?.('[data-desktop-winner-logo]');
   if (desktopWinnerLogo) {
-    desktopWinnerLogo.classList.add('is-flipped');
     clearTimeout(desktopWinnerLogo._flipTimer);
-    desktopWinnerLogo._flipTimer = setTimeout(() => {
-      desktopWinnerLogo.classList.remove('is-flipped');
-    }, 3000);
+    desktopWinnerLogo.classList.remove('is-flipped');
+    void desktopWinnerLogo.offsetWidth;
+    requestAnimationFrame(() => {
+      desktopWinnerLogo.classList.add('is-flipped');
+      desktopWinnerLogo._flipTimer = setTimeout(() => {
+        desktopWinnerLogo.classList.remove('is-flipped');
+      }, 3000);
+    });
     return;
   }
 
@@ -2368,7 +2372,7 @@ function renderDesktopRailLogo() {
   <button class="desktop-rail-logo" type="button" data-desktop-winner-logo aria-label="Show last winner face">
     <span class="desktop-rail-logo-inner">
       <img class="desktop-rail-logo-face desktop-rail-logo-front" src="imgs/tunacan.png" alt="">
-      <img class="desktop-rail-logo-face desktop-rail-logo-back" src="${esc(faceIconSrc(winnerName))}" alt="" onerror="this.src='imgs/tunacan.png'">
+      <img class="desktop-rail-logo-face desktop-rail-logo-back" src="${esc(faceIconSrc(winnerName))}" alt="" onerror="this.onerror=null;this.src='imgs/tunacan.png'">
     </span>
   </button>`;
 }
