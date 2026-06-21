@@ -598,6 +598,7 @@ document.addEventListener('click', e => {
 
   const historyShareResultBtn = e.target.closest?.('[data-history-share-result]');
   if (historyShareResultBtn) {
+    if (!IS_ADMIN || !currentUser) return;
     e.stopPropagation();
     const historyIndex = Number(historyShareResultBtn.dataset.historyShareResult);
     const day = getHistoryEntries()[historyIndex];
@@ -2550,6 +2551,7 @@ function renderShareResultCard(info) {
 }
 
 function openShareResult(day=S.today, dayNumber=null) {
+  if (!IS_ADMIN || !currentUser) return;
   if (!day?.wrapTime) return;
   closeShareResult();
   const info = getShareResultInfo(day, dayNumber);
@@ -2773,6 +2775,7 @@ function openStandingsExportDialog() {
 }
 
 async function downloadStandingsExport() {
+  if (!IS_ADMIN || !currentUser) return;
   try {
     const renderer = window.TotoWrapFinalStandingsExport;
     if (!renderer?.renderBlob) throw new Error('Standings renderer is not available');
@@ -4196,6 +4199,7 @@ async function clearCrazyDaySettings() {
 }
 
 async function handleAdminDialogAction(btn) {
+  if (!IS_ADMIN || !currentUser) return;
   const action = btn.dataset.adminDialogAction;
   const date = btn.dataset.historyDate;
   if (action === 'standings-export-save') {
@@ -4487,6 +4491,9 @@ function renderHistory() {
     const historyDayTag = canManage
       ? `<button class="hist-day-tag hist-day-edit" type="button" title="Edit ${dayLabel}" aria-label="Edit ${dayLabel}" data-history-edit="${historyDate}">${dayLabel}</button>`
       : `<span class="hist-day-tag">${dayLabel}</span>`;
+    const historyShareTag = (className, content) => canManage
+      ? `<button class="${className} hist-share-trigger" style="font-weight:bold" type="button" data-history-share-result="${historyIndex}">${content}</button>`
+      : `<span class="${className}" style="font-weight:bold">${content}</span>`;
     
     if (d.noWinner) {
         const slices = boundaries(d.guesses, d);
@@ -4495,7 +4502,7 @@ function renderHistory() {
           <div class="hist-summary">
             <div class="hist-main-info">
               ${historyDayTag}
-              <button class="hist-title hist-share-trigger red" style="font-weight:bold" type="button" data-history-share-result="${historyIndex}">No Winner</button>
+              ${historyShareTag('hist-title red', 'No Winner')}
             </div>
             <div class="hist-meta">
               <span class="accent mono hist-wrap-time">${esc(d.wrapTime)}</span>
@@ -4545,7 +4552,7 @@ function renderHistory() {
       <div class="hist-summary">
         <div class="hist-main-info">
           ${historyDayTag}
-          <button class="${histWinnerClass} hist-share-trigger" style="font-weight:bold" type="button" data-history-share-result="${historyIndex}">${histWinnerMarkup}</button>
+          ${historyShareTag(histWinnerClass, histWinnerMarkup)}
           <span class="hist-bet mono dim" style="font-size:0.75rem">(${esc(winnerBet)})</span>
         </div>
         <div class="hist-meta">
@@ -4639,6 +4646,7 @@ async function cancelCrazyDayForSafety() {
 }
 
 async function showPreview() {
+  if (!IS_ADMIN || !currentUser) return;
   const inp = document.getElementById('paste-inp');
   const text = inp?.value || '';
   if (!text.trim()) { toast('Paste guesses first', 'err'); return; }
@@ -4801,6 +4809,7 @@ async function showPreview() {
 }
 
 async function savePlayer(idx) {
+  if (!IS_ADMIN || !currentUser) return;
   const nameInput = document.getElementById(`name-${idx}`);
   const ptsInput = document.getElementById(`pts-${idx}`);
   if (!nameInput || !ptsInput) return;
@@ -4851,6 +4860,7 @@ function removePlayerFromDay(day, name) {
 }
 
 async function deletePlayer(idx) {
+  if (!IS_ADMIN || !currentUser) return;
   const player = S.playerRoster[idx];
   if (!player) return;
   if (!confirm(`Delete ${player.name}?`)) return;
