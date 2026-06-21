@@ -648,7 +648,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .board-fixed-card .board-pie-graphic { height:313px; align-items:flex-start; padding:0; pointer-events:none; }
 .board-fixed-card .board-pie-svg { filter:none; }
 .board-fixed-card .accuracy-sort { flex:0 0 auto; }
-.board-fixed-card .board-legend { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:-4px; padding-top:32px; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px, #000 calc(100% - 2px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px, #000 calc(100% - 2px), transparent 100%); }
+.board-fixed-card .board-legend { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:-4px; padding-top:32px; padding-bottom:14px; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px, #000 calc(100% - 18px), rgba(0,0,0,.55) calc(100% - 8px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 12px, #000 30px, #000 calc(100% - 18px), rgba(0,0,0,.55) calc(100% - 8px), transparent 100%); }
 .tab-page-frame { min-height:100%; }
 .tab-page-frame > :last-child { margin-bottom:0; }
 .pregame-boundary-frame { display:flex; flex-direction:column; }
@@ -663,7 +663,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .today-completed-view.has-next-day-action .today-scroll-card { margin-bottom:12px; }
 .today-scroll-card > .card-lbl { position:relative; z-index:2; flex:0 0 auto; }
 .today-scroll-list,
-.standings-scroll-list { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:0; padding-top:0; -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 2px, #000 calc(100% - 2px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, #000 2px, #000 calc(100% - 2px), transparent 100%); }
+.standings-scroll-list { position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin-top:0; padding-top:8px; padding-bottom:8px; -webkit-mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0, rgba(0,0,0,.36) 3px, #000 8px, #000 calc(100% - 10px), rgba(0,0,0,.36) calc(100% - 4px), transparent 100%); }
 .today-scroll-list { margin-inline:-8px; padding-inline:8px; overflow-x:hidden; }
 .today-scroll-list .row-name { color:var(--dim); }
 .today-scroll-list .today-live-name-text { color:var(--dim); transition:color .75s ease; }
