@@ -493,7 +493,7 @@
       </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('','Final standings','',`${finalStandingsImageFrame(data)}<button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
+      screen('','Thank you,<br>everybody!','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to swim together with you. Yes, Marco, even with you.</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
     ];
   }
 
@@ -699,7 +699,6 @@
     recap.innerHTML = `
       <div class="final-recap-top"><img class="final-recap-logo" src="imgs/totowrap.png" alt="TotoWrap"></div>
       <div class="final-recap-track">${screens.join('')}</div>
-      <img class="final-recap-bottom-logo" src="imgs/tonnowrap.png" alt="TonnoWrap">
       <div class="final-recap-progress">${screens.map((_,index) => `<button class="final-recap-dot${index===0?' on':''}" type="button" data-recap-screen="${index}" aria-label="Open recap screen ${index+1}"></button>`).join('')}</div>`;
     document.body.appendChild(recap);
     recap.querySelectorAll('.final-recap-reaction-media').forEach(media => {

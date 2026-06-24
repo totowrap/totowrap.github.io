@@ -695,6 +695,17 @@
   height:100%;
   object-fit:contain;
 }
+.final-recap-closing-copy {
+  max-width:min(540px,calc(100vw - 56px));
+  margin:8px auto 0;
+  color:var(--dim);
+  font-size:.66rem;
+  font-weight:bold;
+  line-height:1.28;
+  letter-spacing:.055em;
+  text-align:center;
+  text-transform:uppercase;
+}
 .final-recap-progress {
   position:absolute;
   z-index:5;
@@ -717,17 +728,6 @@
   transition:opacity .25s ease,background .25s ease;
 }
 .final-recap-dot.on { opacity:1; background:var(--accent); }
-.final-recap-bottom-logo {
-  position:absolute;
-  z-index:5;
-  bottom:calc(46px + env(safe-area-inset-bottom));
-  left:50%;
-  transform:translateX(-50%);
-  width:104px;
-  height:auto;
-  opacity:.88;
-  pointer-events:none;
-}
 .final-recap-replay {
   width:min(330px,100%);
   margin-top:18px;
