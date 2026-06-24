@@ -18,7 +18,10 @@
     'cog/cog11.jpeg',
     'cog/cog12.jpeg',
     'cog/cog13.jpeg',
-    'cog/cog14.jpeg'
+    'cog/cog14.jpeg',
+    'cog/cog15.jpeg',
+    'cog/cog16.jpeg',
+    'cog/cog17.jpeg'
   ];
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
