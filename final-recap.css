@@ -75,7 +75,7 @@
   transform:translateY(-10px);
 }
 .final-recap-shirt-screen {
-  padding-inline:9px;
+  padding-inline:0;
 }
 .final-recap-kicker {
   color:var(--dim);
@@ -682,9 +682,8 @@
 .final-recap-place-name span { display:block; }
 .final-recap-place-points { margin-top:6px; color:var(--accent); font-size:.68rem; }
 .final-recap-standings-image-frame {
-  width:min(100%,760px);
+  width:min(calc(100vw - 1cm),calc(100vh - 250px),760px);
   aspect-ratio:1;
-  max-height:calc(100vh - 250px);
   margin:0 auto;
   display:grid;
   place-items:center;
@@ -768,8 +767,8 @@
   .final-recap-specific-stat > div { gap:14px; }
   .final-recap-specific-stat strong { font-size:3.2rem; }
   .final-recap-specific-stat b { font-size:.6rem; }
-  .final-recap-shirt-screen { padding-inline:9px; }
-  .final-recap-standings-image-frame { width:100%; max-height:calc(100vh - 206px); }
+  .final-recap-shirt-screen { padding-inline:0; }
+  .final-recap-standings-image-frame { width:min(calc(100vw - 1cm),calc(100vh - 206px)); }
 }
 @media (prefers-reduced-motion:reduce) {
   .final-recap,

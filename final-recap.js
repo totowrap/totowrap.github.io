@@ -494,7 +494,7 @@
       </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('','Thank you','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to swim together with you. Yes, Marco, even with you.</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
+      screen('','Thank you','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to swim together with you.</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
     ];
   }
 
