@@ -129,6 +129,42 @@
     }, []);
   }
 
+  function cropTransparentCanvas(canvas, padding = 0) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+    const { width, height } = canvas;
+    const pixels = ctx.getImageData(0, 0, width, height).data;
+    let top = height;
+    let right = 0;
+    let bottom = 0;
+    let left = width;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (pixels[(y * width + x) * 4 + 3] <= 4) continue;
+        if (x < left) left = x;
+        if (x > right) right = x;
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+      }
+    }
+
+    if (left > right || top > bottom) return canvas;
+    const inset = Math.max(0, Number(padding) || 0);
+    left = Math.max(0, left - inset);
+    top = Math.max(0, top - inset);
+    right = Math.min(width - 1, right + inset);
+    bottom = Math.min(height - 1, bottom + inset);
+
+    const cropped = document.createElement('canvas');
+    cropped.width = right - left + 1;
+    cropped.height = bottom - top + 1;
+    const croppedCtx = cropped.getContext('2d');
+    if (!croppedCtx) return canvas;
+    croppedCtx.drawImage(canvas, left, top, cropped.width, cropped.height, 0, 0, cropped.width, cropped.height);
+    return cropped;
+  }
+
   async function renderCanvas(rawEntries, options = {}) {
     const entries = normalizeEntries(rawEntries);
     if (!entries.length) throw new Error('No standings available');
@@ -250,7 +286,7 @@
       ctx.fillText('LA LUDOPATIA È UN PROBLEMA SOLO SE PERDI', canvas.width / 2, y);
     }
 
-    return canvas;
+    return options.background ? canvas : cropTransparentCanvas(canvas, options.cropPadding);
   }
 
   async function renderBlob(entries, options) {
