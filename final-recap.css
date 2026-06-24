@@ -74,6 +74,9 @@
   text-align:center;
   transform:translateY(-10px);
 }
+.final-recap-shirt-screen {
+  padding-inline:9px;
+}
 .final-recap-kicker {
   color:var(--dim);
   font-size:.62rem;
@@ -157,6 +160,7 @@
   .final-recap-reaction-card,
   .final-recap-specific-stat,
   .final-recap-standings-image-frame,
+  .final-recap-closing-copy,
   .final-recap-podium-place,
   .final-recap-replay
 ) {
@@ -174,6 +178,7 @@
   .final-recap-reaction-card,
   .final-recap-specific-stat,
   .final-recap-standings-image-frame,
+  .final-recap-closing-copy,
   .final-recap-podium-place,
   .final-recap-replay
 ) {
@@ -197,6 +202,7 @@
   .final-recap-reaction-card,
   .final-recap-specific-stat,
   .final-recap-standings-image-frame,
+  .final-recap-closing-copy,
   .final-recap-podium-place,
   .final-recap-replay
 ) {
@@ -676,9 +682,9 @@
 .final-recap-place-name span { display:block; }
 .final-recap-place-points { margin-top:6px; color:var(--accent); font-size:.68rem; }
 .final-recap-standings-image-frame {
-  width:min(calc(100vw - 28px),680px);
+  width:min(100%,760px);
   aspect-ratio:1;
-  max-height:calc(100vh - 238px);
+  max-height:calc(100vh - 250px);
   margin:0 auto;
   display:grid;
   place-items:center;
@@ -697,7 +703,7 @@
 }
 .final-recap-closing-copy {
   max-width:min(540px,calc(100vw - 56px));
-  margin:8px auto 0;
+  margin:6px auto 0;
   color:var(--dim);
   font-size:.66rem;
   font-weight:bold;
@@ -762,7 +768,8 @@
   .final-recap-specific-stat > div { gap:14px; }
   .final-recap-specific-stat strong { font-size:3.2rem; }
   .final-recap-specific-stat b { font-size:.6rem; }
-  .final-recap-standings-image-frame { width:min(82vw,410px); max-height:calc(100vh - 206px); }
+  .final-recap-shirt-screen { padding-inline:9px; }
+  .final-recap-standings-image-frame { width:100%; max-height:calc(100vh - 206px); }
 }
 @media (prefers-reduced-motion:reduce) {
   .final-recap,
@@ -782,6 +789,7 @@
     .final-recap-reaction-card,
     .final-recap-specific-stat,
     .final-recap-standings-image-frame,
+    .final-recap-closing-copy,
     .final-recap-podium-place,
     .final-recap-replay
   ) { opacity:1; transform:none; }
@@ -799,6 +807,7 @@
     .final-recap-reaction-card,
     .final-recap-specific-stat,
     .final-recap-standings-image-frame,
+    .final-recap-closing-copy,
     .final-recap-podium-place,
     .final-recap-replay
   ) { animation:none; }

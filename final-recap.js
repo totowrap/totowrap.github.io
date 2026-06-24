@@ -334,6 +334,7 @@
       if (!renderer?.renderDataUrl) throw new Error('Standings renderer is not available');
       const src = await renderer.renderDataUrl(rankedFinalLeaderboard(data), {
         omitLogo: true,
+        omitFooter: true,
         canvasHeight: 3000,
         contentTop: 190
       });
@@ -493,7 +494,7 @@
       </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('','Thank you,<br>everybody!','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to swim together with you. Yes, Marco, even with you.</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
+      screen('','Thank you','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to swim together with you. Yes, Marco, even with you.</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
     ];
   }
 
@@ -622,6 +623,7 @@
         .final-recap-reaction-card,
         .final-recap-specific-stat,
         .final-recap-standings-image-frame,
+        .final-recap-closing-copy,
         .final-recap-podium-place,
         .final-recap-replay
       `);

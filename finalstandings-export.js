@@ -242,11 +242,13 @@
       ctx.globalAlpha = 1;
     }
 
-    y += 75;
-    ctx.fillStyle = yellow;
-    ctx.textAlign = 'center';
-    ctx.font = "bold 38px 'Alte Haas Grotesk', sans-serif";
-    ctx.fillText('LA LUDOPATIA È UN PROBLEMA SOLO SE PERDI', canvas.width / 2, y);
+    if (!options.omitFooter) {
+      y += 75;
+      ctx.fillStyle = yellow;
+      ctx.textAlign = 'center';
+      ctx.font = "bold 38px 'Alte Haas Grotesk', sans-serif";
+      ctx.fillText('LA LUDOPATIA È UN PROBLEMA SOLO SE PERDI', canvas.width / 2, y);
+    }
 
     return canvas;
   }
