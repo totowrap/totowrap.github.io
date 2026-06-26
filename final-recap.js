@@ -720,17 +720,41 @@
         soundToggle.classList.toggle('is-muted',video.muted);
         soundToggle.setAttribute('aria-label',video.muted ? 'Turn sound on' : 'Mute video');
       };
+      const canToggleSound = () => {
+        const activeScreen = recap.querySelectorAll('.final-recap-screen')[screenIndex];
+        if (media.closest('.final-recap-screen') !== activeScreen) return false;
+        if (!media.classList.contains('has-video') || video.readyState < 2) return false;
+        const rect = video.getBoundingClientRect();
+        const style = window.getComputedStyle(video);
+        return rect.width > 0
+          && rect.height > 0
+          && rect.bottom > 0
+          && rect.top < window.innerHeight
+          && rect.right > 0
+          && rect.left < window.innerWidth
+          && style.visibility !== 'hidden'
+          && Number(style.opacity) > .5;
+      };
       ['loadedmetadata','loadeddata','canplay'].forEach(eventName => video.addEventListener(eventName, () => {
         markVideoReady();
         playWhenVisible();
       }));
       video.addEventListener('error', () => media.classList.remove('has-video'));
       media.addEventListener('click', event => {
-        const activeScreen = recap.querySelectorAll('.final-recap-screen')[screenIndex];
-        const isActiveMedia = media.closest('.final-recap-screen') === activeScreen;
-        if (!isActiveMedia || !media.classList.contains('has-video') || video.readyState < 2) return;
+        if (!canToggleSound()) return;
         event.stopPropagation();
         video.muted = !video.muted;
+        if (!video.muted) {
+          recap.querySelectorAll('.final-recap-reaction-media').forEach(otherMedia => {
+            if (otherMedia === media) return;
+            const otherVideo = otherMedia.querySelector('video');
+            const otherToggle = otherMedia.querySelector('.final-recap-sound-toggle');
+            if (!otherVideo) return;
+            otherVideo.muted = true;
+            otherToggle?.classList.add('is-muted');
+            otherToggle?.setAttribute('aria-label','Turn sound on');
+          });
+        }
         updateSoundToggle();
         playWhenVisible();
       });
