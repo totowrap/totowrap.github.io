@@ -89,6 +89,16 @@
 .final-recap-title-left { display:inline-block; text-align:left; }
 .final-recap-title-line { display:block; white-space:nowrap; }
 .final-recap-title-nowrap { display:block; white-space:nowrap; }
+.final-recap-opening-title {
+  display:inline-flex;
+  align-items:baseline;
+  justify-content:center;
+  gap:.22em;
+  white-space:nowrap;
+}
+.final-recap-opening-title span {
+  display:inline-block;
+}
 .final-recap-title-player {
   margin-top:14px;
   font-size:clamp(1.15rem,5.2vw,2.2rem);
@@ -221,6 +231,29 @@
 @keyframes final-recap-title-stage {
   0%,58% { transform:translateY(var(--recap-title-center-shift,0)) scale(1.06); }
   100% { transform:translateY(0) scale(1); }
+}
+.final-recap-opening-screen.is-active .final-recap-title {
+  animation:final-recap-opening-title-stage 2.64s cubic-bezier(.2,.82,.2,1) both;
+}
+.final-recap-opening-screen.is-active .final-recap-opening-title span {
+  animation:final-recap-opening-word-drop .56s cubic-bezier(.16,.9,.28,1.18) calc(.16s + var(--opening-title-index) * .3s) both;
+}
+.final-recap-opening-screen.is-active .final-recap-copy {
+  animation-delay:2.72s;
+}
+.final-recap-opening-screen .final-recap-copy {
+  max-width:min(620px,calc(100vw - 48px));
+  font-size:.72rem;
+  line-height:1.38;
+}
+@keyframes final-recap-opening-title-stage {
+  0%,70% { transform:translateY(var(--recap-title-center-shift,0)) scale(1.06); }
+  100% { transform:translateY(0) scale(1); }
+}
+@keyframes final-recap-opening-word-drop {
+  0% { opacity:0; transform:translateY(-86px) scale(1.08); }
+  64% { opacity:1; transform:translateY(7px) scale(1.015); }
+  100% { opacity:1; transform:translateY(0) scale(1); }
 }
 @keyframes final-recap-text-in {
   0% { opacity:0; transform:translateY(7px); }
@@ -849,6 +882,7 @@
     .final-recap-replay
   ) { opacity:1; transform:none; }
   .final-recap-screen.is-active .final-recap-title,
+  .final-recap-opening-screen.is-active .final-recap-opening-title span,
   .final-recap-screen.is-active .final-recap-title-player,
   .final-recap-screen.is-active .final-recap-copy,
   .final-recap-screen.is-active :is(
