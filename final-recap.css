@@ -749,11 +749,49 @@
   cursor:pointer;
 }
 .final-recap-shirt-screen .final-recap-replay {
-  position:absolute;
-  left:50%;
-  bottom:calc(48px + env(safe-area-inset-bottom));
-  translate:-50% 0;
+  position:static;
+  left:auto;
+  bottom:auto;
+  translate:0;
   margin-top:0;
+}
+.final-recap-shirt-screen {
+  padding:calc(88px + env(safe-area-inset-top)) 0 calc(78px + env(safe-area-inset-bottom));
+  display:grid;
+  grid-template-rows:
+    minmax(8px,.6fr)
+    auto
+    minmax(8px,.6fr)
+    minmax(0,5fr)
+    minmax(8px,.34fr)
+    auto
+    minmax(8px,.34fr)
+    auto;
+  align-items:center;
+  justify-items:center;
+}
+.final-recap-shirt-screen .final-recap-title {
+  grid-row:2;
+}
+.final-recap-shirt-screen .final-recap-standings-image-frame {
+  grid-row:4;
+  align-self:stretch;
+  width:min(calc(100vw - 1cm),760px);
+  height:100%;
+}
+.final-recap-shirt-screen .final-recap-standings-image {
+  width:100%;
+  height:100%;
+  max-height:none;
+  object-fit:contain;
+}
+.final-recap-shirt-screen .final-recap-closing-copy {
+  grid-row:6;
+  margin:0 auto;
+}
+.final-recap-shirt-screen .final-recap-replay {
+  grid-row:8;
+  width:min(330px,calc(100vw - 2cm));
 }
 @media (max-width:420px) {
   .final-recap-screen { padding-inline:18px; }
@@ -776,7 +814,7 @@
   .final-recap-specific-stat b { font-size:.6rem; }
   .final-recap-shirt-screen { padding-inline:0; }
   .final-recap-standings-image-frame { width:calc(100vw - 1cm); }
-  .final-recap-standings-image { max-height:calc(100vh - 206px); }
+  .final-recap-shirt-screen .final-recap-standings-image { max-height:none; }
 }
 @media (prefers-reduced-motion:reduce) {
   .final-recap,
