@@ -88,11 +88,13 @@
 }
 .final-recap-title-left { display:inline-block; text-align:left; }
 .final-recap-title-line { display:block; white-space:nowrap; }
+.final-recap-title-nowrap { display:block; white-space:nowrap; }
 .final-recap-title-player {
-  display:block;
-  margin-top:12px;
+  margin-top:14px;
   font-size:clamp(1.15rem,5.2vw,2.2rem);
+  font-weight:bold;
   line-height:1;
+  letter-spacing:.04em;
   text-transform:none;
 }
 .final-recap-title-player.is-green { color:var(--green); }
@@ -149,6 +151,7 @@
   background:linear-gradient(135deg,rgba(var(--yellow-rgb),.18),rgba(38,55,89,.58));
 }
 .final-recap-screen:not(.is-active):not(.is-leaving) :is(
+  .final-recap-title-player,
   .final-recap-copy,
   .final-recap-official-accuracy,
   .final-recap-stat,
@@ -188,8 +191,14 @@
 .final-recap-screen.is-active .final-recap-title {
   animation:final-recap-title-stage 1.72s cubic-bezier(.2,.82,.2,1) both;
 }
+.final-recap-screen.is-active .final-recap-title-player {
+  animation:final-recap-text-in .5s ease 1.82s both;
+}
 .final-recap-screen.is-active .final-recap-copy {
   animation:final-recap-text-in .5s ease 1.55s both;
+}
+.final-recap-accuracy-screen.is-active .final-recap-copy {
+  animation-delay:2.12s;
 }
 .final-recap-screen.is-active :is(
   .final-recap-official-accuracy,
@@ -822,6 +831,7 @@
   .final-recap-track,
   .final-recap-dot { transition:none; }
   .final-recap-screen:not(.is-active):not(.is-leaving) :is(
+    .final-recap-title-player,
     .final-recap-copy,
     .final-recap-official-accuracy,
     .final-recap-stat,
@@ -839,6 +849,7 @@
     .final-recap-replay
   ) { opacity:1; transform:none; }
   .final-recap-screen.is-active .final-recap-title,
+  .final-recap-screen.is-active .final-recap-title-player,
   .final-recap-screen.is-active .final-recap-copy,
   .final-recap-screen.is-active :is(
     .final-recap-official-accuracy,
