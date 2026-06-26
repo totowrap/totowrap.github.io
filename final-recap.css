@@ -77,13 +77,6 @@
 .final-recap-shirt-screen {
   padding-inline:0;
 }
-.final-recap-kicker {
-  color:var(--dim);
-  font-size:.62rem;
-  letter-spacing:.18em;
-  text-transform:uppercase;
-  margin-bottom:13px;
-}
 .final-recap-title {
   max-width:720px;
   color:var(--accent);
@@ -95,6 +88,15 @@
 }
 .final-recap-title-left { display:inline-block; text-align:left; }
 .final-recap-title-line { display:block; white-space:nowrap; }
+.final-recap-title-player {
+  display:block;
+  margin-top:12px;
+  font-size:clamp(1.15rem,5.2vw,2.2rem);
+  line-height:1;
+  text-transform:none;
+}
+.final-recap-title-player.is-green { color:var(--green); }
+.final-recap-title-player.is-red { color:var(--red); }
 .final-recap-title.neutral { color:var(--text); }
 .final-recap-copy {
   max-width:560px;
@@ -147,7 +149,6 @@
   background:linear-gradient(135deg,rgba(var(--yellow-rgb),.18),rgba(38,55,89,.58));
 }
 .final-recap-screen:not(.is-active):not(.is-leaving) :is(
-  .final-recap-kicker,
   .final-recap-copy,
   .final-recap-official-accuracy,
   .final-recap-stat,
@@ -187,7 +188,7 @@
 .final-recap-screen.is-active .final-recap-title {
   animation:final-recap-title-stage 1.72s cubic-bezier(.2,.82,.2,1) both;
 }
-.final-recap-screen.is-active :is(.final-recap-kicker,.final-recap-copy) {
+.final-recap-screen.is-active .final-recap-copy {
   animation:final-recap-text-in .5s ease 1.55s both;
 }
 .final-recap-screen.is-active :is(
@@ -821,7 +822,6 @@
   .final-recap-track,
   .final-recap-dot { transition:none; }
   .final-recap-screen:not(.is-active):not(.is-leaving) :is(
-    .final-recap-kicker,
     .final-recap-copy,
     .final-recap-official-accuracy,
     .final-recap-stat,
@@ -839,7 +839,7 @@
     .final-recap-replay
   ) { opacity:1; transform:none; }
   .final-recap-screen.is-active .final-recap-title,
-  .final-recap-screen.is-active :is(.final-recap-kicker,.final-recap-copy),
+  .final-recap-screen.is-active .final-recap-copy,
   .final-recap-screen.is-active :is(
     .final-recap-official-accuracy,
     .final-recap-stat,

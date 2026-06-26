@@ -418,7 +418,6 @@
   }
   function screen(kicker, title, copy='', content='', className='') {
     return `<section class="final-recap-screen ${className}">
-      ${kicker ? `<div class="final-recap-kicker">${esc(kicker)}</div>` : ''}
       <div class="final-recap-title">${title}</div>
       ${copy ? `<p class="final-recap-copy">${copy}</p>` : ''}
       ${content}
@@ -441,11 +440,12 @@
         <span class="final-recap-place-points">${group ? `${group.score} ${word(group.score,'pt','pts')} · ${group.wins} ${word(group.wins,'win','wins')}` : '—'}</span>
       </div>`;
     }).join('')}</div>`;
+    const accuracyTitle = (label, player, tone) => `${esc(label)}${player ? `<span class="final-recap-title-player ${tone}">${esc(player.name)}</span>` : ''}`;
     const accuracyCopy = data.mostAccurate
-      ? `${esc(data.mostAccurate.name)} finished an average of ${esc(compactTime(data.mostAccurate.avgGap))} from the official wrap across ${data.mostAccurate.bets} ${word(data.mostAccurate.bets,'bet','bets')}.`
+      ? `Average distance was ${esc(compactTime(data.mostAccurate.avgGap))} from the official wrap across ${data.mostAccurate.bets} ${word(data.mostAccurate.bets,'bet','bets')}.`
       : 'There is not enough completed data to calculate accuracy yet.';
     const leastAccuracyCopy = data.leastAccurate
-      ? `${esc(data.leastAccurate.name)} finished an average of ${esc(compactTime(data.leastAccurate.avgGap))} from the official wrap across ${data.leastAccurate.bets} ${word(data.leastAccurate.bets,'bet','bets')}.`
+      ? `Average distance was ${esc(compactTime(data.leastAccurate.avgGap))} from the official wrap across ${data.leastAccurate.bets} ${word(data.leastAccurate.bets,'bet','bets')}.`
       : 'There is not enough completed data to calculate accuracy yet.';
     const exactGroups = data.exactPlayers.reduce((groups,item) => {
       const group = groups.find(entry => entry.exact === item.exact);
@@ -464,8 +464,8 @@
       screen('The project in numbers',projectDayTitle,'',`<div class="final-recap-stat-grid">${stat(players,word(players,'Tuna played','Tunas played'))}${stat(data.totalBets,word(data.totalBets,'Bet placed','Bets placed'))}${stat(data.totalForgot,word(data.totalForgot,'Forgotten bet','Forgotten bets'))}</div>`),
       screen('Perfect timing',`<span class="final-recap-number">${data.exactDays}</span> exact ${word(data.exactDays,'bet','bets')}`,'',exactCards),
       screen('Nobody won',`<span class="final-recap-number">${data.noWinnerEntries.length}</span> no-winner ${word(data.noWinnerEntries.length,'day','days')}`,'Expected wrap compared with the official wrap.',noWinnerRows(data.noWinnerEntries)),
-      screen('Accuracy award',esc(data.mostAccurate?.name || 'No winner'),accuracyCopy,`${accuracyGraph(data.mostAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.mostAccurate?.avgGap),'Average distance')}${stat(data.mostAccurate?.bets || 0,word(data.mostAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.mostAccurate?.wins || 0,word(data.mostAccurate?.wins || 0,'Win','Wins'))}</div>`),
-      screen('Least accurate',esc(data.leastAccurate?.name || 'No winner'),leastAccuracyCopy,`${accuracyGraph(data.leastAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.leastAccurate?.avgGap),'Average distance')}${stat(data.leastAccurate?.bets || 0,word(data.leastAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.leastAccurate?.wins || 0,word(data.leastAccurate?.wins || 0,'Win','Wins'))}</div>`),
+      screen('Accuracy award',accuracyTitle('Most accurate',data.mostAccurate,'is-green'),accuracyCopy,`${accuracyGraph(data.mostAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.mostAccurate?.avgGap),'Average distance')}${stat(data.mostAccurate?.bets || 0,word(data.mostAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.mostAccurate?.wins || 0,word(data.mostAccurate?.wins || 0,'Win','Wins'))}</div>`),
+      screen('Least accurate',accuracyTitle('Least accurate',data.leastAccurate,'is-red'),leastAccuracyCopy,`${accuracyGraph(data.leastAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.leastAccurate?.avgGap),'Average distance')}${stat(data.leastAccurate?.bets || 0,word(data.leastAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.leastAccurate?.wins || 0,word(data.leastAccurate?.wins || 0,'Win','Wins'))}</div>`),
       screen('The highs and lows','Every second counted','',`<div class="final-recap-showcase-grid">
         ${splitShowcaseAward('Closest wrong bet',data.closestWrong?.name || '—',data.closestWrong ? compactTime(data.closestWrong.gap) : '—','green')}
         ${furthestComparisonCard(data.furthestNoWinner,data.furthestWinningDay)}
@@ -494,7 +494,7 @@
       </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
       screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('','Thank you','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to swim together with you.</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
+      screen('','Thank you!','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to swim together with you</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
     ];
   }
 
