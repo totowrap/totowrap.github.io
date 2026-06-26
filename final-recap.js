@@ -191,7 +191,6 @@
     let previousLeader = null;
     const runningScores = new Map(players.map(name => [name, 0]));
     const runningWins = new Map(players.map(name => [name, 0]));
-    let firstRankSnapshot = null;
 
     days.forEach((day, dayIndex) => {
       const winners = new Set(winnerNames(day));
@@ -254,9 +253,6 @@
       if (previousLeader && leader && leader !== previousLeader) {
         leadChanges.push({dayIndex,from:previousLeader,to:leader});
       }
-      if (!firstRankSnapshot && [...runningScores.values()].some(score => score > 0)) {
-        firstRankSnapshot = rankSnapshot(players,runningScores,runningWins);
-      }
       if (leader) previousLeader = leader;
     });
 
@@ -275,47 +271,7 @@
     const longestStreak = list.filter(item => item.longestWinStreak === maxStreak && maxStreak > 0).sort((a,b) => a.name.localeCompare(b.name));
     const maxCloseWrong = Math.max(0,...list.map(item => item.closeWrong));
     const closeWrongLeaders = list.filter(item => item.closeWrong === maxCloseWrong && maxCloseWrong > 0).sort((a,b) => a.name.localeCompare(b.name));
-    const plotTwist = findBiggestPlotTwist(leaderboard,firstRankSnapshot);
-    return {days,list,leaderboard,totalBets,totalForgot,noWinnerEntries,exactDays,closestWrong,furthestNoWinner,furthestWinningDay,leadChanges,mostAccurate,leastAccurate,mostReliable,mostForgot,exactPlayers,longestStreak,closeWrongLeaders,plotTwist};
-  }
-
-  function rankSnapshot(names, scoreMap, winMap) {
-    const entries = names.map(name => ({
-      name,
-      score:Number(scoreMap.get(name) || 0),
-      wins:Number(winMap.get(name) || 0)
-    })).sort((a,b) => b.score-a.score || b.wins-a.wins || a.name.localeCompare(b.name));
-    let previousRank = 0;
-    let previousScore = null;
-    let previousWins = null;
-    const outsideRank = entries.findIndex(entry => entry.score <= 0) + 1 || entries.length + 1;
-    return new Map(entries.map((entry,index) => {
-      let rank;
-      let label;
-      if (entry.score > 0) {
-        rank = entry.score === previousScore && entry.wins === previousWins ? previousRank : index + 1;
-        previousRank = rank;
-        previousScore = entry.score;
-        previousWins = entry.wins;
-        label = `#${rank}`;
-      } else {
-        rank = outsideRank;
-        label = 'outside the leaderboard';
-      }
-      return [entry.name,{rank,label,score:entry.score,wins:entry.wins}];
-    }));
-  }
-
-  function findBiggestPlotTwist(leaderboard, firstRankSnapshot) {
-    if (!firstRankSnapshot) return null;
-    return rankedFinalLeaderboard({leaderboard})
-      .filter(entry => entry.score > 0 && typeof entry.rank === 'number' && firstRankSnapshot.has(entry.name))
-      .map(entry => {
-        const start = firstRankSnapshot.get(entry.name);
-        return {...entry,startRank:start.rank,startLabel:start.label,climb:start.rank - entry.rank};
-      })
-      .filter(entry => entry.climb > 0)
-      .sort((a,b) => b.climb-a.climb || a.rank-b.rank || b.score-a.score || b.wins-a.wins || a.name.localeCompare(b.name))[0] || null;
+    return {days,list,leaderboard,totalBets,totalForgot,noWinnerEntries,exactDays,closestWrong,furthestNoWinner,furthestWinningDay,leadChanges,mostAccurate,leastAccurate,mostReliable,mostForgot,exactPlayers,longestStreak,closeWrongLeaders};
   }
 
   function stat(value, label) {
@@ -329,15 +285,6 @@
       <span>${esc(label)}</span>
       <strong>${esc(value)}</strong>
       <b>${esc(names)}</b>
-    </div>`;
-  }
-  function plotTwistCard(item) {
-    if (!item) return '<div class="final-recap-empty">No dramatic leaderboard climb survived the final standings.</div>';
-    return `<div class="final-recap-showcase-card final-recap-plot-twist-card" data-tone="gold">
-      <span>Biggest climb</span>
-      <strong>${esc(item.name)}</strong>
-      <div class="final-recap-plot-route"><b>${esc(item.startLabel)}</b><i>→</i><b>#${esc(item.rank)}</b></div>
-      <small>${item.climb} ${word(item.climb,'place','places')} up · ${item.score} ${word(item.score,'pt','pts')} · ${item.wins} ${word(item.wins,'win','wins')}</small>
     </div>`;
   }
   function rankedFinalLeaderboard(data) {
@@ -518,7 +465,6 @@
     return [
       screen('TonnoWrap final recap',openingTitle,openingCopy,'','final-recap-opening-screen'),
       screen('The project in numbers',projectDayTitle,'',`<div class="final-recap-stat-grid">${stat(players,word(players,'Tuna played','Tunas played'))}${stat(data.totalBets,word(data.totalBets,'Bet placed','Bets placed'))}${stat(data.totalForgot,word(data.totalForgot,'Forgotten bet','Forgotten bets'))}</div>`),
-      screen('Plot twist','Biggest plot twist','The player who climbed the furthest from the first real leaderboard to the final standings.',plotTwistCard(data.plotTwist),'final-recap-plot-twist-screen'),
       screen('Perfect timing',`<span class="final-recap-number">${data.exactDays}</span> exact ${word(data.exactDays,'bet','bets')}`,'',exactCards),
       screen('Nobody won',`<span class="final-recap-number">${data.noWinnerEntries.length}</span> no-winner ${word(data.noWinnerEntries.length,'day','days')}`,'Expected wrap compared with the official wrap.',noWinnerRows(data.noWinnerEntries)),
       screen('Accuracy award',accuracyTitle('Most accurate'),accuracyCopy,`${accuracyGraph(data.mostAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.mostAccurate?.avgGap),'Average distance')}${stat(data.mostAccurate?.bets || 0,word(data.mostAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.mostAccurate?.wins || 0,word(data.mostAccurate?.wins || 0,'Win','Wins'))}</div>`,'final-recap-accuracy-screen',accuracyName(data.mostAccurate,'is-green')),

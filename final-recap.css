@@ -554,47 +554,6 @@
   line-height:1.2;
   text-transform:uppercase;
 }
-.final-recap-plot-twist-card {
-  width:min(520px,100%);
-  min-height:210px;
-  margin:24px auto 0;
-  gap:16px;
-}
-.final-recap-plot-twist-card strong {
-  margin-top:0;
-  font-size:clamp(2rem,9vw,3.8rem);
-  line-height:.95;
-}
-.final-recap-plot-route {
-  display:grid;
-  grid-template-columns:1fr auto 1fr;
-  align-items:center;
-  gap:14px;
-  width:min(360px,100%);
-  margin:0 auto;
-}
-.final-recap-plot-route b {
-  color:var(--text);
-  font-size:.76rem;
-  font-weight:bold;
-  letter-spacing:.08em;
-  line-height:1.1;
-  text-transform:uppercase;
-}
-.final-recap-plot-route b:last-child { color:var(--accent); }
-.final-recap-plot-route i {
-  color:var(--accent);
-  font-size:1.35rem;
-  font-style:normal;
-  line-height:1;
-}
-.final-recap-plot-twist-card small {
-  color:var(--dim);
-  font-size:.62rem;
-  letter-spacing:.08em;
-  line-height:1.25;
-  text-transform:uppercase;
-}
 .final-recap-furthest-card { padding:14px; }
 .final-recap-furthest-card > div {
   margin-top:11px;
