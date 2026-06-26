@@ -233,27 +233,37 @@
   100% { transform:translateY(0) scale(1); }
 }
 .final-recap-opening-screen.is-active .final-recap-title {
-  animation:final-recap-opening-title-stage 2.64s cubic-bezier(.2,.82,.2,1) both;
+  animation:final-recap-opening-title-stage 3.82s cubic-bezier(.2,.82,.2,1) both;
 }
 .final-recap-opening-screen.is-active .final-recap-opening-title span {
-  animation:final-recap-opening-word-drop .56s cubic-bezier(.16,.9,.28,1.18) calc(.16s + var(--opening-title-index) * .3s) both;
+  animation:final-recap-opening-word-drop .86s cubic-bezier(.16,.9,.28,1.18) calc(.24s + var(--opening-title-index) * .5s) both;
 }
 .final-recap-opening-screen.is-active .final-recap-copy {
-  animation-delay:2.72s;
+  animation:final-recap-opening-copy-in 3.4s ease 4.02s both;
 }
 .final-recap-opening-screen .final-recap-copy {
-  max-width:min(620px,calc(100vw - 48px));
-  font-size:.72rem;
-  line-height:1.38;
+  max-width:min(650px,calc(100vw - 52px));
+  margin-top:24px;
+  color:var(--dim);
+  font-size:clamp(.78rem,2.35vw,.98rem);
+  line-height:1.42;
+  letter-spacing:.018em;
+  text-align:justify;
+  text-align-last:left;
 }
 @keyframes final-recap-opening-title-stage {
-  0%,70% { transform:translateY(var(--recap-title-center-shift,0)) scale(1.06); }
+  0%,74% { transform:translateY(var(--recap-title-center-shift,0)) scale(1.06); }
   100% { transform:translateY(0) scale(1); }
 }
 @keyframes final-recap-opening-word-drop {
-  0% { opacity:0; transform:translateY(-86px) scale(1.08); }
-  64% { opacity:1; transform:translateY(7px) scale(1.015); }
+  0% { opacity:0; transform:translateY(-112px) scale(1.08); }
+  66% { opacity:1; transform:translateY(8px) scale(1.015); }
   100% { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes final-recap-opening-copy-in {
+  0% { opacity:0; transform:translateY(12px); }
+  38% { opacity:.45; transform:translateY(5px); }
+  100% { opacity:1; transform:translateY(0); }
 }
 @keyframes final-recap-text-in {
   0% { opacity:0; transform:translateY(7px); }
