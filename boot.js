@@ -36,6 +36,7 @@
     () => 'Facciamo un referendum?',
     () => 'Viva la Edocrazia!',
     () => 'Vita sprecata che sei...',
+    () => '<span class="boot-phrase-right">"Io vengo al lavoro solo per il TotoWrap"\n- Marco Mattioli</span>',
     () => {
       const storedNames = getPlayerNames();
       const name = storedNames[randomInt(storedNames.length)];
