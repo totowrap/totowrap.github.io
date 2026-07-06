@@ -149,6 +149,7 @@
     const regular = detail.regular || '+0 points';
     const perfect = detail.perfect || '+0 points';
     const penalty = normalizePenaltyText(detail.penalty || '0 points');
+    const neighborPenalty = normalizePenaltyText(detail.neighborPenalty || '0 points');
     crazy.innerHTML = `
       <div class="boot-crazy-title" aria-label="Crazy Day">
         <span style="--i:0;--wave-color:#5bc8f5">C</span><span style="--i:1;--wave-color:#6dd87a">r</span><span style="--i:2;--wave-color:#e06c6c">a</span><span style="--i:3;--wave-color:#a374f7">z</span><span style="--i:4;--wave-color:#f07dba">y</span><span class="space" style="--i:5"></span><span style="--i:6;--wave-color:#a374f7">D</span><span style="--i:7;--wave-color:#fb8c5f">a</span><span style="--i:8;--wave-color:#40e4e4">y</span>
@@ -161,6 +162,7 @@
         ${renderCrazyRule('Perfect wrap', perfect)}
         ${renderCrazyRule('No bet', penalty)}
         ${renderCrazyRule('Furthest bet', penalty)}
+        ${renderCrazyRule('Neighbor bets', neighborPenalty)}
       </div>
     `;
     bootContent.classList.add('is-crazy-day');
