@@ -3368,6 +3368,35 @@ function didPlayerWinDay(name, day) {
   return winners.some(winnerName => nameKey(winnerName) === nameKey(name));
 }
 
+function buildClosenessYTicks(maxGap) {
+  const safeMax = Math.max(1, Number(maxGap) || 1);
+  const topForValue = value => 88 - (value / safeMax) * 78;
+  const selected = [
+    { value: safeMax, top: 10 },
+    { value: safeMax / 2, top: 49 },
+    { value: 0, top: 88 }
+  ];
+  const referenceValues = [];
+  for (let value = 15 * 60; value < safeMax; value += 15 * 60) {
+    referenceValues.push(value);
+  }
+  const priority = value => {
+    if (value % 3600 === 0) return 0;
+    if (value % 1800 === 0) return 1;
+    return 2;
+  };
+  referenceValues
+    .sort((a, b) => priority(a) - priority(b) || b - a)
+    .some(value => {
+      if (selected.length >= 8) return true;
+      const top = topForValue(value);
+      const tooClose = selected.some(tick => Math.abs(tick.top - top) < 7);
+      if (!tooClose) selected.push({ value, top });
+      return false;
+    });
+  return selected.sort((a, b) => b.value - a.value);
+}
+
 function renderBoardCloseness(pl) {
   const COLORS = [
     '#e3b74f', '#6dd87a', '#e06c6c', '#5bc8f5', '#f07dba',
@@ -3452,11 +3481,7 @@ function renderBoardCloseness(pl) {
       ${marker}
     </a>`;
   }).join('');
-  const yTicks = [
-    { value: maxGap, top: 10 },
-    { value: maxGap / 2, top: 49 },
-    { value: 0, top: 88 },
-  ].map(tick =>
+  const yTicks = buildClosenessYTicks(maxGap).map(tick =>
     `<div class="closeness-y-tick" style="top:${tick.top}%"><span>${esc(formatBoardCompactGap(tick.value))}</span></div>`
   ).join('');
   const denseDayLabels = completed.length > 15;
