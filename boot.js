@@ -162,7 +162,7 @@
         ${renderCrazyRule('Perfect wrap', perfect)}
         ${renderCrazyRule('No bet', penalty)}
         ${renderCrazyRule('Furthest bet', penalty)}
-        ${renderCrazyRule('Neighbor bets', neighborPenalty)}
+        ${renderCrazyRule('Close bets', neighborPenalty)}
       </div>
     `;
     bootContent.classList.add('is-crazy-day');

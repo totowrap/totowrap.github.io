@@ -1820,6 +1820,7 @@ function compactSignedPoints(value) {
 function todayPenaltyStatus(penalty) {
   if (!penalty?.points) return null;
   if (penalty.reason === 'furthest-from-wrap') return { cls: 'b-penalty', text: 'FAR' };
+  if (penalty.reason === 'neighboring-bet') return { cls: 'b-penalty', text: 'CLOSE' };
   return { cls: 'b-penalty', text: compactSignedPoints(penalty.points) };
 }
 
@@ -2532,7 +2533,7 @@ function renderCrazyDayIndicator(day=S.today) {
   return `
     <div class="crazy-day-indicator" role="note" aria-label="Crazy Day scoring">
       <span class="crazy-day-indicator-title">Crazy Day</span>
-      <span class="crazy-day-indicator-rules">${regular} regular / ${perfect} perfect / ${penalty} no bet / ${penalty} furthest / ${neighborPenalty} neighbor</span>
+      <span class="crazy-day-indicator-rules">${regular} regular / ${perfect} perfect / ${penalty} no bet / ${penalty} furthest / ${neighborPenalty} close</span>
     </div>
   `;
 }
@@ -3140,7 +3141,7 @@ function renderCrazyDaySetupCard(day) {
   const penalty = cfg ? String(Math.abs(cfg.penaltyPoints)) : '';
   const neighborPenalty = cfg && cfg.neighborPenaltyPoints ? String(Math.abs(cfg.neighborPenaltyPoints)) : '';
   const statusText = cfg
-    ? `Crazy Day is active: ${cfg.regularPoints > 0 ? '+' : ''}${cfg.regularPoints} regular, ${cfg.perfectPoints > 0 ? '+' : ''}${cfg.perfectPoints} perfect wrap, ${cfg.penaltyPoints} no bet/furthest from wrap, ${cfg.neighborPenaltyPoints} neighbor bets.`
+    ? `Crazy Day is active: ${cfg.regularPoints > 0 ? '+' : ''}${cfg.regularPoints} regular, ${cfg.perfectPoints > 0 ? '+' : ''}${cfg.perfectPoints} perfect wrap, ${cfg.penaltyPoints} no bet/furthest from wrap, ${cfg.neighborPenaltyPoints} close bets.`
     : 'Tap to set special scoring for this day.';
   return `<div class="card crazy-day-card${cfg ? ' is-saved' : ''}${_crazyDayPanelOpen ? ' expanded' : ''}">
     <div class="crazy-day-top">
@@ -3161,7 +3162,7 @@ function renderCrazyDaySetupCard(day) {
           <span aria-hidden="true">-</span>
           <input type="number" id="crazy-penalty-points" value="${esc(penalty)}" placeholder="" min="0" step="1" inputmode="numeric">
         </div>
-        <label for="crazy-neighbor-penalty-points">Neighbor bets lose</label>
+        <label for="crazy-neighbor-penalty-points">Close bets lose</label>
         <div class="crazy-penalty-input-wrap">
           <span aria-hidden="true">-</span>
           <input type="number" id="crazy-neighbor-penalty-points" value="${esc(neighborPenalty)}" placeholder="" min="0" step="1" inputmode="numeric">
