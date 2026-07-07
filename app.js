@@ -4090,6 +4090,26 @@ function openCurrentBetDialog(name) {
     <div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="${isEditing ? 'current-bet-update' : 'current-bet-save'}" data-current-bet-player="${esc(playerName)}">Confirm</button>
+    </div>
+    ${isEditing ? `<button class="admin-dialog-action delete mt8" type="button" data-admin-dialog-action="current-bet-delete-open" data-current-bet-player="${esc(playerName)}">Delete Bet</button>` : ''}`
+  });
+}
+
+function openCurrentBetDeleteDialog(name) {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
+  const playerName = String(name || '').trim();
+  const existingGuess = (S.today.guesses || []).find(g => nameKey(g.name) === nameKey(playerName));
+  if (!existingGuess?.time) {
+    toast('Choose a current player bet', 'err');
+    return;
+  }
+  openAdminDialog({
+    title: `Delete ${playerName} Bet`,
+    showClose: false,
+    copy: 'This clears only this bet from the current day. The player stays in the roster.',
+    body: `<div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
+      <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="current-bet-delete-confirm" data-current-bet-player="${esc(playerName)}">Delete Bet</button>
     </div>`
   });
 }
@@ -4197,6 +4217,25 @@ async function updateCurrentPlayerBet(name, betTime, betDate='') {
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast(`${playerName} bet updated`, 'ok');
+  render();
+  return true;
+}
+
+async function deleteCurrentPlayerBet(name) {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime) return false;
+  const playerName = String(name || '').trim();
+  const existingGuess = (S.today.guesses || []).find(g => nameKey(g.name) === nameKey(playerName));
+  if (!existingGuess?.time) {
+    toast('Choose a current player bet', 'err');
+    return false;
+  }
+
+  const prevS = cloneState();
+  existingGuess.time = null;
+  delete existingGuess.date;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast(`${playerName} bet deleted`, 'ok');
   render();
   return true;
 }
@@ -4436,6 +4475,15 @@ async function handleAdminDialogAction(btn) {
       document.getElementById('admin-current-bet-input')?.value,
       document.getElementById('admin-current-bet-date-input')?.value
     );
+    if (saved) closeAdminDialog();
+    return;
+  }
+  if (action === 'current-bet-delete-open') {
+    openCurrentBetDeleteDialog(btn.dataset.currentBetPlayer);
+    return;
+  }
+  if (action === 'current-bet-delete-confirm') {
+    const saved = await deleteCurrentPlayerBet(btn.dataset.currentBetPlayer);
     if (saved) closeAdminDialog();
     return;
   }
