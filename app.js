@@ -3475,7 +3475,7 @@ function renderBoardCloseness(pl) {
   const markerHtml = points.map(point => {
     const pos = pointPosition(point);
     const marker = point.won
-      ? '<img class="closeness-win-marker" src="imgs/tuna.png" alt="" aria-hidden="true">'
+      ? '<img class="closeness-win-marker" src="imgs/tunacan.png" alt="" aria-hidden="true">'
       : `<span class="closeness-dot" style="background:${colorOf(point.name)};"></span>`;
     return `<a class="closeness-marker" href="#history-${encodeURIComponent(point.date)}" data-closeness-date="${esc(point.date)}" style="left:${pos.left.toFixed(2)}%; top:${pos.top.toFixed(2)}%;" title="${esc(point.name)} - ${esc(formatBoardExactCompactGap(point.gap))} off on ${esc(displayDayLabel(point.day + 1))}" aria-label="Open ${esc(displayDayLabel(point.day + 1))} in history">
       ${marker}
