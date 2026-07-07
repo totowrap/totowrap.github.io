@@ -3458,9 +3458,12 @@ function renderBoardCloseness(pl) {
   ].map(tick =>
     `<div class="closeness-y-tick" style="top:${tick.top}%"><span>${esc(formatBoardCompactGap(tick.value))}</span></div>`
   ).join('');
+  const denseDayLabels = completed.length > 15;
   const dayTicks = completed.map((_, idx) => {
     const left = maxDay ? (idx / maxDay) * 96 : 0;
-    return `<div class="closeness-x-tick" style="left:${left.toFixed(2)}%;"><span>${esc(displayDayNumber(idx + 1))}</span></div>`;
+    const displayDay = Number(displayDayNumber(idx + 1));
+    const majorClass = Number.isFinite(displayDay) && displayDay % 5 === 0 ? ' is-major' : '';
+    return `<div class="closeness-x-tick${majorClass}" style="left:${left.toFixed(2)}%;"><span>${esc(displayDayNumber(idx + 1))}</span></div>`;
   }).join('');
 
   const compareAccuracyStats = (a, b) => {
@@ -3525,7 +3528,7 @@ function renderBoardCloseness(pl) {
 
   return `
   <div class="closeness-wrap">
-    <div class="closeness-graph">
+    <div class="closeness-graph${denseDayLabels ? ' is-dense-days' : ''}">
       <div class="accuracy-active-name" style="color:${colorOf(activePlayer)};">${esc(activePlayer)}</div>
       <div class="closeness-y-axis"></div>
       <div class="closeness-x-axis"></div>

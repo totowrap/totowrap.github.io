@@ -690,6 +690,10 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .closeness-y-tick span { position:absolute; left:0; top:-6px; width:24px; transform:none; color:var(--dim); font-size:.42rem; font-variant-numeric:tabular-nums; line-height:1; overflow:hidden; text-align:right; white-space:nowrap; }
 .closeness-x-tick { position:absolute; top:88%; width:1px; height:7px; background:rgba(var(--neutral-rgb), .26); }
 .closeness-x-tick span { position:absolute; left:50%; top:9px; transform:translateX(-50%); color:var(--dim); font-size:.48rem; font-variant-numeric:tabular-nums; }
+@media (max-width: 700px) {
+  .closeness-graph.is-dense-days .closeness-x-tick:not(.is-major) span { display:none; }
+  .closeness-graph.is-dense-days .closeness-x-tick.is-major span { font-size:.42rem; }
+}
 .closeness-x-label,
 .closeness-y-label { position:absolute; color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:.52rem; font-variant-numeric:tabular-nums; letter-spacing:.1em; line-height:1; text-transform:uppercase; pointer-events:none; }
 .closeness-x-label { left:-58px; right:-4px; bottom:-12px; text-align:center; }
