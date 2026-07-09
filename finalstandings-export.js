@@ -129,42 +129,6 @@
     }, []);
   }
 
-  function cropTransparentCanvas(canvas, padding = 0) {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return canvas;
-    const { width, height } = canvas;
-    const pixels = ctx.getImageData(0, 0, width, height).data;
-    let top = height;
-    let right = 0;
-    let bottom = 0;
-    let left = width;
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (pixels[(y * width + x) * 4 + 3] <= 4) continue;
-        if (x < left) left = x;
-        if (x > right) right = x;
-        if (y < top) top = y;
-        if (y > bottom) bottom = y;
-      }
-    }
-
-    if (left > right || top > bottom) return canvas;
-    const inset = Math.max(0, Number(padding) || 0);
-    left = Math.max(0, left - inset);
-    top = Math.max(0, top - inset);
-    right = Math.min(width - 1, right + inset);
-    bottom = Math.min(height - 1, bottom + inset);
-
-    const cropped = document.createElement('canvas');
-    cropped.width = right - left + 1;
-    cropped.height = bottom - top + 1;
-    const croppedCtx = cropped.getContext('2d');
-    if (!croppedCtx) return canvas;
-    croppedCtx.drawImage(canvas, left, top, cropped.width, cropped.height, 0, 0, cropped.width, cropped.height);
-    return cropped;
-  }
-
   async function renderCanvas(rawEntries, options = {}) {
     const entries = normalizeEntries(rawEntries);
     if (!entries.length) throw new Error('No standings available');
@@ -172,7 +136,7 @@
 
     const canvas = document.createElement('canvas');
     canvas.width = 3000;
-    canvas.height = Number(options.canvasHeight) || 3900;
+    canvas.height = 3900;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not create image');
     ctx.textBaseline = 'middle';
@@ -192,21 +156,19 @@
     const scoring = entries.filter(entry => entry.score > 0 && Number(entry.rank) > 3);
     const zeroNames = entries.filter(entry => entry.score <= 0).map(entry => entry.name.toUpperCase());
 
-    if (!options.omitLogo) {
-      const logo = await loadImage(options.logoSrc || 'imgs/tonnowrapbig.png');
-      if (logo) {
-        const logoWidth = 860;
-        const logoHeight = logoWidth * logo.height / logo.width;
-        ctx.drawImage(logo, (canvas.width - logoWidth) / 2, 180, logoWidth, logoHeight);
-      } else {
-        ctx.fillStyle = yellow;
-        ctx.textAlign = 'center';
-        ctx.font = "bold 150px 'Alte Haas Grotesk', sans-serif";
-        ctx.fillText('TonnoWrap', canvas.width / 2, 300);
-      }
+    const logo = await loadImage(options.logoSrc || 'imgs/tonnowrapbig.png');
+    if (logo) {
+      const logoWidth = 860;
+      const logoHeight = logoWidth * logo.height / logo.width;
+      ctx.drawImage(logo, (canvas.width - logoWidth) / 2, 180, logoWidth, logoHeight);
+    } else {
+      ctx.fillStyle = yellow;
+      ctx.textAlign = 'center';
+      ctx.font = "bold 150px 'Alte Haas Grotesk', sans-serif";
+      ctx.fillText('TonnoWrap', canvas.width / 2, 300);
     }
 
-    let y = Number(options.contentTop) || (options.omitLogo ? 220 : 1050);
+    let y = 1050;
     const podiumHeight = 245;
     const podiumGap = 38;
     podium.forEach(entry => {
@@ -278,15 +240,13 @@
       ctx.globalAlpha = 1;
     }
 
-    if (!options.omitFooter) {
-      y += 75;
-      ctx.fillStyle = yellow;
-      ctx.textAlign = 'center';
-      ctx.font = "bold 38px 'Alte Haas Grotesk', sans-serif";
-      ctx.fillText('LA LUDOPATIA È UN PROBLEMA SOLO SE PERDI', canvas.width / 2, y);
-    }
+    y += 75;
+    ctx.fillStyle = yellow;
+    ctx.textAlign = 'center';
+    ctx.font = "bold 38px 'Alte Haas Grotesk', sans-serif";
+    ctx.fillText('LA LUDOPATIA È UN PROBLEMA SOLO SE PERDI', canvas.width / 2, y);
 
-    return options.background ? canvas : cropTransparentCanvas(canvas, options.cropPadding);
+    return canvas;
   }
 
   async function renderBlob(entries, options) {

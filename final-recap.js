@@ -174,17 +174,18 @@
     const players = (source.playerRoster || []).map(player => player.name).filter(Boolean);
     const stats = new Map(players.map(name => [name, {
       name, score:Number(source.scores?.[name] || 0), wins:0, exact:0, bets:0, forgot:0,
-      gaps:[], gapPoints:[], closeWrong:0, winStreak:0, longestWinStreak:0
+      gaps:[], gapPoints:[], closeWrong:0, closeWrongBuckets:{under1:0,under3:0,under5:0}, winStreak:0, longestWinStreak:0
     }]));
     const ensure = name => {
-      if (!stats.has(name)) stats.set(name, {name,score:Number(source.scores?.[name]||0),wins:0,exact:0,bets:0,forgot:0,gaps:[],gapPoints:[],closeWrong:0,winStreak:0,longestWinStreak:0});
+      if (!stats.has(name)) stats.set(name, {name,score:Number(source.scores?.[name]||0),wins:0,exact:0,bets:0,forgot:0,gaps:[],gapPoints:[],closeWrong:0,closeWrongBuckets:{under1:0,under3:0,under5:0},winStreak:0,longestWinStreak:0});
       return stats.get(name);
     };
     let totalBets = 0;
     let totalForgot = 0;
     const noWinnerEntries = [];
     let exactDays = 0;
-    let closestWrong = null;
+    let closestWrongGap = null;
+    let closestWrongLeaders = [];
     let furthestNoWinner = null;
     let furthestWinningDay = null;
     const leadChanges = [];
@@ -237,10 +238,25 @@
         if (!winners.size && gap !== null && (!furthestNoWinner || gap > furthestNoWinner.gap)) furthestNoWinner = item;
         if (winners.size && gap !== null && (!furthestWinningDay || gap > furthestWinningDay.gap)) furthestWinningDay = item;
         if (!winners.has(guess.name) && gap !== null) {
-          if (gap < 300) player.closeWrong += 1;
+          if (gap < 60) {
+            player.closeWrongBuckets.under1 += 1;
+            player.closeWrong += 1;
+          } else if (gap < 180) {
+            player.closeWrongBuckets.under3 += 1;
+            player.closeWrong += 1;
+          } else if (gap < 300) {
+            player.closeWrongBuckets.under5 += 1;
+            player.closeWrong += 1;
+          }
           const territoryGap = wrongTerritoryGap(guess.name,day);
-          if (territoryGap !== null && (!closestWrong || territoryGap < closestWrong.gap)) {
-            closestWrong = {...item,gap:territoryGap};
+          if (territoryGap !== null) {
+            const miss = {...item,gap:territoryGap};
+            if (closestWrongGap === null || territoryGap < closestWrongGap) {
+              closestWrongGap = territoryGap;
+              closestWrongLeaders = [miss];
+            } else if (territoryGap === closestWrongGap) {
+              closestWrongLeaders.push(miss);
+            }
           }
         }
       });
@@ -269,9 +285,16 @@
     const mostReliable = list.filter(item => item.bets === maxBets).sort((a,b) => a.name.localeCompare(b.name));
     const maxStreak = Math.max(0,...list.map(item => item.longestWinStreak));
     const longestStreak = list.filter(item => item.longestWinStreak === maxStreak && maxStreak > 0).sort((a,b) => a.name.localeCompare(b.name));
-    const maxCloseWrong = Math.max(0,...list.map(item => item.closeWrong));
-    const closeWrongLeaders = list.filter(item => item.closeWrong === maxCloseWrong && maxCloseWrong > 0).sort((a,b) => a.name.localeCompare(b.name));
-    return {days,list,leaderboard,totalBets,totalForgot,noWinnerEntries,exactDays,closestWrong,furthestNoWinner,furthestWinningDay,leadChanges,mostAccurate,leastAccurate,mostReliable,mostForgot,exactPlayers,longestStreak,closeWrongLeaders};
+    const closeWrongBucketLeaders = ['under1','under3','under5'].reduce((result,key) => {
+      const max = Math.max(0,...list.map(item => item.closeWrongBuckets?.[key] || 0));
+      result[key] = list
+        .filter(item => (item.closeWrongBuckets?.[key] || 0) === max && max > 0)
+        .sort((a,b) => a.name.localeCompare(b.name));
+      return result;
+    }, {});
+    const closestWrong = closestWrongLeaders[0] || null;
+    closestWrongLeaders = closestWrongLeaders.sort((a,b) => a.name.localeCompare(b.name) || a.dayIndex-b.dayIndex);
+    return {days,list,leaderboard,totalBets,totalForgot,noWinnerEntries,exactDays,closestWrong,closestWrongLeaders,furthestNoWinner,furthestWinningDay,leadChanges,mostAccurate,leastAccurate,mostReliable,mostForgot,exactPlayers,longestStreak,closeWrongBucketLeaders};
   }
 
   function stat(value, label) {
@@ -285,6 +308,36 @@
       <span>${esc(label)}</span>
       <strong>${esc(value)}</strong>
       <b>${esc(names)}</b>
+    </div>`;
+  }
+  function closeWrongBucketCard(leadersByBucket) {
+    const buckets = [
+      ['under1','<1 min'],
+      ['under3','<3 mins'],
+      ['under5','<5 mins']
+    ];
+    const row = ([key,label]) => {
+      const leaders = leadersByBucket?.[key] || [];
+      const count = leaders[0]?.closeWrongBuckets?.[key] || 0;
+      return `<div class="final-recap-close-wrong-row">
+        <span>${esc(label)}</span>
+        <strong>${count ? `${count} ${word(count,'bet','bets')}` : '—'}</strong>
+        <b>${leaders.length ? esc(leaders.map(item => item.name).join(', ')) : '—'}</b>
+      </div>`;
+    };
+    return `<div class="final-recap-showcase-card final-recap-close-wrong-card" data-tone="gold">
+      <span>Most close wrong bets</span>
+      <div>${buckets.map(row).join('')}</div>
+    </div>`;
+  }
+  function closestWrongCard(item) {
+    return `<div class="final-recap-showcase-card final-recap-closest-wrong-card" data-tone="green">
+      <span>Closest wrong bet</span>
+      <div class="final-recap-furthest-row">
+        <strong>${esc(item ? compactTime(item.gap) : '—')}</strong>
+        <b>${esc(item?.name || '—')}</b>
+        <small>${esc(item ? `Day ${item.dayIndex} · ${formatDate(item.date)}` : 'No qualifying day')}</small>
+      </div>
     </div>`;
   }
   function rankedFinalLeaderboard(data) {
@@ -355,8 +408,8 @@
       <small>${esc(item ? `Day ${item.dayIndex} · ${formatDate(item.date)}` : 'No qualifying day')}</small>
     </div>`;
     return `<div class="final-recap-showcase-card final-recap-furthest-card" data-tone="red">
-      <span>Furthest from the official wrap</span>
-      <div>${row('Winning day',winningDay)}${row('No-winner day',noWinner)}</div>
+      <span>Furthest bet from official wrap</span>
+      <div>${row('Among winning days',winningDay)}${row('Among no-winner days',noWinner)}</div>
     </div>`;
   }
   function reactionCard(label, file, tone) {
@@ -470,9 +523,9 @@
       screen('Accuracy award',accuracyTitle('Most accurate'),accuracyCopy,`${accuracyGraph(data.mostAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.mostAccurate?.avgGap),'Average distance')}${stat(data.mostAccurate?.bets || 0,word(data.mostAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.mostAccurate?.wins || 0,word(data.mostAccurate?.wins || 0,'Win','Wins'))}</div>`,'final-recap-accuracy-screen',accuracyName(data.mostAccurate,'is-green')),
       screen('Least accurate',accuracyTitle('Least accurate'),leastAccuracyCopy,`${accuracyGraph(data.leastAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.leastAccurate?.avgGap),'Average distance')}${stat(data.leastAccurate?.bets || 0,word(data.leastAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.leastAccurate?.wins || 0,word(data.leastAccurate?.wins || 0,'Win','Wins'))}</div>`,'final-recap-accuracy-screen',accuracyName(data.leastAccurate,'is-red')),
       screen('The highs and lows','Every second counted','',`<div class="final-recap-showcase-grid">
-        ${splitShowcaseAward('Closest wrong bet',data.closestWrong?.name || '—',data.closestWrong ? compactTime(data.closestWrong.gap) : '—','green')}
+        ${closestWrongCard(data.closestWrong)}
         ${furthestComparisonCard(data.furthestNoWinner,data.furthestWinningDay)}
-        ${splitShowcaseAward('Most wrong bets within 5 minutes',data.closeWrongLeaders.length ? data.closeWrongLeaders.map(item => item.name).join(', ') : '—',data.closeWrongLeaders.length ? `${data.closeWrongLeaders[0].closeWrong} ${word(data.closeWrongLeaders[0].closeWrong,'bet','bets')}` : '—','gold')}
+        ${closeWrongBucketCard(data.closeWrongBucketLeaders)}
       </div>`),
       screen('Showing up matters','The regulars','',`<div class="final-recap-showcase-grid">
         ${splitShowcaseAward('Most bets placed',data.mostReliable.length ? data.mostReliable.map(item => item.name).join(', ') : '—',data.mostReliable.length ? `${data.mostReliable[0].bets} ${word(data.mostReliable[0].bets,'bet','bets')}` : '—','green')}
@@ -791,7 +844,8 @@
   }
   function showEntry() {
     const existing = document.querySelector('.final-recap-entry');
-    if (!state || !displayedProgressIsFinal()) {
+    const previewMode = new URLSearchParams(location.search).has('final-recap-preview');
+    if (!state || (!displayedProgressIsFinal() && !previewMode)) {
       existing?.remove();
       return;
     }
@@ -806,6 +860,9 @@
   function receiveState() {
     state = window.__TOTOWRAP_RECAP_STATE__;
     showEntry();
+    if (new URLSearchParams(location.search).has('final-recap-preview')) {
+      setTimeout(openRecap,0);
+    }
   }
   window.addEventListener('totowrap-recap-state-ready', receiveState);
   window.addEventListener('totowrap-open-final-recap', openRecap);
