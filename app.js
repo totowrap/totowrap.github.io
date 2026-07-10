@@ -2000,11 +2000,18 @@ function refreshStatusBadges() {
     const nameEmojiEl = nameEl.querySelector('.today-live-name-emoji');
     if(out.has(g.name)){
       playerRow?.classList.add('territory-ended');
-      el.className = el instanceof HTMLButtonElement ? 'badge b-out current-bet-edit-action' : 'badge b-out';
+      const canEditCurrentBet = el instanceof HTMLButtonElement && IS_ADMIN && S.today && !S.today.wrapTime;
+      el.className = canEditCurrentBet ? 'badge b-out current-bet-edit-action' : 'badge b-out';
       el.textContent='OUT';
-      el.removeAttribute('data-current-bet-player');
-      el.removeAttribute('aria-label');
-      if (el instanceof HTMLButtonElement) el.disabled = true;
+      if (canEditCurrentBet) {
+        el.dataset.currentBetPlayer = g.name;
+        el.setAttribute('aria-label', `Edit ${g.name} bet`);
+        el.disabled = false;
+      } else {
+        el.removeAttribute('data-current-bet-player');
+        el.removeAttribute('aria-label');
+        if (el instanceof HTMLButtonElement) el.disabled = true;
+      }
       if (nameTextEl && nameEmojiEl) {
         nameTextEl.textContent = g.name;
         nameEmojiEl.textContent = ' 🍣';
@@ -2954,8 +2961,8 @@ function renderActiveTodayRows(t, sg, out, slices) {
 
 	        <div class="row-time">${esc(g.time)}</div>
 
-	        ${!isOut && IS_ADMIN && S.today && !S.today.wrapTime
-          ? `<button class="badge b-in current-bet-edit-action" id="st-${playerId}" type="button" data-current-bet-player="${esc(g.name)}" aria-label="Edit ${esc(g.name)} bet">IN</button>`
+		        ${IS_ADMIN && S.today && !S.today.wrapTime
+          ? `<button class="badge ${isOut ? 'b-out' : 'b-in'} current-bet-edit-action" id="st-${playerId}" type="button" data-current-bet-player="${esc(g.name)}" aria-label="Edit ${esc(g.name)} bet">${isOut ? 'OUT' : 'IN'}</button>`
           : `<div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">${isOut ? 'OUT' : 'IN'}</div>`}
       ` : IS_ADMIN && S.today && !S.today.wrapTime
         ? `<button class="badge b-missing missing-bet-action" type="button" data-current-bet-player="${esc(g.name)}">This tuna forgot to bet today</button>`
