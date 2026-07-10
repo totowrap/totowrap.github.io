@@ -4951,11 +4951,11 @@ async function showPreview() {
     <div class="hdr-wrap">Wrap <span class="hdr-wrap-time live">${esc(savedWrap)}</span></div>
   </div>
 </div>
-<div class="standalone-scroll">
+<div class="standalone-scroll preview-standalone-scroll">
   ${errorWarning}
   ${duplicateWarning}
 
-  <div class="card">
+  <div class="card preview-confirm-card">
     <div class="card-lbl">Confirm Player Guesses</div>
     <div class="preview-head compact-preview-head"><span>Player</span><span>Bet</span><span>Date</span></div>
     <div class="preview-card compact-preview-card">

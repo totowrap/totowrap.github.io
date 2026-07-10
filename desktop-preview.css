@@ -344,6 +344,35 @@ body.desktop-preview-active #app > .desktop-live-bar,
     grid-row: 2;
   }
 
+  body.desktop-preview-active #app > .preview-standalone-scroll {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    min-height: 0;
+    height: 100vh;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body.desktop-preview-active #app > .preview-standalone-scroll > * {
+    width: min(100%, 1040px);
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  body.desktop-preview-active #app > .preview-standalone-scroll > .preview-confirm-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body.desktop-preview-active #app .preview-confirm-card .compact-preview-card {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+  }
+
   body.desktop-preview-active #app .sec {
     padding: 18px 28px 22px;
   }
