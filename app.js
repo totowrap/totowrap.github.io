@@ -1865,12 +1865,28 @@ function calcNapuleDayTheft(guesses, winningSlice, points, day, daySlices, effec
   const winningIndex = slices.findIndex(slice => slice.sec === winningSlice.sec);
   if (winningIndex < 0) return { winnerPoints: 0, penalties: [], robbed: [] };
 
+  const crownName = resolveCrownPlayerName(day, guesses);
+  const protectedCrownKey = crownName && winners.some(winner => nameKey(winner) === nameKey(crownName))
+    ? nameKey(crownName)
+    : '';
+  const winnerKeys = new Set(winners.map(nameKey));
+  const robbableNamesFromSlice = slice => (slice?.names || [])
+    .filter(name => nameKey(name) !== protectedCrownKey)
+    .filter(name => !winnerKeys.has(nameKey(name)));
+  const findRobbedNamesOnSide = direction => {
+    if (!protectedCrownKey) return robbableNamesFromSlice(slices[winningIndex + direction]);
+    for (let idx = winningIndex + direction; idx >= 0 && idx < slices.length; idx += direction) {
+      const names = robbableNamesFromSlice(slices[idx]);
+      if (names.length) return names;
+    }
+    return [];
+  };
   const robbedNames = [
-    ...(slices[winningIndex - 1]?.names || []),
-    ...(slices[winningIndex + 1]?.names || [])
+    ...findRobbedNamesOnSide(-1),
+    ...findRobbedNamesOnSide(1)
   ];
   const uniqueRobbed = [...new Map(robbedNames.map(name => [nameKey(name), name])).values()]
-    .filter(name => name && !winners.some(winner => nameKey(winner) === nameKey(name)));
+    .filter(Boolean);
   if (!uniqueRobbed.length) return { winnerPoints: 0, penalties: [], robbed: [] };
 
   return {
