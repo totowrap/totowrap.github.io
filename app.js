@@ -2745,12 +2745,37 @@ function renderSpecialDayIndicator(day=S.today) {
   return renderNapuleDayIndicator(day) || renderCrazyDayIndicator(day);
 }
 
+function missingBetPenaltyFixEntries(day=S.today) {
+  if (!day?.wrapTime || !Array.isArray(day.guesses)) return [];
+  const penalties = Array.isArray(day.penalties) ? day.penalties : [];
+  return day.guesses
+    .filter(guess => guess?.name && !guess.time)
+    .map(guess => {
+      const penalty = penalties.find(item =>
+        item?.reason === 'missed-bet' && nameKey(item.name) === nameKey(guess.name)
+      );
+      return {
+        name: guess.name,
+        penalty,
+        delta: -1 - (Number(penalty?.points) || 0)
+      };
+    })
+    .filter(entry => entry.delta !== 0);
+}
+
+function renderTodayMissingPenaltyFixButton(day, canStartNextDay) {
+  if (!IS_ADMIN || !canStartNextDay || day !== S.today) return '';
+  if (!missingBetPenaltyFixEntries(day).length) return '';
+  return '<button class="btn btn-s mt12" id="today-missing-penalty-fix-btn" type="button">Apply Missing -1</button>';
+}
+
 function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
   const penaltiesByPlayer = dayPenaltyDetailsMap(t);
   const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
   const winnerCloseTag = canStartNextDay ? 'button' : 'div';
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p next-day-btn" id="new-day-btn">Start Next Day</button>' : '';
+  const missingPenaltyFixBtn = renderTodayMissingPenaltyFixButton(t, canStartNextDay);
   const completedViewClass = canStartNextDay ? 'today-fixed-view today-completed-view has-next-day-action' : 'today-fixed-view today-completed-view';
   const fridayBanner = renderFridayWrapBanner(t);
 
@@ -2783,9 +2808,10 @@ function renderCompletedToday(t, canStartNextDay=false) {
           </div>`;
         }).join('')}
         </div>
-      </div>
-      ${nextDayBtn}
-    </div>`;
+	      </div>
+	      ${missingPenaltyFixBtn}
+	      ${nextDayBtn}
+	    </div>`;
   }
 
   const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
@@ -2830,9 +2856,10 @@ function renderCompletedToday(t, canStartNextDay=false) {
       </div>`;
     }).join('')}
     </div>
-  </div>
-  ${nextDayBtn}
-  </div>`;
+	  </div>
+	  ${missingPenaltyFixBtn}
+	  ${nextDayBtn}
+	  </div>`;
 }
 
 function getShareResultInfo(day, dayNumber=null) {
@@ -4883,6 +4910,36 @@ function applyDayPenalties(day, direction) {
   });
 }
 
+async function applyTodayMissingPenaltyFix() {
+  if (!IS_ADMIN || !currentUser || !S.today?.wrapTime) return false;
+  const entries = missingBetPenaltyFixEntries(S.today);
+  if (!entries.length) {
+    toast('Missing penalties already applied', 'ok');
+    return true;
+  }
+
+  const prevS = cloneState();
+  const penalties = Array.isArray(S.today.penalties) ? [...S.today.penalties] : [];
+  entries.forEach(entry => {
+    const idx = penalties.findIndex(item =>
+      item?.reason === 'missed-bet' && nameKey(item.name) === nameKey(entry.name)
+    );
+    if (idx >= 0) {
+      penalties[idx] = { ...penalties[idx], name: entry.name, points: -1, reason: 'missed-bet' };
+    } else {
+      penalties.push({ name: entry.name, points: -1, reason: 'missed-bet' });
+    }
+    applyScoreDelta(entry.name, entry.delta);
+  });
+  S.today.penalties = penalties;
+
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast(`${entries.length} missing ${countWord(entries.length, 'penalty', 'penalties')} applied`, 'ok');
+  render();
+  return true;
+}
+
 function applyCompletedDayResult(day, result) {
   day.winner = result.winner;
   day.winners = result.winners;
@@ -5483,6 +5540,7 @@ function bindMain() {
     });
   });
   document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>setMainTab(btn.dataset.tab)));
+  document.getElementById('today-missing-penalty-fix-btn')?.addEventListener('click', applyTodayMissingPenaltyFix);
   document.getElementById('new-day-btn')?.addEventListener('click', async () => {
     const prevS = cloneState();
     if(S.today&&S.today.wrapTime) S.days.push({...S.today});
