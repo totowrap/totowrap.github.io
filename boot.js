@@ -148,7 +148,8 @@
     }
     const regular = detail.regular || '+0 points';
     const perfect = detail.perfect || '+0 points';
-    const penalty = normalizePenaltyText(detail.penalty || '0 points');
+    const noBetPenalty = normalizePenaltyText(detail.noBetPenalty || detail.penalty || '0 points');
+    const furthestPenalty = normalizePenaltyText(detail.furthestPenalty || detail.penalty || '0 points');
     const neighborPenalty = normalizePenaltyText(detail.neighborPenalty || '0 points');
     crazy.innerHTML = `
       <div class="boot-crazy-title" aria-label="Crazy Day">
@@ -160,8 +161,8 @@
       <div class="boot-crazy-rules">
         ${renderCrazyRule('Regular winner', regular)}
         ${renderCrazyRule('Perfect wrap', perfect)}
-        ${renderCrazyRule('No bet', penalty)}
-        ${renderCrazyRule('Furthest bet', penalty)}
+        ${renderCrazyRule('No bet', noBetPenalty)}
+        ${renderCrazyRule('Furthest bet', furthestPenalty)}
         ${renderCrazyRule('Close bets', neighborPenalty)}
       </div>
     `;
