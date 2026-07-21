@@ -1672,9 +1672,9 @@ function eliminated(guesses, curSec, day=S.today) {
   return out;
 }
 
-function getCrazyDayConfig(day=S.today) {
+function getCrazyDaySettings(day=S.today) {
   const cfg = day?.crazyDay;
-  if (!cfg?.enabled) return null;
+  if (!cfg) return null;
   const regularPoints = Number(cfg.regularPoints);
   const perfectPoints = Number(cfg.perfectPoints);
   const penaltyAmount = Math.abs(Number(cfg.penaltyPoints));
@@ -1685,11 +1685,19 @@ function getCrazyDayConfig(day=S.today) {
   if (![regularPoints, perfectPoints, penaltyAmount, neighborPenaltyAmount].every(Number.isFinite)) return null;
   const penaltyPoints = penaltyAmount ? -penaltyAmount : 0;
   const neighborPenaltyPoints = neighborPenaltyAmount ? -neighborPenaltyAmount : 0;
-  return { enabled: true, regularPoints, perfectPoints, penaltyPoints, neighborPenaltyPoints };
+  return { enabled: cfg.enabled === true, regularPoints, perfectPoints, penaltyPoints, neighborPenaltyPoints };
+}
+
+function getCrazyDayConfig(day=S.today) {
+  const cfg = getCrazyDaySettings(day);
+  return cfg?.enabled ? cfg : null;
 }
 
 function getDayScoring(day=S.today) {
-  return getCrazyDayConfig(day) || { enabled: false, regularPoints: 1, perfectPoints: 3, penaltyPoints: 0, neighborPenaltyPoints: 0 };
+  const settings = getCrazyDaySettings(day);
+  return settings
+    ? { ...settings, enabled: true }
+    : { enabled: false, regularPoints: 1, perfectPoints: 3, penaltyPoints: 0, neighborPenaltyPoints: 0 };
 }
 
 function guessWrapDistanceSec(guess, wrapHMSInput, day, noWinner=false) {
@@ -3142,15 +3150,19 @@ function renderToday() {
 }
 
 function renderCrazyDaySetupCard(day) {
+  const settings = getCrazyDaySettings(day);
   const cfg = getCrazyDayConfig(day);
-  const regular = cfg ? String(cfg.regularPoints) : '';
-  const perfect = cfg ? String(cfg.perfectPoints) : '';
-  const penalty = cfg ? String(Math.abs(cfg.penaltyPoints)) : '';
-  const neighborPenalty = cfg && cfg.neighborPenaltyPoints ? String(Math.abs(cfg.neighborPenaltyPoints)) : '';
+  const regular = settings ? String(settings.regularPoints) : '';
+  const perfect = settings ? String(settings.perfectPoints) : '';
+  const penalty = settings ? String(Math.abs(settings.penaltyPoints)) : '';
+  const neighborPenalty = settings && settings.neighborPenaltyPoints ? String(Math.abs(settings.neighborPenaltyPoints)) : '';
   const statusText = cfg
     ? `Crazy Day is active: ${cfg.regularPoints > 0 ? '+' : ''}${cfg.regularPoints} regular, ${cfg.perfectPoints > 0 ? '+' : ''}${cfg.perfectPoints} perfect wrap, ${cfg.penaltyPoints} no bet/furthest from wrap, ${cfg.neighborPenaltyPoints} close bets.`
+    : settings
+      ? `Custom scoring is saved: ${settings.regularPoints > 0 ? '+' : ''}${settings.regularPoints} regular, ${settings.perfectPoints > 0 ? '+' : ''}${settings.perfectPoints} perfect wrap, ${settings.penaltyPoints} no bet/furthest from wrap, ${settings.neighborPenaltyPoints} close bets. Crazy Day look is off.`
     : 'Tap to set special scoring for this day.';
-  return `<div class="card crazy-day-card${cfg ? ' is-saved' : ''}${_crazyDayPanelOpen ? ' expanded' : ''}">
+  const activeAttr = settings?.enabled ? 'true' : 'false';
+  return `<div class="card crazy-day-card${settings ? ' is-saved' : ''}${cfg ? ' is-active' : ''}${_crazyDayPanelOpen ? ' expanded' : ''}">
     <div class="crazy-day-top">
       <div class="crazy-day-title">
         <strong>Crazy Day</strong>
@@ -3159,6 +3171,13 @@ function renderCrazyDaySetupCard(day) {
       <button class="crazy-day-toggle" id="crazy-day-toggle-btn" type="button" aria-label="Show Crazy Day settings" aria-expanded="${_crazyDayPanelOpen ? 'true' : 'false'}"></button>
     </div>
     <div class="crazy-day-options">
+      <div class="crazy-day-mode-row">
+        <div class="crazy-day-mode-copy">
+          <strong>Crazy Day Look</strong>
+          <span>Show the Crazy Day loading screen and banner.</span>
+        </div>
+        <button class="crazy-day-enable-toggle${settings?.enabled ? ' is-on' : ''}" id="crazy-day-active-toggle" type="button" aria-label="Show Crazy Day look" aria-pressed="${activeAttr}"></button>
+      </div>
       <div class="crazy-day-grid">
         <label for="crazy-regular-points">Regular winner gets</label>
         <input type="number" id="crazy-regular-points" value="${esc(regular)}" placeholder="" step="1" inputmode="numeric">
@@ -3176,11 +3195,11 @@ function renderCrazyDaySetupCard(day) {
         </div>
       </div>
       <div class="crazy-day-summary">
-        Save Crazy Day to apply special scoring. Cancel Crazy Day removes it from this day and clears these fields.
+        Save settings to apply these points. Crazy Day Look only controls the loading page and banner.
       </div>
       <div class="crazy-day-actions">
-        <button class="btn btn-s" id="clear-crazy-day-btn" type="button">Cancel Crazy Day</button>
-        <button class="btn btn-p" id="save-crazy-day-btn" type="button">Save Crazy Day</button>
+        <button class="btn btn-s" id="clear-crazy-day-btn" type="button">Clear Settings</button>
+        <button class="btn btn-p" id="save-crazy-day-btn" type="button">Save Settings</button>
       </div>
     </div>
   </div>`;
@@ -4397,16 +4416,17 @@ async function saveCrazyDaySettings() {
   const perfectPoints = readCrazyDayInput('crazy-perfect-points');
   const penaltyPoints = readCrazyDayPenaltyInput('crazy-penalty-points');
   const neighborPenaltyPoints = readCrazyDayPenaltyInput('crazy-neighbor-penalty-points');
+  const enabled = document.getElementById('crazy-day-active-toggle')?.getAttribute('aria-pressed') === 'true';
   if ([regularPoints, perfectPoints, penaltyPoints, neighborPenaltyPoints].some(value => value === null)) {
     toast('Enter Crazy Day points', 'err');
     return false;
   }
   const prevS = cloneState();
-  S.today.crazyDay = { enabled: true, regularPoints, perfectPoints, penaltyPoints, neighborPenaltyPoints };
+  S.today.crazyDay = { enabled, regularPoints, perfectPoints, penaltyPoints, neighborPenaltyPoints };
   _crazyDayPanelOpen = true;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
-  toast('Crazy Day saved', 'ok');
+  toast(enabled ? 'Crazy Day saved' : 'Custom scoring saved', 'ok');
   render();
   return true;
 }
@@ -4423,7 +4443,7 @@ async function clearCrazyDaySettings() {
   _crazyDayPanelOpen = false;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
-  toast('Crazy Day cleared', 'ok');
+  toast('Crazy Day settings cleared', 'ok');
   render();
   return true;
 }
@@ -4870,30 +4890,11 @@ ${hasCurrentDay ? `
 </div></div>`;
 }
 
-async function cancelCrazyDayForSafety() {
-  if (!IS_ADMIN || !S.today?.crazyDay || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return true;
-  const prevS = cloneState();
-  delete S.today.crazyDay;
-  _crazyDayPanelOpen = false;
-  const saved = await saveS();
-  if (!saved) {
-    restoreAfterFailedSave(prevS);
-    return false;
-  }
-  toast('Crazy Day canceled', 'ok');
-  return true;
-}
-
 async function showPreview() {
   if (!IS_ADMIN || !currentUser) return;
   const inp = document.getElementById('paste-inp');
   const text = inp?.value || '';
   if (!text.trim()) { toast('Paste guesses first', 'err'); return; }
-  const crazyCardOpen = document.querySelector('.crazy-day-card')?.classList.contains('expanded');
-  if (S.today?.crazyDay && !crazyCardOpen) {
-    const cleared = await cancelCrazyDayForSafety();
-    if (!cleared) return;
-  }
   
   const { guesses: parsed, formatErrors } = parsePaste(text);
   if (!parsed.length && (!formatErrors || !formatErrors.length)) {
@@ -5156,13 +5157,15 @@ function bindMain() {
   document.getElementById('crazy-day-toggle-btn')?.addEventListener('click', async () => {
     const card = document.querySelector('.crazy-day-card');
     const next = !card?.classList.contains('expanded');
-    if (!next && S.today?.crazyDay) {
-      await cancelCrazyDayForSafety();
-      return;
-    }
     _crazyDayPanelOpen = next;
     card?.classList.toggle('expanded', next);
     document.getElementById('crazy-day-toggle-btn')?.setAttribute('aria-expanded', String(next));
+  });
+  document.getElementById('crazy-day-active-toggle')?.addEventListener('click', e => {
+    const btn = e.currentTarget;
+    const next = btn.getAttribute('aria-pressed') !== 'true';
+    btn.setAttribute('aria-pressed', String(next));
+    btn.classList.toggle('is-on', next);
   });
   document.getElementById('save-crazy-day-btn')?.addEventListener('click', saveCrazyDaySettings);
   document.getElementById('clear-crazy-day-btn')?.addEventListener('click', clearCrazyDaySettings);
