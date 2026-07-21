@@ -4990,7 +4990,7 @@ function renderHistory() {
           const prob  = g.time ? getWinProbability(g.name, d.guesses, d) : null;
               const penalty = penaltyDetailsByPlayer.get(nameKey(g.name));
               const penaltyPoints = penalty?.points || 0;
-              const penaltyText = penalty?.reason === 'napule-robbed' ? 'ROBBED' : compactSignedPoints(penaltyPoints);
+              const penaltyText = penalty?.reason === 'napule-robbed' ? `ROBBED ${compactSignedPoints(penaltyPoints)}` : compactSignedPoints(penaltyPoints);
               return `
           <div class="row${slice ? ' row-with-boundary' : ''}${isWinner ? ' golden-winner-row' : ''}">
             <div class="row-name row-name-stack${isWinner ? ' history-winner-name' : ''}">

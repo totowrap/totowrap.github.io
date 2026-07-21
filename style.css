@@ -37,7 +37,7 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
 .boot-content.is-napule-day .boot-logo-stage,
 .boot-content.is-napule-day .boot-phrase { opacity: 0; pointer-events: none; }
 .boot-napule-title { color: var(--napule-blue); }
-.boot-napule-title span { --wave-color: var(--napule-blue); }
+.boot-napule-title span { animation: none; color: var(--napule-blue); transform: none; }
 .boot-napule-logo { filter: brightness(95%) drop-shadow(2px 0 0 var(--napule-blue)) drop-shadow(-2px 0 0 var(--napule-blue)) drop-shadow(0 2px 0 var(--napule-blue)) drop-shadow(0 -2px 0 var(--napule-blue)); }
 .boot-napule-rules { color: var(--napule-blue); }
 .boot-napule-rule-copy { display: block; min-width: 0; text-align: right; white-space: nowrap; }
