@@ -63,6 +63,7 @@ let _territoryRuleMigrationPending = false;
 let _territoryRuleMigrationSaving = false;
 let _historyRowScrollAnimation = null;
 let _crazyDayPanelOpen = false;
+let _napuleDayPanelOpen = false;
 let _shareResultInfo = null;
 const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
@@ -71,6 +72,7 @@ const BOOT_FADE_MS = 1500;
 const BOOT_RENDER_WAIT_TIMEOUT_MS = 5000;
 const BOOT_PLAYER_NAMES_STORAGE_KEY = 'totowrap-boot-player-names';
 const BOOT_CRAZY_DAY_STORAGE_KEY = 'totowrap-boot-crazy-day';
+const BOOT_NAPULE_DAY_STORAGE_KEY = 'totowrap-boot-napule-day';
 const BOOT_STARTED_AT = Date.now();
 let _bootHideQueued = false;
 const INNER_SCROLL_SELECTOR = '.today-scroll-list, .standings-scroll-list, .board-legend, .preview-card';
@@ -1697,7 +1699,12 @@ function getCrazyDaySettings(day=S.today) {
   return { enabled: cfg.enabled === true, regularPoints, perfectPoints, noBetPenaltyPoints, furthestPenaltyPoints, neighborPenaltyPoints };
 }
 
+function getNapuleDayConfig(day=S.today) {
+  return day?.napuleDay?.enabled === true ? { enabled: true } : null;
+}
+
 function getCrazyDayConfig(day=S.today) {
+  if (getNapuleDayConfig(day)) return null;
   const cfg = getCrazyDaySettings(day);
   return cfg?.enabled ? cfg : null;
 }
@@ -1766,10 +1773,40 @@ function calcCrazyDayPenalties(guesses, wrapHMSInput, day, noWinner=false, exclu
   return [...candidates.values()];
 }
 
+function calcNapuleDayTheft(guesses, winningSlice, points, day, daySlices) {
+  const stealAmount = Math.max(0, Number(points) || 0);
+  const winners = winningSlice?.names || [];
+  if (!stealAmount || !winners.length) return { winnerPoints: 0, penalties: [], robbed: [] };
+
+  const slices = Array.isArray(daySlices) ? daySlices : boundaries(guesses, day);
+  const winningIndex = slices.findIndex(slice => slice.sec === winningSlice.sec);
+  if (winningIndex < 0) return { winnerPoints: 0, penalties: [], robbed: [] };
+
+  const robbedNames = [
+    ...(slices[winningIndex - 1]?.names || []),
+    ...(slices[winningIndex + 1]?.names || [])
+  ];
+  const uniqueRobbed = [...new Map(robbedNames.map(name => [nameKey(name), name])).values()]
+    .filter(name => name && !winners.some(winner => nameKey(winner) === nameKey(name)));
+  if (!uniqueRobbed.length) return { winnerPoints: 0, penalties: [], robbed: [] };
+
+  return {
+    winnerPoints: stealAmount * uniqueRobbed.length,
+    penalties: uniqueRobbed.map(name => ({
+      name,
+      points: -(stealAmount * winners.length),
+      reason: 'napule-robbed',
+      stolenBy: winners
+    })),
+    robbed: uniqueRobbed
+  };
+}
+
 function calcWinner(guesses, wrapHMSInput, day=S.today) {
   const wrapSec = normalizeGameSec(wrapHMSInput, day);
   const slices = boundaries(guesses, day);
   const scoring = getDayScoring(day);
+  const napuleDay = getNapuleDayConfig(day);
   
   const winningSlice = slices.find(s => wrapSec >= s.start && wrapSec <= s.end);
   
@@ -1787,27 +1824,28 @@ function calcWinner(guesses, wrapHMSInput, day=S.today) {
   const winners = winningSlice.names.map(name => ({ name }));
   
   const firstWinnerGuess = guesses.find(g => g.name === winnerName);
-  const points = isExactBetForWrap(firstWinnerGuess, wrapHMSInput, day) ? scoring.perfectPoints : scoring.regularPoints;
+  const basePoints = isExactBetForWrap(firstWinnerGuess, wrapHMSInput, day) ? scoring.perfectPoints : scoring.regularPoints;
+  if (napuleDay) {
+    const theft = calcNapuleDayTheft(guesses, winningSlice, basePoints, day, slices);
+    return {
+      winner: winnerName,
+      winners,
+      points: theft.winnerPoints,
+      noWinner: false,
+      penalties: theft.penalties,
+      napuleDay: true,
+      napuleRobbed: theft.robbed,
+      napuleBasePoints: basePoints
+    };
+  }
 
   return {
     winner: winnerName,
     winners,
-    points,
+    points: basePoints,
     noWinner: false,
     penalties: calcCrazyDayPenalties(guesses, wrapHMSInput, day, false, winningSlice.names, winningSlice, slices)
   };
-}
-
-function dayPenaltyMap(day) {
-  const penalties = dayPenalties(day);
-  const map = new Map();
-  penalties.forEach(penalty => {
-    const key = nameKey(penalty?.name);
-    const points = Number(penalty?.points) || 0;
-    if (!key || !points) return;
-    map.set(key, (map.get(key) || 0) + points);
-  });
-  return map;
 }
 
 function dayPenaltyDetailsMap(day) {
@@ -1840,6 +1878,7 @@ function todayPenaltyStatus(penalty) {
   if (!penalty?.points) return null;
   if (penalty.reason === 'furthest-from-wrap') return { cls: 'b-penalty', text: 'FAR' };
   if (penalty.reason === 'neighboring-bet') return { cls: 'b-penalty', text: 'CLOSE' };
+  if (penalty.reason === 'napule-robbed') return { cls: 'b-penalty', text: 'ROBBED' };
   return { cls: 'b-penalty', text: compactSignedPoints(penalty.points) };
 }
 
@@ -2526,11 +2565,29 @@ function formatSignedPoints(value) {
   return `${points > 0 ? '+' : ''}${points} ${countWord(points, 'point', 'points')}`;
 }
 
-function syncCrazyDayBootLoader() {
+function syncSpecialDayBootLoader() {
+  const napuleCfg = S.today?.wrapTime ? null : getNapuleDayConfig(S.today);
+  if (napuleCfg) {
+    const scoring = getDayScoring(S.today);
+    const detail = {
+      regular: formatSignedPoints(scoring.regularPoints),
+      perfect: formatSignedPoints(scoring.perfectPoints)
+    };
+    try {
+      localStorage.setItem(BOOT_NAPULE_DAY_STORAGE_KEY, JSON.stringify(detail));
+      localStorage.removeItem(BOOT_CRAZY_DAY_STORAGE_KEY);
+    } catch (_) {}
+    document.dispatchEvent(new CustomEvent('totowrap:napule-day-loader', {
+      detail
+    }));
+    return;
+  }
+
   const cfg = S.today?.wrapTime ? null : getCrazyDayConfig(S.today);
   if (!cfg) {
     try {
       localStorage.removeItem(BOOT_CRAZY_DAY_STORAGE_KEY);
+      localStorage.removeItem(BOOT_NAPULE_DAY_STORAGE_KEY);
     } catch (_) {}
     document.dispatchEvent(new CustomEvent('totowrap:regular-loader'));
     return;
@@ -2544,6 +2601,7 @@ function syncCrazyDayBootLoader() {
   };
   try {
     localStorage.setItem(BOOT_CRAZY_DAY_STORAGE_KEY, JSON.stringify(detail));
+    localStorage.removeItem(BOOT_NAPULE_DAY_STORAGE_KEY);
   } catch (_) {}
   document.dispatchEvent(new CustomEvent('totowrap:crazy-day-loader', {
     detail
@@ -2566,6 +2624,24 @@ function renderCrazyDayIndicator(day=S.today) {
   `;
 }
 
+function renderNapuleDayIndicator(day=S.today) {
+  const cfg = getNapuleDayConfig(day);
+  if (!cfg || day?.noWinner) return '';
+  const scoring = getDayScoring(day);
+  const regular = formatSignedPoints(scoring.regularPoints).replace(' points', '').replace(' point', '');
+  const perfect = formatSignedPoints(scoring.perfectPoints).replace(' points', '').replace(' point', '');
+  return `
+    <div class="crazy-day-indicator napule-day-indicator" role="note" aria-label="Napule Day scoring">
+      <span class="crazy-day-indicator-title">Napule Day</span>
+      <span class="crazy-day-indicator-rules">${regular} regular steal / ${perfect} perfect steal / before + after groups</span>
+    </div>
+  `;
+}
+
+function renderSpecialDayIndicator(day=S.today) {
+  return renderNapuleDayIndicator(day) || renderCrazyDayIndicator(day);
+}
+
 function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
   const penaltiesByPlayer = dayPenaltyDetailsMap(t);
@@ -2583,7 +2659,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
         <span class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</span>
 	        <span class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</span>
       </${winnerCloseTag}>
-      ${renderCrazyDayIndicator(t)}
+      ${renderSpecialDayIndicator(t)}
       ${fridayBanner}
       <div class="card today-scroll-card"><div class="card-lbl">Results</div>
         <div class="today-scroll-list">
@@ -2618,7 +2694,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
     <span class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</span>
 	    <span class="winner-pts">+${t.points} ${countWord(t.points, 'pt', 'pts')} · Wrap at ${esc(t.wrapTime)}</span>
   </${winnerCloseTag}>
-  ${renderCrazyDayIndicator(t)}
+  ${renderSpecialDayIndicator(t)}
   ${fridayBanner}
   <div class="card today-scroll-card"><div class="card-lbl">Results</div>
     <div class="today-scroll-list">
@@ -3018,7 +3094,7 @@ function renderPlayerToday() {
     return `
   <div class="tab-page-frame pregame-boundary-frame">
   ${renderBetClosePlayerCard(t)}
-  ${renderCrazyDayIndicator(t)}
+  ${renderSpecialDayIndicator(t)}
   ${renderMondayWaitingBanner(t)}
   <div class="card waiting-guesses-card">
     <p class="mono dim center">Waiting for admin to submit today's guesses…</p>
@@ -3039,7 +3115,7 @@ function renderPlayerToday() {
     <div class="big-clock-lbl">Live Time</div>
     <div id="next-out-countdown" class="countdown-txt"></div>
   </div>
-  ${renderCrazyDayIndicator(t)}
+  ${renderSpecialDayIndicator(t)}
   <div class="card today-scroll-card"><div class="card-lbl">${statusHeader}</div>
     <div class="today-scroll-list">${renderActiveTodayRows(t, sg, out, slices)}</div>
   </div>
@@ -3117,7 +3193,7 @@ function renderToday() {
     return `
       <div class="today-fixed-view">
       ${clockCard}
-      ${renderCrazyDayIndicator(t)}
+      ${renderSpecialDayIndicator(t)}
       <div class="card today-scroll-card"><div class="card-lbl">${statusHeader}</div>
         <div class="today-scroll-list">${renderActiveTodayRows(t, sg, out, slices)}</div>
       </div>
@@ -3146,8 +3222,9 @@ function renderToday() {
       </div>
       ${t.betCloseAt ? `<p class="mono dim center mt8">Time left: <span class="accent" data-bet-close-countdown>--</span></p>` : ''}
     </div>
-    ${renderCrazyDayIndicator(t)}
+    ${renderSpecialDayIndicator(t)}
     ${renderCrazyDaySetupCard(t)}
+    ${renderNapuleDaySetupCard(t)}
     <div class="card">
       <div class="card-lbl">Paste Today's Guesses</div>
       <p class="mono dim" style="margin-bottom:10px">Format: Name - hh:mm (one per line).</p>
@@ -3219,6 +3296,32 @@ function renderCrazyDaySetupCard(day) {
       <div class="crazy-day-actions">
         <button class="btn btn-s" id="clear-crazy-day-btn" type="button">Clear Settings</button>
         <button class="btn btn-p" id="save-crazy-day-btn" type="button">Save Settings</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderNapuleDaySetupCard(day) {
+  const cfg = getNapuleDayConfig(day);
+  const scoring = getDayScoring(day);
+  const statusText = cfg
+    ? `Napule Day is active: winners steal ${scoring.regularPoints > 0 ? '+' : ''}${scoring.regularPoints} for a regular win or ${scoring.perfectPoints > 0 ? '+' : ''}${scoring.perfectPoints} for a perfect wrap from the immediate bet groups before and after.`
+    : 'Use the saved regular and perfect wrap values, but winners steal those points from the closest bet groups before and after.';
+  return `<div class="card crazy-day-card napule-day-card${cfg ? ' is-active' : ''}${_napuleDayPanelOpen ? ' expanded' : ''}">
+    <div class="crazy-day-top">
+      <div class="crazy-day-title">
+        <strong>Napule Day</strong>
+        <span>${esc(statusText)}</span>
+      </div>
+      <button class="crazy-day-toggle" id="napule-day-toggle-btn" type="button" aria-label="Show Napule Day settings" aria-expanded="${_napuleDayPanelOpen ? 'true' : 'false'}"></button>
+    </div>
+    <div class="crazy-day-options">
+      <div class="crazy-day-summary">
+        Winners do not receive points normally. They steal from the immediate bet-time group before and after the winning bet. Missing players are ignored.
+      </div>
+      <div class="crazy-day-actions">
+        <button class="btn btn-s" id="clear-napule-day-btn" type="button">Cancel Napule Day</button>
+        <button class="btn btn-p" id="save-napule-day-btn" type="button">Save Napule Day</button>
       </div>
     </div>
   </div>`;
@@ -4037,13 +4140,9 @@ async function updateHistoryWrapTime(date, nextWrap) {
 
   const prevS = cloneState();
   adjustCompletedDayScores(target.day, -1);
-  const { winner, winners, points, noWinner, penalties } = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
+  const result = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
   target.day.wrapTime = normalizedWrap;
-  target.day.winner = winner;
-  target.day.winners = winners;
-  target.day.points = points;
-  target.day.noWinner = noWinner;
-  target.day.penalties = penalties || [];
+  applyCompletedDayResult(target.day, result);
   adjustCompletedDayScores(target.day, 1);
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
@@ -4091,12 +4190,7 @@ async function addHistoryPlayerBet(date, name, betTime, betDate='') {
   nextGuess.time = normalizedBet;
   nextGuess.date = normalizedDate || inferBetDate(normalizedBet, target.day);
   if (!existingGuess) target.day.guesses.push(nextGuess);
-  const { winner, winners, points, noWinner, penalties } = calcWinner(target.day.guesses, target.day.wrapTime, target.day);
-  target.day.winner = winner;
-  target.day.winners = winners;
-  target.day.points = points;
-  target.day.noWinner = noWinner;
-  target.day.penalties = penalties || [];
+  applyCompletedDayResult(target.day, calcWinner(target.day.guesses, target.day.wrapTime, target.day));
   adjustCompletedDayScores(target.day, 1);
 
   const saved = await saveS();
@@ -4321,16 +4415,12 @@ async function confirmTodayWrap(wrapTime) {
   if (!isValidHMS(normalizedWrap)) { toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err'); return false; }
 
   const prevS = cloneState();
-  const { winner, winners, points, noWinner, penalties } = calcWinner(S.today.guesses, normalizedWrap, S.today);
+  const result = calcWinner(S.today.guesses, normalizedWrap, S.today);
   S.today.wrapTime = normalizedWrap;
-  S.today.winner = winner;
-  S.today.winners = winners;
-  S.today.points = points;
-  S.today.noWinner = noWinner;
-  S.today.penalties = penalties || [];
+  applyCompletedDayResult(S.today, result);
 
-  if (!noWinner) {
-    winners.forEach(w => applyScoreDelta(w.name, points));
+  if (!result.noWinner) {
+    result.winners.forEach(w => applyScoreDelta(w.name, result.points));
   }
   applyDayPenalties(S.today, 1);
   const saved = await saveS();
@@ -4443,10 +4533,45 @@ async function saveCrazyDaySettings() {
   }
   const prevS = cloneState();
   S.today.crazyDay = { enabled, regularPoints, perfectPoints, noBetPenaltyPoints, furthestPenaltyPoints, neighborPenaltyPoints };
+  if (enabled) {
+    delete S.today.napuleDay;
+    _napuleDayPanelOpen = false;
+  }
   _crazyDayPanelOpen = true;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast(enabled ? 'Crazy Day saved' : 'Custom scoring saved', 'ok');
+  render();
+  return true;
+}
+
+async function saveNapuleDaySettings() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  const prevS = cloneState();
+  S.today.napuleDay = { enabled: true };
+  if (S.today.crazyDay) S.today.crazyDay.enabled = false;
+  _crazyDayPanelOpen = false;
+  _napuleDayPanelOpen = true;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Napule Day saved', 'ok');
+  render();
+  return true;
+}
+
+async function clearNapuleDaySettings() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  if (!S.today.napuleDay) {
+    _napuleDayPanelOpen = false;
+    render();
+    return true;
+  }
+  const prevS = cloneState();
+  delete S.today.napuleDay;
+  _napuleDayPanelOpen = false;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Napule Day canceled', 'ok');
   render();
   return true;
 }
@@ -4581,6 +4706,21 @@ function applyDayPenalties(day, direction) {
   });
 }
 
+function applyCompletedDayResult(day, result) {
+  day.winner = result.winner;
+  day.winners = result.winners;
+  day.points = result.points;
+  day.noWinner = result.noWinner;
+  day.penalties = result.penalties || [];
+  if (result.napuleDay) {
+    day.napuleRobbed = result.napuleRobbed || [];
+    day.napuleBasePoints = result.napuleBasePoints || 0;
+  } else {
+    delete day.napuleRobbed;
+    delete day.napuleBasePoints;
+  }
+}
+
 function adjustCompletedDayScores(day, direction) {
   const points = Number(day?.points) || 0;
   const names = points ? (day.winners ? day.winners.map(w => w.name) : (day.winner ? [day.winner] : [])) : [];
@@ -4596,6 +4736,8 @@ function completedDayOutcome(day) {
     winners: Array.isArray(day?.winners) ? day.winners.map(w => w.name).filter(Boolean) : (day?.winner ? [day.winner] : []),
     points: Number(day?.points) || 0,
     noWinner: Boolean(day?.noWinner),
+    napuleRobbed: Array.isArray(day?.napuleRobbed) ? [...day.napuleRobbed].sort() : [],
+    napuleBasePoints: Number(day?.napuleBasePoints) || 0,
     penalties: Array.isArray(day?.penalties) ? day.penalties.map(p => `${p.name}:${Number(p.points) || 0}:${p.reason || ''}`).sort() : []
   };
 }
@@ -4605,21 +4747,19 @@ function outcomesMatch(a, b) {
   const bWinners = [...(b?.winners || [])].sort();
   return Boolean(a?.noWinner) === Boolean(b?.noWinner)
     && Number(a?.points || 0) === Number(b?.points || 0)
+    && Number(a?.napuleBasePoints || 0) === Number(b?.napuleBasePoints || 0)
     && String(a?.winner || '') === String(b?.winner || '')
     && aWinners.length === bWinners.length
     && aWinners.every((name, idx) => name === bWinners[idx])
+    && (a?.napuleRobbed || []).length === (b?.napuleRobbed || []).length
+    && (a?.napuleRobbed || []).every((name, idx) => name === (b?.napuleRobbed || [])[idx])
     && (a?.penalties || []).length === (b?.penalties || []).length
     && (a?.penalties || []).every((item, idx) => item === (b?.penalties || [])[idx]);
 }
 
 function recalculateCompletedDay(day) {
   if (!day?.wrapTime) return;
-  const { winner, winners, points, noWinner, penalties } = calcWinner(day.guesses || [], day.wrapTime, day);
-  day.winner = winner;
-  day.winners = winners;
-  day.points = points;
-  day.noWinner = noWinner;
-  day.penalties = penalties || [];
+  applyCompletedDayResult(day, calcWinner(day.guesses || [], day.wrapTime, day));
 }
 
 function recalculateCompletedResultsForCurrentBoundaryRule() {
@@ -4636,16 +4776,14 @@ function recalculateCompletedResultsForCurrentBoundaryRule() {
       winners: next.winners.map(w => w.name),
       points: next.points,
       noWinner: next.noWinner,
+      napuleRobbed: [...(next.napuleRobbed || [])].sort(),
+      napuleBasePoints: Number(next.napuleBasePoints) || 0,
       penalties: (next.penalties || []).map(p => `${p.name}:${Number(p.points) || 0}:${p.reason || ''}`).sort()
     };
     if (outcomesMatch(previous, nextOutcome)) return;
 
     adjustCompletedDayScores(day, -1);
-    day.winner = next.winner;
-    day.winners = next.winners;
-    day.points = next.points;
-    day.noWinner = next.noWinner;
-    day.penalties = next.penalties || [];
+    applyCompletedDayResult(day, next);
     adjustCompletedDayScores(day, 1);
     changed = true;
   });
@@ -4766,7 +4904,7 @@ function renderHistory() {
     const historyDate = esc(d.date);
     const historyDetailsLabel = `${esc(displayDate(d.date) || d.date)} Leaderboard`;
     const dayLabel = displayDayLabel(num);
-    const penaltiesByPlayer = dayPenaltyMap(d);
+    const penaltyDetailsByPlayer = dayPenaltyDetailsMap(d);
     const historyDayTag = canManage
       ? `<button class="hist-day-tag hist-day-edit" type="button" title="Edit ${dayLabel}" aria-label="Edit ${dayLabel}" data-history-edit="${historyDate}">${dayLabel}</button>`
       : `<span class="hist-day-tag">${dayLabel}</span>`;
@@ -4797,7 +4935,8 @@ function renderHistory() {
             ${sg.map(g => {
               const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
               const prob  = g.time ? getWinProbability(g.name, d.guesses, d) : null;
-              const penaltyPoints = penaltiesByPlayer.get(nameKey(g.name)) || 0;
+              const penalty = penaltyDetailsByPlayer.get(nameKey(g.name));
+              const penaltyPoints = penalty?.points || 0;
               return `
               <div class="row${slice ? ' row-with-boundary' : ''}">
                 <div class="row-name row-name-stack">
@@ -4849,8 +4988,10 @@ function renderHistory() {
           const isWinner = histNames.includes(g.name);
           const slice = g.time ? slices.find(s => s.names.includes(g.name)) : null;
           const prob  = g.time ? getWinProbability(g.name, d.guesses, d) : null;
-          const penaltyPoints = penaltiesByPlayer.get(nameKey(g.name)) || 0;
-          return `
+              const penalty = penaltyDetailsByPlayer.get(nameKey(g.name));
+              const penaltyPoints = penalty?.points || 0;
+              const penaltyText = penalty?.reason === 'napule-robbed' ? 'ROBBED' : compactSignedPoints(penaltyPoints);
+              return `
           <div class="row${slice ? ' row-with-boundary' : ''}${isWinner ? ' golden-winner-row' : ''}">
             <div class="row-name row-name-stack${isWinner ? ' history-winner-name' : ''}">
               <div class="row-name-main"><span>${esc(g.name)}</span></div>
@@ -4860,11 +5001,11 @@ function renderHistory() {
               <div class="badge b-prob">${prob.text}</div>
               <div class="row-time">${esc(g.time)}</div>
               <div class="badge ${isWinner ? 'b-win' : (penaltyPoints ? 'b-penalty' : 'b-out')}">
-                ${isWinner ? `+${d.points}` : (penaltyPoints ? compactSignedPoints(penaltyPoints) : '—')}
+                ${isWinner ? `+${d.points}` : (penaltyPoints ? penaltyText : '—')}
               </div>
             ` : penaltyPoints ? `
               <div class="badge b-history-forgot">Forgot to bet</div>
-              <div class="badge b-penalty">${compactSignedPoints(penaltyPoints)}</div>
+              <div class="badge b-penalty">${penaltyText}</div>
             ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
           </div>`;
         }).join('')}
@@ -5189,6 +5330,15 @@ function bindMain() {
   });
   document.getElementById('save-crazy-day-btn')?.addEventListener('click', saveCrazyDaySettings);
   document.getElementById('clear-crazy-day-btn')?.addEventListener('click', clearCrazyDaySettings);
+  document.getElementById('napule-day-toggle-btn')?.addEventListener('click', async () => {
+    const card = document.querySelector('.napule-day-card');
+    const next = !card?.classList.contains('expanded');
+    _napuleDayPanelOpen = next;
+    card?.classList.toggle('expanded', next);
+    document.getElementById('napule-day-toggle-btn')?.setAttribute('aria-expanded', String(next));
+  });
+  document.getElementById('save-napule-day-btn')?.addEventListener('click', saveNapuleDaySettings);
+  document.getElementById('clear-napule-day-btn')?.addEventListener('click', clearNapuleDaySettings);
   document.getElementById('admin-clock')?.addEventListener('click', () => {
     openLiveWrapActions(nowHMS());
   });
@@ -5224,7 +5374,7 @@ onSnapshot(STATE_REF, (snap) => {
     _territoryRuleMigrationPending = true;
   }
   storeBootPlayerNames();
-  syncCrazyDayBootLoader();
+  syncSpecialDayBootLoader();
   _stateReady = true;
   render();
   window.__TOTOWRAP_RECAP_STATE__ = JSON.parse(JSON.stringify(S));

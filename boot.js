@@ -13,6 +13,7 @@
   const LAST_PHRASE_KEY = 'totowrap-last-boot-phrase';
   const PLAYER_NAMES_KEY = 'totowrap-boot-player-names';
   const CRAZY_DAY_KEY = 'totowrap-boot-crazy-day';
+  const NAPULE_DAY_KEY = 'totowrap-boot-napule-day';
   const PHRASE_VISIBLE_MS = 5000;
   const PHRASE_FADE_MS = 650;
   const PHRASE_CLEAN_MS = 500;
@@ -106,6 +107,15 @@
     }
   }
 
+  function getCachedNapuleDay() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(NAPULE_DAY_KEY) || 'null');
+      return cached && typeof cached === 'object' ? cached : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   function storePhraseIndex(index) {
     try {
       localStorage.setItem(LAST_PHRASE_KEY, String(index));
@@ -136,6 +146,9 @@
     stopPhraseRotation();
     regularLogoLayer?.classList.remove('is-visible');
     edoardoLogoLayer?.classList.remove('is-visible');
+    const napule = bootContent.querySelector('[data-boot-napule-day]');
+    napule?.classList.remove('is-visible');
+    bootContent.classList.remove('is-napule-day');
     phrase.classList.remove('is-ready', 'is-exiting');
     phrase.classList.add('is-loading');
     phrase.innerHTML = '';
@@ -173,11 +186,59 @@
     });
   }
 
+  function showNapuleDayLoader(detail={}) {
+    if (!loaderIsActive() || !bootContent) return;
+    stopPhraseRotation();
+    regularLogoLayer?.classList.remove('is-visible');
+    edoardoLogoLayer?.classList.remove('is-visible');
+    const crazy = bootContent.querySelector('[data-boot-crazy-day]');
+    crazy?.classList.remove('is-visible');
+    bootContent.classList.remove('is-crazy-day');
+    phrase.classList.remove('is-ready', 'is-exiting');
+    phrase.classList.add('is-loading');
+    phrase.innerHTML = '';
+    let napule = bootContent.querySelector('[data-boot-napule-day]');
+    if (!napule) {
+      napule = document.createElement('div');
+      napule.className = 'boot-crazy-day boot-napule-day';
+      napule.setAttribute('data-boot-napule-day', '');
+      bootContent.appendChild(napule);
+    }
+    const regular = detail.regular || '+0 points';
+    const perfect = detail.perfect || '+0 points';
+    napule.innerHTML = `
+      <div class="boot-crazy-title boot-napule-title" aria-label="Napule Day">
+        <span style="--i:0">N</span><span style="--i:1">a</span><span style="--i:2">p</span><span style="--i:3">u</span><span style="--i:4">l</span><span style="--i:5">e</span><span class="space" style="--i:6"></span><span style="--i:7">D</span><span style="--i:8">a</span><span style="--i:9">y</span>
+      </div>
+      <div class="boot-crazy-logo-wrap" aria-hidden="true">
+        <img class="boot-crazy-logo boot-napule-logo" src="imgs/napule.png" alt="">
+      </div>
+      <div class="boot-crazy-rules boot-napule-rules">
+        ${renderCrazyRule('Regular steal', regular)}
+        ${renderCrazyRule('Perfect steal', perfect)}
+        ${renderNapuleCopyRule('Robbed groups', 'Before + after')}
+        ${renderNapuleCopyRule('No winner', 'Regular day')}
+      </div>
+    `;
+    bootContent.classList.add('is-napule-day');
+    requestAnimationFrame(() => {
+      if (!loaderIsActive()) return;
+      napule.classList.add('is-visible');
+    });
+  }
+
   function renderCrazyRule(label, value) {
     const points = splitPointText(value);
     return `
       <div class="boot-crazy-rule-label">${escapeHTML(label)}</div>
       <div class="boot-crazy-rule-points"><span class="boot-crazy-rule-sign">${escapeHTML(points.sign)}</span><span class="boot-crazy-rule-number">${escapeHTML(points.number)}</span><span class="boot-crazy-rule-word">${escapeHTML(points.word)}</span></div>
+    `;
+  }
+
+  function renderNapuleCopyRule(label, value) {
+    return `
+      <div class="boot-crazy-rule-label">${escapeHTML(label)}</div>
+      <div class="boot-crazy-rule-points boot-napule-rule-copy">${escapeHTML(value)}</div>
     `;
   }
 
@@ -200,10 +261,13 @@
   }
 
   function showRegularLoader() {
-    if (!loaderIsActive() || !bootContent?.classList.contains('is-crazy-day')) return;
+    if (!loaderIsActive() || (!bootContent?.classList.contains('is-crazy-day') && !bootContent?.classList.contains('is-napule-day'))) return;
     const crazy = bootContent.querySelector('[data-boot-crazy-day]');
+    const napule = bootContent.querySelector('[data-boot-napule-day]');
     crazy?.classList.remove('is-visible');
+    napule?.classList.remove('is-visible');
     bootContent.classList.remove('is-crazy-day');
+    bootContent.classList.remove('is-napule-day');
     regularLogoLayer?.classList.add('is-visible');
     edoardoLogoLayer?.classList.remove('is-visible');
     if (!phraseTimer) showNextPhrase();
@@ -276,9 +340,14 @@
   document.addEventListener('totowrap:crazy-day-loader', event => {
     showCrazyDayLoader(event.detail || {});
   });
+  document.addEventListener('totowrap:napule-day-loader', event => {
+    showNapuleDayLoader(event.detail || {});
+  });
   document.addEventListener('totowrap:regular-loader', showRegularLoader);
 
+  const cachedNapuleDay = getCachedNapuleDay();
   const cachedCrazyDay = getCachedCrazyDay();
-  if (cachedCrazyDay) showCrazyDayLoader(cachedCrazyDay);
+  if (cachedNapuleDay) showNapuleDayLoader(cachedNapuleDay);
+  else if (cachedCrazyDay) showCrazyDayLoader(cachedCrazyDay);
   else showNextPhrase();
 })();
