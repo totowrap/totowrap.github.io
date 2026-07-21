@@ -64,6 +64,7 @@ let _territoryRuleMigrationSaving = false;
 let _historyRowScrollAnimation = null;
 let _crazyDayPanelOpen = false;
 let _napuleDayPanelOpen = false;
+let _crownPanelOpen = false;
 let _shareResultInfo = null;
 const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
@@ -1600,7 +1601,12 @@ function getWinProbability(playerName, allGuesses, day=S.today) {
   const mySlice = slices.find(s => s.names.includes(playerName));
   if (!mySlice) return { text: '0.0%', color: 'var(--red)' };
 
-  const myRange = sliceDuration(mySlice);
+  let myRange = sliceDuration(mySlice);
+  if (isCrownPlayerName(playerName, day, allGuesses)) {
+    const myIndex = slices.findIndex(s => s === mySlice);
+    const crownSlices = [slices[myIndex - 1], mySlice, slices[myIndex + 1]].filter(Boolean);
+    myRange = crownSlices.reduce((sum, slice) => sum + sliceDuration(slice), 0);
+  }
   const percent = (myRange / totalRange) * 100;
   
   // Color Logic
@@ -1666,10 +1672,19 @@ function boundaries(guesses, day=S.today) {
 function eliminated(guesses, curSec, day=S.today) {
   const slices = boundaries(guesses, day);
   const out = new Set();
+  const crownName = resolveCrownPlayerName(day, guesses);
+  const crownIndex = crownName
+    ? slices.findIndex(slice => (slice.names || []).some(name => nameKey(name) === nameKey(crownName)))
+    : -1;
+  const crownCoverage = crownIndex >= 0
+    ? [slices[crownIndex - 1], slices[crownIndex], slices[crownIndex + 1]].filter(Boolean)
+    : [];
+  const crownEnd = crownCoverage.length ? Math.max(...crownCoverage.map(slice => slice.end)) : null;
   slices.forEach(slice => {
-    if (curSec > slice.end) {
-      slice.names.forEach(name => out.add(name));
-    }
+    slice.names.forEach(name => {
+      const end = nameKey(name) === nameKey(crownName) && crownEnd !== null ? crownEnd : slice.end;
+      if (curSec > end) out.add(name);
+    });
   });
   return out;
 }
@@ -1701,6 +1716,74 @@ function getCrazyDaySettings(day=S.today) {
 
 function getNapuleDayConfig(day=S.today) {
   return day?.napuleDay?.enabled === true ? { enabled: true } : null;
+}
+
+function getCrownConfig(day=S.today) {
+  const cfg = day?.crown;
+  const playerName = String(cfg?.playerName || '').trim();
+  return cfg?.enabled === true && playerName ? { enabled: true, playerName } : null;
+}
+
+function resolveCrownPlayerName(day=S.today, guesses=[]) {
+  const cfg = getCrownConfig(day);
+  if (!cfg) return '';
+  const key = nameKey(cfg.playerName);
+  const guessMatch = (guesses || []).find(guess => nameKey(guess?.name) === key);
+  if (guessMatch?.name) return guessMatch.name;
+  const rosterMatch = (S.playerRoster || []).find(player => nameKey(player?.name) === key);
+  return rosterMatch?.name || cfg.playerName;
+}
+
+function isCrownPlayerName(name, day=S.today, guesses=[]) {
+  const crownName = resolveCrownPlayerName(day, guesses);
+  return Boolean(crownName && nameKey(crownName) === nameKey(name));
+}
+
+function addUniqueName(names, name) {
+  if (!name || names.some(existing => nameKey(existing) === nameKey(name))) return names;
+  names.push(name);
+  return names;
+}
+
+function crownEligibleWinnerNames(guesses, winningSlice, day=S.today, daySlices=null) {
+  const crownName = resolveCrownPlayerName(day, guesses);
+  if (!crownName || !winningSlice) return [];
+  const crownGuess = (guesses || []).find(guess => nameKey(guess?.name) === nameKey(crownName));
+  if (!crownGuess?.time) return [];
+
+  const slices = Array.isArray(daySlices) ? daySlices : boundaries(guesses, day);
+  const winningIndex = slices.findIndex(slice => slice.sec === winningSlice.sec);
+  const crownIndex = slices.findIndex(slice => (slice.names || []).some(name => nameKey(name) === nameKey(crownGuess.name)));
+  if (winningIndex < 0 || crownIndex < 0 || Math.abs(winningIndex - crownIndex) > 1) return [];
+  return [crownGuess.name];
+}
+
+function crownFinalCoveredSlice(day=S.today, guesses=[], daySlices=null) {
+  const crownName = resolveCrownPlayerName(day, guesses);
+  if (!crownName) return null;
+  const slices = Array.isArray(daySlices) ? daySlices : boundaries(guesses, day);
+  const crownIndex = slices.findIndex(slice => (slice.names || []).some(name => nameKey(name) === nameKey(crownName)));
+  if (crownIndex < 0) return null;
+  return slices[crownIndex + 1] || slices[crownIndex];
+}
+
+function namesEliminatedAtSliceEnd(slice, day=S.today, guesses=[], daySlices=null) {
+  const crownName = resolveCrownPlayerName(day, guesses);
+  const crownFinalSlice = crownFinalCoveredSlice(day, guesses, daySlices);
+  return (slice?.names || []).filter(name => {
+    if (!crownName || nameKey(name) !== nameKey(crownName)) return true;
+    return !crownFinalSlice || crownFinalSlice.sec === slice.sec;
+  });
+}
+
+function effectiveWinnersForSlice(slice, day=S.today, guesses=[], daySlices=null) {
+  const names = [...(slice?.names || [])];
+  crownEligibleWinnerNames(guesses, slice, day, daySlices).forEach(name => addUniqueName(names, name));
+  return names;
+}
+
+function playerLiveEmoji(name, baseEmoji, day=S.today, guesses=[]) {
+  return `${isCrownPlayerName(name, day, guesses) ? '👑 ' : ''}${baseEmoji}`;
 }
 
 function getCrazyDayConfig(day=S.today) {
@@ -1773,9 +1856,9 @@ function calcCrazyDayPenalties(guesses, wrapHMSInput, day, noWinner=false, exclu
   return [...candidates.values()];
 }
 
-function calcNapuleDayTheft(guesses, winningSlice, points, day, daySlices) {
+function calcNapuleDayTheft(guesses, winningSlice, points, day, daySlices, effectiveWinnerNames=null) {
   const stealAmount = Math.max(0, Number(points) || 0);
-  const winners = winningSlice?.names || [];
+  const winners = effectiveWinnerNames || winningSlice?.names || [];
   if (!stealAmount || !winners.length) return { winnerPoints: 0, penalties: [], robbed: [] };
 
   const slices = Array.isArray(daySlices) ? daySlices : boundaries(guesses, day);
@@ -1821,12 +1904,13 @@ function calcWinner(guesses, wrapHMSInput, day=S.today) {
   }
 
   const winnerName = winningSlice.names[0];
-  const winners = winningSlice.names.map(name => ({ name }));
+  const winnerNames = effectiveWinnersForSlice(winningSlice, day, guesses, slices);
+  const winners = winnerNames.map(name => ({ name }));
   
   const firstWinnerGuess = guesses.find(g => g.name === winnerName);
   const basePoints = isExactBetForWrap(firstWinnerGuess, wrapHMSInput, day) ? scoring.perfectPoints : scoring.regularPoints;
   if (napuleDay) {
-    const theft = calcNapuleDayTheft(guesses, winningSlice, basePoints, day, slices);
+    const theft = calcNapuleDayTheft(guesses, winningSlice, basePoints, day, slices, winnerNames);
     return {
       winner: winnerName,
       winners,
@@ -1844,7 +1928,7 @@ function calcWinner(guesses, wrapHMSInput, day=S.today) {
     winners,
     points: basePoints,
     noWinner: false,
-    penalties: calcCrazyDayPenalties(guesses, wrapHMSInput, day, false, winningSlice.names, winningSlice, slices)
+    penalties: calcCrazyDayPenalties(guesses, wrapHMSInput, day, false, winnerNames, winningSlice, slices)
   };
 }
 
@@ -2000,6 +2084,7 @@ function tickClock() {
 
   // Find the current/upcoming boundary
   const nextBoundary = slices.find(s => s.end >= cur);
+  const nextEliminationBoundary = slices.find(s => s.end >= cur && namesEliminatedAtSliceEnd(s, S.today, S.today.guesses, slices).length);
   const firstTerritoryStart = slices[0]?.start;
   if (Number.isFinite(firstTerritoryStart) && cur < firstTerritoryStart) {
     countdownEl.innerHTML = `Ouch!<br>Everyone will lose if we wrap before ${secToHMS(firstTerritoryStart - cur)}`;
@@ -2009,19 +2094,20 @@ function tickClock() {
   }
   
   // THE FIX: Check if this boundary is actually the final territory
-  const isFinalTerritory = (nextBoundary === slices[slices.length - 1]);
+  const isFinalTerritory = !nextEliminationBoundary || nextEliminationBoundary === slices[slices.length - 1];
 
   // PHASE 1: Someone is still at risk (and it's not the final winners)
-  if (nextBoundary && cur <= nextBoundary.end && !isFinalTerritory) {
-    const diff = (nextBoundary.end + 1) - cur;
+  if (nextEliminationBoundary && cur <= nextEliminationBoundary.end && !isFinalTerritory) {
+    const diff = (nextEliminationBoundary.end + 1) - cur;
     
-    const styledNames = nextBoundary.names.map(name => `<span class="countdown-elimination-name">${esc(name)}</span>`);
+    const styledNames = namesEliminatedAtSliceEnd(nextEliminationBoundary, S.today, S.today.guesses, slices)
+      .map(name => `<span class="countdown-elimination-name">${esc(name)}</span>`);
     
     countdownEl.innerHTML = `Next elimination ${formatNames(styledNames)} in ${secToHMS(diff)}`;
     countdownEl.style.display = 'block';
-  } else if (isFinalTerritory) {
+  } else if (nextBoundary && isFinalTerritory) {
   // PHASE 2: Everyone else is out - The "Lucky Day"
-    const winnersToday = slices[slices.length - 1].names;
+    const winnersToday = effectiveWinnersForSlice(nextBoundary, S.today, S.today.guesses, slices);
     const styledWinners = winnersToday.map(name => `<span class="countdown-name">${esc(name)}</span>`);
     const diff = Math.max(0, (nextBoundary.end + 1) - cur);
     
@@ -2045,6 +2131,7 @@ function refreshStatusBadges() {
   const cur=gameNowSec(), out=eliminated(S.today.guesses,cur,S.today);
   const activeSlice = boundaries(S.today.guesses, S.today).find(slice => cur >= slice.start && cur <= slice.end);
   const activeNames = new Set(activeSlice?.names || []);
+  crownEligibleWinnerNames(S.today.guesses, activeSlice, S.today).forEach(name => activeNames.add(name));
   S.today.guesses.forEach((g, idx)=>{
     const id = playerDomId(idx);
     const el=document.getElementById('st-'+id);
@@ -2072,9 +2159,9 @@ function refreshStatusBadges() {
       }
       if (nameTextEl && nameEmojiEl) {
         nameTextEl.textContent = g.name;
-        nameEmojiEl.textContent = ' 🍣';
+        nameEmojiEl.textContent = ` ${playerLiveEmoji(g.name, '🍣', S.today, S.today.guesses)}`;
       } else {
-        nameEl.textContent = g.name + ' 🍣';
+        nameEl.textContent = `${g.name} ${playerLiveEmoji(g.name, '🍣', S.today, S.today.guesses)}`;
       }
     }
     else{
@@ -2083,9 +2170,9 @@ function refreshStatusBadges() {
       el.textContent='IN';
       if (nameTextEl && nameEmojiEl) {
         nameTextEl.textContent = g.name;
-        nameEmojiEl.textContent = ' 🐟';
+        nameEmojiEl.textContent = ` ${playerLiveEmoji(g.name, '🐟', S.today, S.today.guesses)}`;
       } else {
-        nameEl.textContent = g.name + ' 🐟';
+        nameEl.textContent = `${g.name} ${playerLiveEmoji(g.name, '🐟', S.today, S.today.guesses)}`;
       }
     }
   });
@@ -2670,7 +2757,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
           return `
           <div class="row">
             <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
-	              <span>${esc(g.name)} ${g.time ? '🍣' : '🎣'}</span>
+              <span>${esc(g.name)} ${playerLiveEmoji(g.name, g.time ? '🍣' : '🎣', t, t.guesses)}</span>
               ${g.time ? st.pill : ''}
             </div>
             ${g.time ? `
@@ -2703,7 +2790,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
       const isWinner = todayWinnerNames.includes(g.name);
       const penalty = penaltiesByPlayer.get(nameKey(g.name));
       const penaltyStatus = todayPenaltyStatus(penalty);
-      const displayEmoji = isWinner ? '🦈' : (!g.time ? '🎣' : '🍣');
+      const displayEmoji = playerLiveEmoji(g.name, isWinner ? '🦈' : (!g.time ? '🎣' : '🍣'), t, t.guesses);
       const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
 
       return `
@@ -3031,10 +3118,11 @@ function renderActiveTodayRows(t, sg, out, slices) {
   const cur = gameNowSec(t);
   const activeSlice = slices.find(slice => cur >= slice.start && cur <= slice.end);
   const activeNames = new Set(activeSlice?.names || []);
+  crownEligibleWinnerNames(t.guesses, activeSlice, t, slices).forEach(name => activeNames.add(name));
   return sg.map(g => {
     const st = getPreviousStreak(g.name);
     const isOut = out.has(g.name);
-    const displayEmoji = !g.time ? '🎣' : (isOut ? '🍣' : '🐟');
+    const displayEmoji = playerLiveEmoji(g.name, !g.time ? '🎣' : (isOut ? '🍣' : '🐟'), t, t.guesses);
     const playerIdx = t.guesses.indexOf(g);
     const playerId = playerDomId(playerIdx);
     const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
@@ -3225,6 +3313,7 @@ function renderToday() {
     ${renderSpecialDayIndicator(t)}
     ${renderCrazyDaySetupCard(t)}
     ${renderNapuleDaySetupCard(t)}
+    ${renderCrownSetupCard(t)}
     <div class="card">
       <div class="card-lbl">Paste Today's Guesses</div>
       <p class="mono dim" style="margin-bottom:10px">Format: Name - hh:mm (one per line).</p>
@@ -3322,6 +3411,39 @@ function renderNapuleDaySetupCard(day) {
       <div class="crazy-day-actions">
         <button class="btn btn-s" id="clear-napule-day-btn" type="button">Cancel Napule Day</button>
         <button class="btn btn-p" id="save-napule-day-btn" type="button">Save Napule Day</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCrownSetupCard(day) {
+  const cfg = getCrownConfig(day);
+  const savedName = cfg?.playerName || String(day?.crown?.playerName || '').trim();
+  const statusText = cfg
+    ? `${cfg.playerName} wears the crown and can win from their own bet group or the immediately adjacent groups.`
+    : 'Choose one player who can win from their own bet group and the immediate groups before and after.';
+  return `<div class="card crazy-day-card crown-day-card${cfg ? ' is-active' : ''}${_crownPanelOpen ? ' expanded' : ''}">
+    <div class="crazy-day-top">
+      <div class="crazy-day-title">
+        <strong>Crown</strong>
+        <span>${esc(statusText)}</span>
+      </div>
+      <button class="crazy-day-toggle" id="crown-toggle-btn" type="button" aria-label="Show Crown settings" aria-expanded="${_crownPanelOpen ? 'true' : 'false'}"></button>
+    </div>
+    <div class="crazy-day-options">
+      <div class="admin-dialog-input-wrap crown-player-input-wrap">
+        <label class="inp-lbl" for="crown-player-input">Crown Player</label>
+        <input class="admin-dialog-wrap-input" type="text" id="crown-player-input" value="${esc(savedName)}" placeholder="Name" list="crown-player-list" maxlength="80">
+        <datalist id="crown-player-list">
+          ${getAlphabeticalPlayerRoster().map(player => `<option value="${esc(player.name)}"></option>`).join('')}
+        </datalist>
+      </div>
+      <div class="crazy-day-summary">
+        The player keeps only their real visible bet, but wins if the previous or next bet group wins.
+      </div>
+      <div class="crazy-day-actions">
+        <button class="btn btn-s" id="clear-crown-btn" type="button">Cancel Crown</button>
+        <button class="btn btn-p" id="save-crown-btn" type="button">Save Crown</button>
       </div>
     </div>
   </div>`;
@@ -4576,6 +4698,45 @@ async function clearNapuleDaySettings() {
   return true;
 }
 
+async function saveCrownSettings() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  const rawName = document.getElementById('crown-player-input')?.value.trim() || '';
+  if (!rawName) {
+    toast('Choose crown player', 'err');
+    return false;
+  }
+  const rosterPlayer = (S.playerRoster || []).find(player => nameKey(player?.name) === nameKey(rawName));
+  if (!rosterPlayer) {
+    toast('Choose a roster player', 'err');
+    return false;
+  }
+  const prevS = cloneState();
+  S.today.crown = { enabled: true, playerName: rosterPlayer.name };
+  _crownPanelOpen = true;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Crown saved', 'ok');
+  render();
+  return true;
+}
+
+async function clearCrownSettings() {
+  if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
+  if (!S.today.crown) {
+    _crownPanelOpen = false;
+    render();
+    return true;
+  }
+  const prevS = cloneState();
+  delete S.today.crown;
+  _crownPanelOpen = false;
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast('Crown canceled', 'ok');
+  render();
+  return true;
+}
+
 async function clearCrazyDaySettings() {
   if (!IS_ADMIN || !S.today || S.today.wrapTime || S.today.guesses?.some(g => g.time)) return false;
   if (!S.today.crazyDay) {
@@ -5233,6 +5394,9 @@ async function savePlayer(idx) {
       if (day.addedPlayers) {
         day.addedPlayers = day.addedPlayers.map(name => name === oldName ? newName : name);
       }
+      if (day.crown && nameKey(day.crown.playerName) === nameKey(oldName)) {
+        day.crown.playerName = newName;
+      }
     });
     if (S.today && S.today.guesses) {
       S.today.guesses.forEach(g => { if (g.name === oldName) g.name = newName; });
@@ -5242,6 +5406,9 @@ async function savePlayer(idx) {
       }
       if (S.today.addedPlayers) {
         S.today.addedPlayers = S.today.addedPlayers.map(name => name === oldName ? newName : name);
+      }
+      if (S.today.crown && nameKey(S.today.crown.playerName) === nameKey(oldName)) {
+        S.today.crown.playerName = newName;
       }
     }
   }
@@ -5257,6 +5424,7 @@ function removePlayerFromDay(day, name) {
   const key = nameKey(name);
   if (day.guesses) day.guesses = day.guesses.filter(g => nameKey(g.name) !== key);
   if (day.addedPlayers) day.addedPlayers = day.addedPlayers.filter(playerName => nameKey(playerName) !== key);
+  if (day.crown && nameKey(day.crown.playerName) === key) delete day.crown;
   recalculateCompletedDay(day);
 }
 
@@ -5339,6 +5507,15 @@ function bindMain() {
   });
   document.getElementById('save-napule-day-btn')?.addEventListener('click', saveNapuleDaySettings);
   document.getElementById('clear-napule-day-btn')?.addEventListener('click', clearNapuleDaySettings);
+  document.getElementById('crown-toggle-btn')?.addEventListener('click', async () => {
+    const card = document.querySelector('.crown-day-card');
+    const next = !card?.classList.contains('expanded');
+    _crownPanelOpen = next;
+    card?.classList.toggle('expanded', next);
+    document.getElementById('crown-toggle-btn')?.setAttribute('aria-expanded', String(next));
+  });
+  document.getElementById('save-crown-btn')?.addEventListener('click', saveCrownSettings);
+  document.getElementById('clear-crown-btn')?.addEventListener('click', clearCrownSettings);
   document.getElementById('admin-clock')?.addEventListener('click', () => {
     openLiveWrapActions(nowHMS());
   });

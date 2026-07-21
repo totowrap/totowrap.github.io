@@ -433,6 +433,11 @@ body::before {
 .napule-day-card.expanded .crazy-day-toggle::after,
 .napule-day-card .crazy-day-enable-toggle.is-on::after { background:var(--napule-blue); }
 .napule-day-card .crazy-day-summary { border-color:rgba(var(--napule-blue-rgb),.24); }
+.crown-day-card { border-color:rgba(var(--yellow-rgb),.34); }
+.crown-day-card .crazy-day-title strong,
+.crown-day-card.is-active .crazy-day-title span { color:var(--accent); }
+.crown-player-input-wrap { margin-bottom:10px; padding:10px; }
+.crown-player-input-wrap .admin-dialog-wrap-input { min-height:38px; color:var(--accent); font-size:.92rem; text-align:center; }
 .bet-close-card { text-align: center; }
 .bet-close-card.is-open { position: relative; overflow: hidden; border-color: rgba(var(--neutral-rgb), .22); background: linear-gradient(135deg, rgba(62,79,112,.84), rgba(38,55,89,.88)), rgba(38,55,89,.88); }
 .bet-close-card.is-open::before { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: rgba(38,55,89,.3); pointer-events: none; }
