@@ -1077,8 +1077,17 @@ function normalizeDateValue(dateStr) {
   const d = dateFromISO(dateStr);
   return d ? localDateISO(d) : null;
 }
+function resolveDayStartDateISO(day=S.today) {
+  const candidates = [
+    normalizeDateValue(day?.estWrapDate),
+    normalizeDateValue(day?.wrapDate),
+    normalizeDateValue(day?.approvedDate),
+    normalizeDateValue(day?.date)
+  ].filter(Boolean);
+  return candidates[0] || null;
+}
 function gameStartDateISO(day=S.today) {
-  return normalizeDateValue(day?.approvedDate) || normalizeDateValue(day?.date) || localDateISO();
+  return resolveDayStartDateISO(day) || localDateISO();
 }
 function historyDateISO(day) {
   return gameStartDateISO(day);
@@ -4379,6 +4388,9 @@ async function updateHistoryWrapTime(date, nextWrap, nextWrapDate) {
   adjustCompletedDayScores(target.day, -1);
   target.day.wrapTime = normalizedWrap;
   target.day.wrapDate = normalizedWrapDate;
+  const startedOn = gameStartDateISO(target.day);
+  target.day.date = startedOn;
+  target.day.approvedDate = startedOn;
   const result = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
   applyCompletedDayResult(target.day, result);
   adjustCompletedDayScores(target.day, 1);
@@ -4691,9 +4703,9 @@ async function confirmTodayWrap(wrapTime, wrapDate='') {
   if (!normalizedWrapDate) { toast('Use a valid wrap date', 'err'); return false; }
 
   const prevS = cloneState();
-  const startedOn = gameStartDateISO(S.today);
+  const startedOn = gameStartDateISO({ ...S.today, wrapDate: normalizedWrapDate });
   S.today.date = startedOn;
-  S.today.approvedDate = normalizeDateValue(S.today.approvedDate) || startedOn;
+  S.today.approvedDate = startedOn;
   S.today.wrapTime = normalizedWrap;
   S.today.wrapDate = normalizedWrapDate;
   const result = calcWinner(S.today.guesses, normalizedWrap, S.today);
@@ -4766,6 +4778,8 @@ async function saveEstimatedWrapTime() {
   const prevS = cloneState();
   S.today.estWrap = wrapTime;
   S.today.estWrapDate = wrapDate;
+  S.today.date = wrapDate;
+  S.today.approvedDate = wrapDate;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Wrap time saved', 'ok');
@@ -5134,10 +5148,16 @@ function recalculateCompletedResultsForCurrentBoundaryRule() {
 function normalizeHistoryStartDates() {
   let changed = false;
   [...(S.days || []), S.today].filter(Boolean).forEach(day => {
-    const startedOn = normalizeDateValue(day.approvedDate);
-    if (!startedOn || normalizeDateValue(day.date) === startedOn) return;
-    day.date = startedOn;
-    changed = true;
+    const startedOn = resolveDayStartDateISO(day);
+    if (!startedOn) return;
+    if (normalizeDateValue(day.date) !== startedOn) {
+      day.date = startedOn;
+      changed = true;
+    }
+    if (normalizeDateValue(day.approvedDate) !== startedOn) {
+      day.approvedDate = startedOn;
+      changed = true;
+    }
   });
   return changed;
 }
