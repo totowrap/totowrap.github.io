@@ -944,6 +944,7 @@ async function saveS() {
     render();
     return false;
   }
+  sortHistoryDaysByDate();
   const localVersion = Number(S._version) || 0;
   const nextState = normalizeState(cloneState());
   nextState._version = localVersion + 1;
@@ -1091,6 +1092,62 @@ function gameStartDateISO(day=S.today) {
 }
 function historyDateISO(day) {
   return gameStartDateISO(day);
+}
+function compareHistoryRefs(a, b) {
+  const aDate = historyDateISO(a.day);
+  const bDate = historyDateISO(b.day);
+  const diff = dateDiffDays(bDate, aDate);
+  if (diff) return diff;
+  return (a.originalOrder || 0) - (b.originalOrder || 0);
+}
+function getHistoryEntryRefs({ includeToday=true }={}) {
+  const refs = (S.days || []).map((day, idx) => ({
+    kind: 'history',
+    idx,
+    day,
+    originalOrder: idx
+  }));
+  if (includeToday && S.today && S.today.wrapTime) {
+    refs.push({
+      kind: 'today',
+      idx: -1,
+      day: S.today,
+      originalOrder: refs.length
+    });
+  }
+  return refs
+    .sort(compareHistoryRefs)
+    .map((ref, displayIndex) => ({ ...ref, displayIndex }));
+}
+function sortHistoryDaysByDate() {
+  if (!Array.isArray(S.days) || S.days.length < 2) return false;
+  const sorted = S.days
+    .map((day, idx) => ({ kind: 'history', idx, day, originalOrder: idx }))
+    .sort(compareHistoryRefs)
+    .map(ref => ref.day);
+  const changed = sorted.some((day, idx) => day !== S.days[idx]);
+  if (changed) S.days = sorted;
+  return changed;
+}
+function getCurrentInternalDayNumber() {
+  if (!S.today) return null;
+  const refs = (S.days || []).map((day, idx) => ({
+    kind: 'history',
+    idx,
+    day,
+    originalOrder: idx
+  }));
+  refs.push({
+    kind: 'today',
+    idx: -1,
+    day: S.today,
+    originalOrder: refs.length
+  });
+  const sorted = refs
+    .sort(compareHistoryRefs)
+    .map((ref, displayIndex) => ({ ...ref, displayIndex }));
+  const ref = sorted.find(item => item.kind === 'today');
+  return ref ? ref.displayIndex + 1 : S.days.length + 1;
 }
 function approvalSec(day=S.today) { return day?.approvedAt ? toSec(day.approvedAt) : null; }
 function approvalDateISO(day=S.today) { return gameStartDateISO(day); }
@@ -1565,7 +1622,7 @@ async function copyCurrentBetsRecap() {
     toast('No wrap time to copy', 'err');
     return false;
   }
-  const dayNumber = S.days.length + 1;
+  const dayNumber = getCurrentInternalDayNumber() || S.days.length + 1;
   const dayContext = {
     approvedAt: S.today.approvedAt,
     approvedDate: gameStartDateISO(S.today),
@@ -2599,7 +2656,7 @@ function renderPlayer(app) {
 }
 
 function renderDesktopLiveBar() {
-  const dayNum = S.days.length + (S.today ? 1 : 0);
+  const dayNum = S.today ? getCurrentInternalDayNumber() : S.days.length;
   const dayLabel = dayNum ? displayDayProgressHeader(dayNum) : `Day —/${DISPLAY_TOTAL_DAYS}`;
   const estWrap = S.today?.estWrap || '--:--';
   const wrapStatusClass = S.today?.wrapTime ? 'off' : 'live';
@@ -2623,7 +2680,7 @@ function renderDesktopLiveBar() {
 }
 
 function renderDesktopProjectProgress() {
-  const internalDay = S.days.length + (S.today ? 1 : 0);
+  const internalDay = S.today ? getCurrentInternalDayNumber() : S.days.length;
   const displayDay = Number(displayDayNumber(internalDay));
   const current = Number.isFinite(displayDay) ? Math.max(0, Math.min(DISPLAY_TOTAL_DAYS, displayDay)) : 0;
   const pct = DISPLAY_TOTAL_DAYS ? (current / DISPLAY_TOTAL_DAYS) * 100 : 0;
@@ -2660,7 +2717,7 @@ function renderDesktopProjectProgress() {
 }
 
 function renderPlayerMain() {
-  const dayNum = S.days.length + (S.today ? 1 : 0);
+  const dayNum = S.today ? getCurrentInternalDayNumber() : S.days.length;
   const wrapStatusClass = (S.today && S.today.wrapTime) ? 'off' : 'live';
   const estWrap = S.today?.estWrap || '--:--';
   return `
@@ -2903,7 +2960,7 @@ function getShareResultInfo(day, dayNumber=null) {
   const detail = noWinner
     ? 'Outside all bets'
     : formatOfficialWrapOffset(wrapOffset);
-  const dayNum = dayNumber || (S.days.length + (S.today ? 1 : 0));
+  const dayNum = dayNumber || (S.today ? getCurrentInternalDayNumber() : S.days.length);
 
   return {
     noWinner,
@@ -3232,7 +3289,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
 
 function renderPlayerToday() {
   const t = S.today;
-  const lastDay = S.days && S.days.length > 0 ? S.days[S.days.length - 1] : null;
+  const lastDay = getLatestStoredHistoryDay();
   const statusHeader = renderPlayerStatusHeader(lastDay);
 
   if (!t) {
@@ -3293,7 +3350,7 @@ function bindPlayerNav() {
 }
 
 function renderMain() {
-  const totalDays=S.days.length+(S.today?1:0);
+  const totalDays = S.today ? getCurrentInternalDayNumber() : S.days.length;
   const estWrap = S.today?.estWrap || '--:--';
   const wrapStatusClass = S.today&&S.today.wrapTime ? 'off' : 'live';
   const dayHeader = totalDays ? displayDayProgressHeader(totalDays) : `Day —/${DISPLAY_TOTAL_DAYS}`;
@@ -3326,7 +3383,7 @@ ${renderDesktopLiveBar()}
 
 function renderToday() {
   const t = S.today;
-  const lastDay = S.days && S.days.length > 0 ? S.days[S.days.length - 1] : null;
+  const lastDay = getLatestStoredHistoryDay();
   const statusHeader = renderPlayerStatusHeader(lastDay);
   
   if (!t) {
@@ -4142,9 +4199,11 @@ function renderBoardPlayerStats(name) {
 }
 
 function getHistoryEntries() {
-  const all = [...S.days];
-  if (S.today && S.today.wrapTime) all.push(S.today);
-  return all;
+  return getHistoryEntryRefs().map(ref => ref.day);
+}
+function getLatestStoredHistoryDay() {
+  const refs = getHistoryEntryRefs({ includeToday: false });
+  return refs.length ? refs[refs.length - 1].day : null;
 }
 
 function deleteHistoryDayByDate(date) {
@@ -4239,15 +4298,14 @@ function openHistoryDayNumberDialog(date, historyIndex='') {
     toast('Start next day before editing this day number', 'err');
     return;
   }
-  const maxDayNumber = Math.max(0, S.days.length - 1);
   openAdminDialog({
-    title: 'Change Day Number',
-    copy: `Current ${getHistoryDayLabel(date)}. Moving a day changes the stored history order.`,
+    title: 'Change Day',
+    copy: `History is sorted automatically by official date. Changing this date moves the day to its chronological position.`,
     showClose: false,
-    focusSelector: '#admin-history-day-number-input',
+    focusSelector: '#admin-history-day-date-input',
     body: `<div class="admin-dialog-input-wrap">
-      <label class="inp-lbl" for="admin-history-day-number-input">Day Number</label>
-      <input class="admin-dialog-wrap-input" type="number" id="admin-history-day-number-input" value="${esc(target.idx)}" min="0" max="${esc(maxDayNumber)}" step="1" inputmode="numeric">
+      <label class="inp-lbl" for="admin-history-day-date-input">Official Date</label>
+      <input class="admin-dialog-wrap-input" type="text" id="admin-history-day-date-input" value="${esc(displayDate(historyDateISO(target.day)) || historyDateISO(target.day))}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
     </div>
     <div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
@@ -4382,18 +4440,21 @@ async function updateHistoryWrapTime(date, nextWrap, nextWrapDate) {
     toast('Use a valid wrap date', 'err');
     return false;
   }
-  if (normalizedWrap === currentWrap && normalizedWrapDate === currentWrapDate) return true;
+  const currentOfficialDate = historyDateISO(target.day);
+  if (normalizedWrap === currentWrap && normalizedWrapDate === currentWrapDate && normalizedWrapDate === currentOfficialDate) return true;
 
   const prevS = cloneState();
   adjustCompletedDayScores(target.day, -1);
   target.day.wrapTime = normalizedWrap;
   target.day.wrapDate = normalizedWrapDate;
-  const startedOn = gameStartDateISO(target.day);
+  target.day.estWrapDate = normalizedWrapDate;
+  const startedOn = normalizedWrapDate;
   target.day.date = startedOn;
   target.day.approvedDate = startedOn;
   const result = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
   applyCompletedDayResult(target.day, result);
   adjustCompletedDayScores(target.day, 1);
+  sortHistoryDaysByDate();
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Official wrap time updated', 'ok');
@@ -4401,7 +4462,7 @@ async function updateHistoryWrapTime(date, nextWrap, nextWrapDate) {
   return true;
 }
 
-async function updateHistoryDayNumber(date, nextDayNumber, historyIndex='') {
+async function updateHistoryDayNumber(date, nextDate, historyIndex='') {
   if (!IS_ADMIN) return false;
   const target = findHistoryDayNumberTarget(date, historyIndex);
   if (!target) {
@@ -4412,20 +4473,31 @@ async function updateHistoryDayNumber(date, nextDayNumber, historyIndex='') {
     toast('Start next day before editing this day number', 'err');
     return false;
   }
-  const parsed = Number.parseInt(String(nextDayNumber || '').trim(), 10);
-  const maxDayNumber = S.days.length - 1;
-  if (!Number.isInteger(parsed) || parsed < 0 || parsed > maxDayNumber) {
-    toast(`Use a day number from 0 to ${maxDayNumber}`, 'err');
+  const normalizedDate = parseDateInput(nextDate);
+  if (!normalizedDate) {
+    toast('Use a valid date', 'err');
     return false;
   }
-  if (parsed === target.idx) return true;
+  const currentDate = historyDateISO(target.day);
+  const duplicate = S.days.some((day, idx) => idx !== target.idx && historyDateISO(day) === normalizedDate);
+  if (duplicate) {
+    toast('Duplicate history date', 'err');
+    return false;
+  }
+  if (normalizedDate === currentDate && S.days[target.idx] === target.day) return true;
 
   const prevS = cloneState();
-  const [day] = S.days.splice(target.idx, 1);
-  S.days.splice(parsed, 0, day);
+  adjustCompletedDayScores(target.day, -1);
+  target.day.estWrapDate = normalizedDate;
+  target.day.date = normalizedDate;
+  target.day.approvedDate = normalizedDate;
+  const result = calcWinner(target.day.guesses || [], target.day.wrapTime, target.day);
+  applyCompletedDayResult(target.day, result);
+  adjustCompletedDayScores(target.day, 1);
+  sortHistoryDaysByDate();
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
-  toast(`Moved to ${displayDayLabel(parsed + 1)}`, 'ok');
+  toast(`Moved by date to ${displayDate(normalizedDate)}`, 'ok');
   render();
   return true;
 }
@@ -4968,7 +5040,7 @@ async function handleAdminDialogAction(btn) {
   if (action === 'history-day-number-save') {
     const updated = await updateHistoryDayNumber(
       date,
-      document.getElementById('admin-history-day-number-input')?.value,
+      document.getElementById('admin-history-day-date-input')?.value,
       historyIndex
     );
     if (updated) closeAdminDialog();
@@ -5159,6 +5231,7 @@ function normalizeHistoryStartDates() {
       changed = true;
     }
   });
+  if (sortHistoryDaysByDate()) changed = true;
   return changed;
 }
 
@@ -5265,12 +5338,14 @@ async function deleteCurrentDayAndMatchingHistory() {
 }
 
 function renderHistory() {
-  const all = getHistoryEntries();
-  if (!all.length) return '<div class="tab-page-frame"><div class="empty">No completed days yet</div></div>';
+  const allRefs = getHistoryEntryRefs();
+  if (!allRefs.length) return '<div class="tab-page-frame"><div class="empty">No completed days yet</div></div>';
 
-  const historyRows = [...all].reverse().map((d, i) => {
-    const num = all.length - i;
-    const historyIndex = all.length - i - 1;
+  const historyRows = [...allRefs].reverse().map(ref => {
+    const d = ref.day;
+    const num = ref.displayIndex + 1;
+    const historyIndex = ref.displayIndex;
+    const storageIndex = ref.kind === 'history' ? ref.idx : '';
     const sg = sortedGuesses(d.guesses, d);
     const canManage = IS_ADMIN;
     const estWrapInfo = `<div class="hist-est-wrap">Estimated Wrap - <span>${esc(d.estWrap || '--:--')}</span></div>`;
@@ -5283,7 +5358,7 @@ function renderHistory() {
       : `<div class="card-lbl">${historyDetailsLabel}</div>`;
     const penaltyDetailsByPlayer = dayPenaltyDetailsMap(d);
     const historyDayTag = canManage
-      ? `<button class="hist-day-tag hist-day-edit" type="button" title="Edit ${dayLabel}" aria-label="Edit ${dayLabel}" data-history-edit="${historyDate}" data-history-index="${historyIndex}">${dayLabel}</button>`
+      ? `<button class="hist-day-tag hist-day-edit" type="button" title="Edit ${dayLabel}" aria-label="Edit ${dayLabel}" data-history-edit="${historyDate}" data-history-index="${esc(storageIndex)}">${dayLabel}</button>`
       : `<span class="hist-day-tag">${dayLabel}</span>`;
     const historyShareTag = (className, content) => canManage
       ? `<button class="${className} hist-share-trigger" style="font-weight:bold" type="button" data-history-share-result="${historyIndex}">${content}</button>`
@@ -5486,7 +5561,7 @@ async function showPreview() {
     _previewIdx: idx
   }));
   const sorted = sortedGuesses(fullList, previewDay);
-  const totalDays = S.days.length + (S.today ? 1 : 0);
+  const totalDays = S.today ? getCurrentInternalDayNumber() : S.days.length;
   const app = document.getElementById('app');
   
   app.innerHTML = `
@@ -5685,7 +5760,10 @@ function bindMain() {
   document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>setMainTab(btn.dataset.tab)));
   document.getElementById('new-day-btn')?.addEventListener('click', async () => {
     const prevS = cloneState();
-    if(S.today&&S.today.wrapTime) S.days.push({...S.today});
+    if(S.today&&S.today.wrapTime) {
+      S.days.push({...S.today});
+      sortHistoryDaysByDate();
+    }
     S.today={date:localDateISO(),guesses:[],wrapTime:null,wrapDate:null,winner:null,points:null,estWrap:null,approvedAt:null,approvedDate:null};
     const saved = await saveS();
     if (!saved) { restoreAfterFailedSave(prevS); return; }
