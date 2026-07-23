@@ -1,24 +1,3 @@
-.final-recap-entry {
-  position:fixed;
-  left:50%;
-  bottom:calc(18px + env(safe-area-inset-bottom));
-  z-index:8500;
-  transform:translateX(-50%);
-  width:min(430px,calc(100% - 32px));
-  border:1px solid rgba(var(--yellow-rgb),.48);
-  border-radius:8px;
-  padding:12px 18px;
-  background:linear-gradient(135deg,rgba(var(--yellow-rgb),.2),rgba(38,55,89,.82));
-  -webkit-backdrop-filter:blur(14px) saturate(135%);
-  backdrop-filter:blur(14px) saturate(135%);
-  color:var(--accent);
-  font-family:'Alte Haas Grotesk',sans-serif;
-  font-size:.72rem;
-  font-weight:bold;
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  cursor:pointer;
-}
 .final-recap {
   position:fixed;
   inset:0;

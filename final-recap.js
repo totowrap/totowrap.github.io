@@ -843,24 +843,8 @@
       if (delta > 45) updateScreen(screenIndex - 1);
     }, {passive:true});
   }
-  function showEntry() {
-    const existing = document.querySelector('.final-recap-entry');
-    const previewMode = new URLSearchParams(location.search).has('final-recap-preview');
-    if (!state || (!displayedProgressIsFinal() && !previewMode)) {
-      existing?.remove();
-      return;
-    }
-    if (existing) return;
-    const button = document.createElement('button');
-    button.className = 'final-recap-entry';
-    button.type = 'button';
-    button.textContent = 'View TonnoWrap Recap';
-    button.addEventListener('click', openRecap);
-    document.body.appendChild(button);
-  }
   function receiveState() {
     state = window.__TOTOWRAP_RECAP_STATE__;
-    showEntry();
     if (new URLSearchParams(location.search).has('final-recap-preview')) {
       setTimeout(openRecap,0);
     }
