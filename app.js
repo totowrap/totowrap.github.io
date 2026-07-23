@@ -60,7 +60,8 @@ let _skipNextUIRestore = false;
 let _bootHiddenPromise = null;
 let _bootFadeStartedPromise = null;
 let _territoryRuleMigrationPending = false;
-let _territoryRuleMigrationSaving = false;
+let _stateMigrationSaving = false;
+let _historyDateMigrationPending = false;
 let _historyRowScrollAnimation = null;
 let _crazyDayPanelOpen = false;
 let _napuleDayPanelOpen = false;
@@ -1072,8 +1073,18 @@ function parseDateInput(dateStr) {
   const iso = `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
   return dateFromISO(iso) ? iso : null;
 }
+function normalizeDateValue(dateStr) {
+  const d = dateFromISO(dateStr);
+  return d ? localDateISO(d) : null;
+}
+function gameStartDateISO(day=S.today) {
+  return normalizeDateValue(day?.approvedDate) || normalizeDateValue(day?.date) || localDateISO();
+}
+function historyDateISO(day) {
+  return gameStartDateISO(day);
+}
 function approvalSec(day=S.today) { return day?.approvedAt ? toSec(day.approvedAt) : null; }
-function approvalDateISO(day=S.today) { return day?.approvedDate || displayToISO(day?.date); }
+function approvalDateISO(day=S.today) { return gameStartDateISO(day); }
 function inferBetDate(time, day=S.today) {
   const baseDate = approvalDateISO(day);
   const start = approvalSec(day);
@@ -1448,7 +1459,7 @@ function extractBetsFromChatText(chatText, targetISO) {
 
 async function handleChatUpload(file) {
   if (!file) return;
-  const targetISO = S.today?.date || localDateISO();
+  const targetISO = S.today ? gameStartDateISO(S.today) : localDateISO();
   try {
     const text = await file.text();
     const extracted = extractBetsFromChatText(text, targetISO);
@@ -1548,7 +1559,7 @@ async function copyCurrentBetsRecap() {
   const dayNumber = S.days.length + 1;
   const dayContext = {
     approvedAt: S.today.approvedAt,
-    approvedDate: S.today.approvedDate || S.today.date,
+    approvedDate: gameStartDateISO(S.today),
     estWrap: S.today.estWrap,
     estWrapDate: S.today.estWrapDate
   };
@@ -1574,7 +1585,7 @@ async function copyHistoryBetsRecap(historyIndex) {
   }
   const dayContext = {
     approvedAt: day.approvedAt,
-    approvedDate: day.approvedDate || day.date,
+    approvedDate: gameStartDateISO(day),
     estWrap: day.estWrap,
     estWrapDate: day.estWrapDate,
     wrapDate: day.wrapDate
@@ -2353,7 +2364,7 @@ function getWinnerConfettiKey() {
     winnerNameList.includes(guess.name) && isExactBetForDay(guess, S.today)
   );
   if (!exactWinner) return null;
-  return S.today.date + '_' + winnerNameList.join(',');
+  return gameStartDateISO(S.today) + '_' + winnerNameList.join(',');
 }
 
 function scheduleWinnerConfetti() {
@@ -2682,7 +2693,7 @@ function renderPlayerStatusHeader(lastDay) {
 
 function getWrapDateISO(day) {
   if (dateFromISO(day?.wrapDate)) return day.wrapDate;
-  if (!day?.wrapTime) return displayToISO(day?.date);
+  if (!day?.wrapTime) return gameStartDateISO(day);
   const baseDate = approvalDateISO(day);
   const wrapGameSec = normalizeGameSec(day.wrapTime, day);
   return addDaysISO(baseDate, Math.floor(wrapGameSec / DAY_SEC));
@@ -3751,7 +3762,7 @@ function renderBoardCloseness(pl) {
       points.push({
         name: player.name,
         day: dayIdx,
-        date: displayToISO(day.date),
+        date: historyDateISO(day),
         gap: boardClosenessGap(guess, day),
         won: didPlayerWinDay(player.name, day)
       });
@@ -4074,7 +4085,7 @@ function getBoardPlayerStats(name) {
       const wrongGap = wrongTerritoryGap(name, day);
       if (wrongGap !== null && (closestWrongGap === null || wrongGap < closestWrongGap)) {
         closestWrongGap = wrongGap;
-        closestWrongDate = day.date || null;
+        closestWrongDate = historyDateISO(day);
       }
     }
   });
@@ -4129,11 +4140,11 @@ function getHistoryEntries() {
 
 function deleteHistoryDayByDate(date) {
   const isoDate = displayToISO(date);
-  const idx = S.days.findIndex(day => displayToISO(day.date) === isoDate);
+  const idx = S.days.findIndex(day => historyDateISO(day) === isoDate);
   if (idx !== -1) {
     return { kind: 'history', idx };
   }
-  if (S.today && displayToISO(S.today.date) === isoDate) {
+  if (S.today && historyDateISO(S.today) === isoDate) {
     return { kind: 'today' };
   }
   return null;
@@ -4141,11 +4152,11 @@ function deleteHistoryDayByDate(date) {
 
 function findHistoryEntryByDate(date) {
   const isoDate = displayToISO(date);
-  const historyIdx = S.days.findIndex(day => displayToISO(day.date) === isoDate);
+  const historyIdx = S.days.findIndex(day => historyDateISO(day) === isoDate);
   if (historyIdx !== -1) {
     return { kind: 'history', idx: historyIdx, day: S.days[historyIdx] };
   }
-  if (S.today && S.today.wrapTime && displayToISO(S.today.date) === isoDate) {
+  if (S.today && S.today.wrapTime && historyDateISO(S.today) === isoDate) {
     return { kind: 'today', idx: -1, day: S.today };
   }
   return null;
@@ -4176,7 +4187,7 @@ function openAdminDialog({ title, copy='', body='', focusSelector='', showClose=
 
 function getHistoryDayLabel(date) {
   const isoDate = displayToISO(date);
-  const idx = getHistoryEntries().findIndex(day => displayToISO(day.date) === isoDate);
+  const idx = getHistoryEntries().findIndex(day => historyDateISO(day) === isoDate);
   return idx === -1 ? 'History Day' : displayDayLabel(idx + 1);
 }
 
@@ -4680,6 +4691,9 @@ async function confirmTodayWrap(wrapTime, wrapDate='') {
   if (!normalizedWrapDate) { toast('Use a valid wrap date', 'err'); return false; }
 
   const prevS = cloneState();
+  const startedOn = gameStartDateISO(S.today);
+  S.today.date = startedOn;
+  S.today.approvedDate = normalizeDateValue(S.today.approvedDate) || startedOn;
   S.today.wrapTime = normalizedWrap;
   S.today.wrapDate = normalizedWrapDate;
   const result = calcWinner(S.today.guesses, normalizedWrap, S.today);
@@ -5117,14 +5131,27 @@ function recalculateCompletedResultsForCurrentBoundaryRule() {
   return changed;
 }
 
-async function maybeSaveTerritoryRuleMigration() {
-  if (!_territoryRuleMigrationPending || _territoryRuleMigrationSaving || !IS_ADMIN || !currentUser) return;
-  _territoryRuleMigrationSaving = true;
+function normalizeHistoryStartDates() {
+  let changed = false;
+  [...(S.days || []), S.today].filter(Boolean).forEach(day => {
+    const startedOn = normalizeDateValue(day.approvedDate);
+    if (!startedOn || normalizeDateValue(day.date) === startedOn) return;
+    day.date = startedOn;
+    changed = true;
+  });
+  return changed;
+}
+
+async function maybeSavePendingStateMigrations() {
+  if ((!_territoryRuleMigrationPending && !_historyDateMigrationPending) || _stateMigrationSaving || !IS_ADMIN || !currentUser) return;
+  const hadHistoryDateFix = _historyDateMigrationPending;
+  _stateMigrationSaving = true;
   const saved = await saveS();
-  _territoryRuleMigrationSaving = false;
+  _stateMigrationSaving = false;
   if (saved) {
     _territoryRuleMigrationPending = false;
-    toast('Territories recalculated', 'ok');
+    _historyDateMigrationPending = false;
+    toast(hadHistoryDateFix ? 'History dates updated' : 'Territories recalculated', 'ok');
     render();
   }
 }
@@ -5155,7 +5182,7 @@ function removeAutoAddedPlayersFromDeletedDays(deletedDays) {
 
 function getHistoryDateMatchCount(date) {
   const isoDate = displayToISO(date);
-  return S.days.filter(day => displayToISO(day.date) === isoDate).length;
+  return S.days.filter(day => historyDateISO(day) === isoDate).length;
 }
 
 async function deleteHistoryDay(date, confirmed=false) {
@@ -5192,10 +5219,10 @@ async function deleteHistoryDay(date, confirmed=false) {
 
 async function deleteCurrentDayAndMatchingHistory() {
   if (!IS_ADMIN || !S.today) return;
-  const isoDate = displayToISO(S.today.date);
+  const isoDate = historyDateISO(S.today);
   const label = displayDate(isoDate) || isoDate;
   const matchingHistoryIndexes = S.days
-    .map((day, idx) => displayToISO(day.date) === isoDate ? idx : -1)
+    .map((day, idx) => historyDateISO(day) === isoDate ? idx : -1)
     .filter(idx => idx !== -1);
 
   const confirmCopy = matchingHistoryIndexes.length
@@ -5207,7 +5234,7 @@ async function deleteCurrentDayAndMatchingHistory() {
   const deletedDays = [S.today, ...matchingHistoryIndexes.map(idx => S.days[idx])];
   adjustCompletedDayScores(S.today, -1);
   matchingHistoryIndexes.forEach(idx => adjustCompletedDayScores(S.days[idx], -1));
-  S.days = S.days.filter(day => displayToISO(day.date) !== isoDate);
+  S.days = S.days.filter(day => historyDateISO(day) !== isoDate);
   S.today = null;
   removeAutoAddedPlayersFromDeletedDays(deletedDays);
 
@@ -5227,8 +5254,9 @@ function renderHistory() {
     const sg = sortedGuesses(d.guesses, d);
     const canManage = IS_ADMIN;
     const estWrapInfo = `<div class="hist-est-wrap">Estimated Wrap - <span>${esc(d.estWrap || '--:--')}</span></div>`;
-    const historyDate = esc(d.date);
-    const historyDetailsLabel = `${esc(displayDate(d.date) || d.date)} Leaderboard`;
+    const rawHistoryDate = historyDateISO(d);
+    const historyDate = esc(rawHistoryDate);
+    const historyDetailsLabel = `${esc(displayDate(rawHistoryDate) || rawHistoryDate)} Leaderboard`;
     const dayLabel = displayDayLabel(num);
     const historyDetailsTitle = canManage
       ? `<button class="card-lbl hist-copy-date" type="button" data-history-copy-bets="${historyIndex}" title="Copy ${dayLabel} bets">${historyDetailsLabel}</button>`
@@ -5396,7 +5424,7 @@ async function showPreview() {
     toast('Set wrap time first', 'err');
     return;
   }
-  const savedWrapDate = S.today?.estWrapDate || S.today?.date || localDateISO();
+  const savedWrapDate = S.today?.estWrapDate || (S.today ? gameStartDateISO(S.today) : localDateISO());
   
   const errorWarning = formatErrors.length > 0
     ? `<div class="card" style="border: 1px solid var(--red); background: rgba(var(--red-rgb), 0.1); margin-bottom: 12px;">
@@ -5430,7 +5458,7 @@ async function showPreview() {
   });
   
   const previewApprovedAt = nowHMS();
-  const previewApprovedDate = S.today?.date || localDateISO();
+  const previewApprovedDate = S.today ? gameStartDateISO(S.today) : localDateISO();
   const previewDay = { approvedAt: previewApprovedAt, approvedDate: previewApprovedDate };
   const fullList = buildFullGuessList(parsed).map((g, idx) => ({
     ...g,
@@ -5705,7 +5733,7 @@ onAuthStateChanged(auth, user => {
   currentUser = user;
   authReady = true;
   render();
-  maybeSaveTerritoryRuleMigration();
+  maybeSavePendingStateMigrations();
 });
 
 onSnapshot(STATE_REF, (snap) => {
@@ -5717,6 +5745,9 @@ onSnapshot(STATE_REF, (snap) => {
   }
   if (recalculateCompletedResultsForCurrentBoundaryRule()) {
     _territoryRuleMigrationPending = true;
+  }
+  if (normalizeHistoryStartDates()) {
+    _historyDateMigrationPending = true;
   }
   storeBootPlayerNames();
   syncSpecialDayBootLoader();
@@ -5733,7 +5764,7 @@ onSnapshot(STATE_REF, (snap) => {
     return graph ? graph.outerHTML : '';
   };
   window.dispatchEvent(new CustomEvent('totowrap-recap-state-ready'));
-  maybeSaveTerritoryRuleMigration();
+  maybeSavePendingStateMigrations();
 }, (err) => {
   console.error("Firestore error:", err);
   if (!_stateReady) showConnectionError();
