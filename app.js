@@ -595,6 +595,13 @@ document.addEventListener('click', e => {
     return;
   }
 
+  const historyCopyBetsBtn = e.target.closest?.('[data-history-copy-bets]');
+  if (historyCopyBetsBtn) {
+    e.stopPropagation();
+    copyHistoryBetsRecap(Number(historyCopyBetsBtn.dataset.historyCopyBets));
+    return;
+  }
+
   const currentBetBtn = e.target.closest?.('[data-current-bet-player]');
   if (currentBetBtn) {
     openCurrentBetDialog(currentBetBtn.dataset.currentBetPlayer);
@@ -1099,10 +1106,13 @@ function normalizeGameSec(time, day=S.today, explicitDate=null) {
   if (explicitDate) return dateDiffDays(approvalDateISO(day), explicitDate) * DAY_SEC + sec;
   return sec <= start ? sec + DAY_SEC : sec;
 }
+function normalizeWrapGameSec(time, day=S.today) {
+  return normalizeGameSec(time, day, dateFromISO(day?.wrapDate) ? day.wrapDate : null);
+}
 function guessGameSec(g, day=S.today) { return normalizeGameSec(g.time, day, g.date || null); }
 function betMinuteDistanceFromWrapSec(guess, day=S.today) {
   if (!guess?.time || !day?.wrapTime) return null;
-  const wrapSec = normalizeGameSec(day.wrapTime, day);
+  const wrapSec = normalizeWrapGameSec(day.wrapTime, day);
   const betStart = guessGameSec(guess, day);
   const betEnd = betStart + 59;
   if (wrapSec >= betStart && wrapSec <= betEnd) return 0;
@@ -1110,7 +1120,7 @@ function betMinuteDistanceFromWrapSec(guess, day=S.today) {
 }
 function betMinuteOffsetFromWrap(guess, day=S.today) {
   if (!guess?.time || !day?.wrapTime) return null;
-  const wrapSec = normalizeGameSec(day.wrapTime, day);
+  const wrapSec = normalizeWrapGameSec(day.wrapTime, day);
   const betStart = guessGameSec(guess, day);
   const betEnd = betStart + 59;
   if (wrapSec >= betStart && wrapSec <= betEnd) return { distance: 0, direction: 'exact' };
@@ -1119,7 +1129,7 @@ function betMinuteOffsetFromWrap(guess, day=S.today) {
 }
 function betMinuteDistanceFromWrapInputSec(guess, wrapHMSInput, day=S.today) {
   if (!guess?.time || !wrapHMSInput) return null;
-  const wrapSec = normalizeGameSec(wrapHMSInput, day);
+  const wrapSec = normalizeWrapGameSec(wrapHMSInput, day);
   const betStart = guessGameSec(guess, day);
   const betEnd = betStart + 59;
   if (wrapSec >= betStart && wrapSec <= betEnd) return 0;
@@ -1548,6 +1558,33 @@ async function copyCurrentBetsRecap() {
   return copied;
 }
 
+async function copyHistoryBetsRecap(historyIndex) {
+  if (!IS_ADMIN || !currentUser) return false;
+  const day = getHistoryEntries()[historyIndex];
+  if (!day?.guesses?.some(g => g.time)) {
+    toast('No bets to copy', 'err');
+    return false;
+  }
+  const wrapTime = day.estWrap && day.estWrap !== '--:--'
+    ? day.estWrap
+    : String(day.wrapTime || '').slice(0, 5);
+  if (!wrapTime) {
+    toast('No wrap time to copy', 'err');
+    return false;
+  }
+  const dayContext = {
+    approvedAt: day.approvedAt,
+    approvedDate: day.approvedDate || day.date,
+    estWrap: day.estWrap,
+    estWrapDate: day.estWrapDate,
+    wrapDate: day.wrapDate
+  };
+  const clipboardText = formatConfirmedBetsClipboard(historyIndex + 1, wrapTime, day.guesses || [], dayContext);
+  const copied = await copyTextToClipboard(clipboardText);
+  toast(copied ? 'History bets copied' : 'Could not copy history bets', copied ? 'ok' : 'err');
+  return copied;
+}
+
 function buildFullGuessList(parsed) {
   const result = [];
   const rosterNames = new Map(S.playerRoster.map(p => [nameKey(p.name), p.name]));
@@ -1803,7 +1840,7 @@ function guessWrapDistanceSec(guess, wrapHMSInput, day, noWinner=false) {
   if (!guess?.time || !wrapHMSInput) return null;
   if (noWinner) return clockDistanceSec(guess.time, wrapHMSInput);
   const guessSec = guessGameSec(guess, day);
-  const wrapSec = normalizeGameSec(wrapHMSInput, day);
+  const wrapSec = normalizeWrapGameSec(wrapHMSInput, day);
   return Math.abs(guessSec - wrapSec);
 }
 
@@ -1902,7 +1939,7 @@ function calcNapuleDayTheft(guesses, winningSlice, points, day, daySlices, effec
 }
 
 function calcWinner(guesses, wrapHMSInput, day=S.today) {
-  const wrapSec = normalizeGameSec(wrapHMSInput, day);
+  const wrapSec = normalizeWrapGameSec(wrapHMSInput, day);
   const slices = boundaries(guesses, day);
   const scoring = getDayScoring(day);
   const napuleDay = getNapuleDayConfig(day);
@@ -2644,6 +2681,7 @@ function renderPlayerStatusHeader(lastDay) {
 }
 
 function getWrapDateISO(day) {
+  if (dateFromISO(day?.wrapDate)) return day.wrapDate;
   if (!day?.wrapTime) return displayToISO(day?.date);
   const baseDate = approvalDateISO(day);
   const wrapGameSec = normalizeGameSec(day.wrapTime, day);
@@ -3645,7 +3683,7 @@ function clockDistanceSec(a, b) {
 
 function boardClosenessGap(guess, day) {
   if (day?.noWinner) return clockDistanceSec(guess.time, day.wrapTime);
-  return Math.abs(guessGameSec(guess, day) - normalizeGameSec(day.wrapTime, day));
+  return Math.abs(guessGameSec(guess, day) - normalizeWrapGameSec(day.wrapTime, day));
 }
 
 function didPlayerWinDay(name, day) {
@@ -3970,7 +4008,7 @@ function formatBoardExactCompactGap(totalSec) {
 
 function wrongTerritoryGap(name, day) {
   if (!day?.wrapTime || !day.guesses?.length) return null;
-  const wrapSec = normalizeGameSec(day.wrapTime, day);
+  const wrapSec = normalizeWrapGameSec(day.wrapTime, day);
   const slice = boundaries(day.guesses, day).find(s => s.names.includes(name));
   if (!slice || (wrapSec >= slice.start && wrapSec <= slice.end)) return null;
   return wrapSec < slice.start ? slice.start - wrapSec : wrapSec - slice.end;
@@ -4223,14 +4261,19 @@ function openHistoryWrapDialog(date) {
     return;
   }
   const currentWrap = target.day.wrapTime || '';
+  const currentWrapDate = getWrapDateISO(target.day);
   openAdminDialog({
     title: 'Edit Official Wrap',
-    copy: `${getHistoryDayLabel(date)} current wrap: ${currentWrap || '--:--'}`,
+    copy: `${getHistoryDayLabel(date)} current wrap: ${currentWrap || '--:--'} on ${displayDate(currentWrapDate) || currentWrapDate}`,
     showClose: false,
     focusSelector: '#admin-history-wrap-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-history-wrap-input">Wrap Time (HH:MM:SS)</label>
       <input class="admin-dialog-wrap-input" type="text" id="admin-history-wrap-input" value="${esc(currentWrap)}" placeholder="hh:mm:ss" maxlength="8" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
+    </div>
+    <div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-history-wrap-date-input">Wrap Date</label>
+      <input class="admin-dialog-wrap-input" type="text" id="admin-history-wrap-date-input" value="${esc(displayDate(currentWrapDate) || currentWrapDate)}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
     </div>
     <div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
@@ -4261,7 +4304,7 @@ function openHistoryDeleteDialog(date) {
   });
 }
 
-async function updateHistoryWrapTime(date, nextWrap) {
+async function updateHistoryWrapTime(date, nextWrap, nextWrapDate) {
   if (!IS_ADMIN) return false;
   const target = findHistoryEntryByDate(date);
   if (!target) {
@@ -4269,17 +4312,25 @@ async function updateHistoryWrapTime(date, nextWrap) {
     return false;
   }
   const currentWrap = target.day.wrapTime || '';
+  const currentWrapDate = getWrapDateISO(target.day);
   const normalizedWrap = normalizeHMSInput(nextWrap);
-  if (!normalizedWrap || normalizedWrap === currentWrap) return true;
+  const normalizedWrapDate = parseDateInput(nextWrapDate);
+  if (!normalizedWrap && !normalizedWrapDate) return true;
   if (!isValidHMS(normalizedWrap)) {
     toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err');
     return false;
   }
+  if (!normalizedWrapDate) {
+    toast('Use a valid wrap date', 'err');
+    return false;
+  }
+  if (normalizedWrap === currentWrap && normalizedWrapDate === currentWrapDate) return true;
 
   const prevS = cloneState();
   adjustCompletedDayScores(target.day, -1);
-  const result = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
   target.day.wrapTime = normalizedWrap;
+  target.day.wrapDate = normalizedWrapDate;
+  const result = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
   applyCompletedDayResult(target.day, result);
   adjustCompletedDayScores(target.day, 1);
   const saved = await saveS();
@@ -4341,11 +4392,12 @@ async function addHistoryPlayerBet(date, name, betTime, betDate='') {
 function openLiveWrapActions(wrapTime) {
   if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
   const capturedWrap = String(wrapTime || nowHMS());
+  const capturedDate = localDateISO();
   openAdminDialog({
     title: 'Set Official Wrap',
     showClose: false,
     body: `<div class="admin-dialog-actions">
-      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-approve" data-wrap-time="${esc(capturedWrap)}">Approve &mdash; ${esc(capturedWrap)}</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="today-wrap-approve" data-wrap-time="${esc(capturedWrap)}" data-wrap-date="${esc(capturedDate)}">Approve &mdash; ${esc(capturedWrap)}</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="today-wrap-manual">Set wrap manually</button>
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
     </div>`
@@ -4354,14 +4406,19 @@ function openLiveWrapActions(wrapTime) {
 
 function openManualTodayWrapDialog() {
   if (!IS_ADMIN || !S.today || S.today.wrapTime) return;
+  const currentWrapDate = S.today.estWrapDate || localDateISO();
   openAdminDialog({
     title: 'Insert Wrap Manually',
-    copy: 'Type the official wrap time and confirm.',
+    copy: 'Type the official wrap time and date, then confirm.',
     showClose: false,
     focusSelector: '#admin-today-wrap-input',
     body: `<div class="admin-dialog-input-wrap">
       <label class="inp-lbl" for="admin-today-wrap-input">Wrap Time (HH:MM:SS)</label>
       <input class="admin-dialog-wrap-input" type="text" id="admin-today-wrap-input" placeholder="hh:mm:ss" maxlength="8" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
+    </div>
+    <div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-today-wrap-date-input">Wrap Date</label>
+      <input class="admin-dialog-wrap-input" type="text" id="admin-today-wrap-date-input" value="${esc(displayDate(currentWrapDate) || currentWrapDate)}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
     </div>
     <div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
@@ -4546,15 +4603,19 @@ async function deleteCurrentPlayerBet(name) {
   return true;
 }
 
-async function confirmTodayWrap(wrapTime) {
+async function confirmTodayWrap(wrapTime, wrapDate='') {
   if (!IS_ADMIN || !S.today || S.today.wrapTime) return false;
   const normalizedWrap = normalizeHMSInput(wrapTime);
   if (!normalizedWrap) { toast('Enter wrap time', 'err'); return false; }
   if (!isValidHMS(normalizedWrap)) { toast('Use a valid wrap time (HH:MM or HH:MM:SS)', 'err'); return false; }
+  const dateValue = String(wrapDate || '').trim();
+  const normalizedWrapDate = dateValue ? parseDateInput(dateValue) : localDateISO();
+  if (!normalizedWrapDate) { toast('Use a valid wrap date', 'err'); return false; }
 
   const prevS = cloneState();
-  const result = calcWinner(S.today.guesses, normalizedWrap, S.today);
   S.today.wrapTime = normalizedWrap;
+  S.today.wrapDate = normalizedWrapDate;
+  const result = calcWinner(S.today.guesses, normalizedWrap, S.today);
   applyCompletedDayResult(S.today, result);
 
   if (!result.noWinner) {
@@ -4796,7 +4857,11 @@ async function handleAdminDialogAction(btn) {
     return;
   }
   if (action === 'history-wrap-save') {
-    const updated = await updateHistoryWrapTime(date, document.getElementById('admin-history-wrap-input')?.value);
+    const updated = await updateHistoryWrapTime(
+      date,
+      document.getElementById('admin-history-wrap-input')?.value,
+      document.getElementById('admin-history-wrap-date-input')?.value
+    );
     if (updated) closeAdminDialog();
     return;
   }
@@ -4829,12 +4894,15 @@ async function handleAdminDialogAction(btn) {
     return;
   }
   if (action === 'today-wrap-approve') {
-    const saved = await confirmTodayWrap(btn.dataset.wrapTime);
+    const saved = await confirmTodayWrap(btn.dataset.wrapTime, btn.dataset.wrapDate);
     if (saved) closeAdminDialog();
     return;
   }
   if (action === 'today-wrap-save') {
-    const saved = await confirmTodayWrap(document.getElementById('admin-today-wrap-input')?.value);
+    const saved = await confirmTodayWrap(
+      document.getElementById('admin-today-wrap-input')?.value,
+      document.getElementById('admin-today-wrap-date-input')?.value
+    );
     if (saved) closeAdminDialog();
     return;
   }
@@ -5081,6 +5149,9 @@ function renderHistory() {
     const historyDate = esc(d.date);
     const historyDetailsLabel = `${esc(displayDate(d.date) || d.date)} Leaderboard`;
     const dayLabel = displayDayLabel(num);
+    const historyDetailsTitle = canManage
+      ? `<button class="card-lbl hist-copy-date" type="button" data-history-copy-bets="${historyIndex}" title="Copy ${dayLabel} bets">${historyDetailsLabel}</button>`
+      : `<div class="card-lbl">${historyDetailsLabel}</div>`;
     const penaltyDetailsByPlayer = dayPenaltyDetailsMap(d);
     const historyDayTag = canManage
       ? `<button class="hist-day-tag hist-day-edit" type="button" title="Edit ${dayLabel}" aria-label="Edit ${dayLabel}" data-history-edit="${historyDate}">${dayLabel}</button>`
@@ -5106,7 +5177,7 @@ function renderHistory() {
           </div>
           <div class="hist-details" data-history-details>
             <div class="hist-details-head">
-              <div class="card-lbl">${historyDetailsLabel}</div>
+              ${historyDetailsTitle}
               ${estWrapInfo}
             </div>
             ${sg.map(g => {
@@ -5158,7 +5229,7 @@ function renderHistory() {
       </div>
       <div class="hist-details" data-history-details>
         <div class="hist-details-head">
-          <div class="card-lbl">${historyDetailsLabel}</div>
+          ${historyDetailsTitle}
           ${estWrapInfo}
         </div>
         ${sg.map(g => {
@@ -5486,7 +5557,7 @@ function bindMain() {
   document.getElementById('new-day-btn')?.addEventListener('click', async () => {
     const prevS = cloneState();
     if(S.today&&S.today.wrapTime) S.days.push({...S.today});
-    S.today={date:localDateISO(),guesses:[],wrapTime:null,winner:null,points:null,estWrap:null,approvedAt:null,approvedDate:null};
+    S.today={date:localDateISO(),guesses:[],wrapTime:null,wrapDate:null,winner:null,points:null,estWrap:null,approvedAt:null,approvedDate:null};
     const saved = await saveS();
     if (!saved) { restoreAfterFailedSave(prevS); return; }
     render();

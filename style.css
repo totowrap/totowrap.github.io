@@ -820,6 +820,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .hist-row.open .hist-arrow { transform: rotate(90deg); }
 .hist-details-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: 12px 0 8px 0; border-bottom: 1px solid rgba(var(--yellow-rgb), 0.1); padding-bottom: 4px; }
 .hist-details-head .card-lbl { margin: 0; border-bottom: none; padding-bottom: 0; }
+.hist-copy-date { appearance:none; border:0; background:transparent; padding:0; text-align:left; cursor:pointer; }
 .hist-est-wrap { text-align: right; color: var(--dim); font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .hist-est-wrap span { color: var(--dim); }
 .hist-details { display: none; padding: 0 16px 6px; border-top: 1px solid rgba(61, 84, 51, 0.2); background: rgba(0,0,0,0.05); }

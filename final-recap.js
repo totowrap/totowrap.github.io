@@ -59,6 +59,7 @@
     if (explicitDate && baseDate) return dayDiff(baseDate, explicitDate) * DAY_SECONDS + sec;
     return sec <= start ? sec + DAY_SECONDS : sec;
   };
+  const wrapGameSec = day => gameSec(day?.wrapTime, day, isoDate(day?.wrapDate) || null);
   const betGap = (guess, day) => {
     if (day?.noWinner) {
       const betClock = clockSec(guess?.time);
@@ -68,13 +69,13 @@
       return Math.min(raw,DAY_SECONDS - raw);
     }
     const bet = gameSec(guess?.time, day, guess?.date || null);
-    const wrap = gameSec(day?.wrapTime, day);
+    const wrap = wrapGameSec(day);
     return bet === null || wrap === null ? null : Math.abs(bet - wrap);
   };
   const betMinuteGap = (guess, day) => {
     if (!guess?.time || !day?.wrapTime) return null;
     const bet = gameSec(guess.time, day, guess.date || null);
-    const wrap = gameSec(day.wrapTime, day);
+    const wrap = wrapGameSec(day);
     if (bet === null || wrap === null) return null;
     const betEnd = bet + 59;
     if (wrap >= bet && wrap <= betEnd) return 0;
@@ -103,7 +104,7 @@
     }));
   };
   const wrongTerritoryGap = (name, day) => {
-    const wrap = gameSec(day?.wrapTime,day);
+    const wrap = wrapGameSec(day);
     const slice = territoryBoundaries(day).find(item => item.names.includes(name));
     if (wrap === null || !slice || (wrap >= slice.start && wrap <= slice.end)) return null;
     return wrap < slice.start ? slice.start - wrap : wrap - slice.end;
