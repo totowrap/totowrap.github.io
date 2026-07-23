@@ -5985,6 +5985,13 @@ onSnapshot(STATE_REF, (snap) => {
   _stateReady = true;
   render();
   window.__TOTOWRAP_RECAP_STATE__ = JSON.parse(JSON.stringify(S));
+  window.__TOTOWRAP_RECAP_ACCURACY_STATS__ = () =>
+    getBoardClosenessStats(getSortedPlayerRoster()).map(item => ({
+      name: item.name,
+      bets: item.count,
+      count: item.count,
+      avgGap: item.avgGap
+    }));
   window.__TOTOWRAP_RECAP_ACCURACY_GRAPH__ = playerName => {
     const previousPlayer = _closenessPlayer;
     _closenessPlayer = playerName;

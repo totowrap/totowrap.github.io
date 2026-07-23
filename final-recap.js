@@ -28,6 +28,8 @@
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
   }[char]));
   const word = (value, singular, plural) => Number(value) === 1 ? singular : plural;
+  const nameKey = value => String(value || '').trim().toLowerCase();
+  const MIN_ACCURACY_BETS = 10;
   const nameList = names => {
     const list = (names || []).filter(Boolean).map(esc);
     if (list.length <= 1) return list[0] || '';
@@ -119,6 +121,31 @@
     if (min) return `${min}m ${rest}s`;
     return `${rest}s`;
   };
+  function mergeBoardAccuracyStats(list) {
+    const localByName = new Map(list.map(item => [nameKey(item.name), item]));
+    const boardStats = typeof window.__TOTOWRAP_RECAP_ACCURACY_STATS__ === 'function'
+      ? window.__TOTOWRAP_RECAP_ACCURACY_STATS__()
+      : [];
+    const source = boardStats.length ? boardStats : list;
+    return source.map(item => {
+      const local = localByName.get(nameKey(item.name)) || {};
+      const rawValue = item.avgGap ?? local.avgGap;
+      const rawAvg = rawValue === null || rawValue === undefined ? null : Number(rawValue);
+      return {
+        ...local,
+        ...item,
+        name: local.name || item.name,
+        wins: Number(local.wins || 0),
+        bets: Number(item.bets ?? item.count ?? local.bets ?? 0),
+        avgGap: rawAvg !== null && Number.isFinite(rawAvg) ? rawAvg : null
+      };
+    });
+  }
+  function accuracyCandidates(list) {
+    return mergeBoardAccuracyStats(list).filter(item =>
+      item.avgGap !== null && item.bets > MIN_ACCURACY_BETS
+    );
+  }
   const winnerNames = day => {
     if (day?.noWinner) return [];
     if (Array.isArray(day?.winners) && day.winners.length) {
@@ -278,8 +305,9 @@
       avgGap:player.gaps.length ? player.gaps.reduce((sum,value) => sum + value,0) / player.gaps.length : null
     }));
     const leaderboard = [...list].sort((a,b) => b.score-a.score || b.wins-a.wins || a.name.localeCompare(b.name));
-    const mostAccurate = [...list].filter(item => item.avgGap !== null).sort((a,b) => a.avgGap-b.avgGap || b.bets-a.bets)[0] || null;
-    const leastAccurate = [...list].filter(item => item.avgGap !== null).sort((a,b) => b.avgGap-a.avgGap || b.bets-a.bets)[0] || null;
+    const measuredAccuracy = accuracyCandidates(list);
+    const mostAccurate = [...measuredAccuracy].sort((a,b) => a.avgGap-b.avgGap || b.bets-a.bets || a.name.localeCompare(b.name))[0] || null;
+    const leastAccurate = [...measuredAccuracy].sort((a,b) => b.avgGap-a.avgGap || b.bets-a.bets || a.name.localeCompare(b.name))[0] || null;
     const mostForgot = [...list].sort((a,b) => b.forgot-a.forgot || a.name.localeCompare(b.name))[0] || null;
     const exactPlayers = [...list].filter(item => item.exact > 0).sort((a,b) => b.exact-a.exact || b.wins-a.wins || a.name.localeCompare(b.name));
     const maxBets = Math.max(0,...list.map(item => item.bets));
