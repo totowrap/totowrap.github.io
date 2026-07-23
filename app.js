@@ -720,7 +720,7 @@ document.addEventListener('click', e => {
   const historyEditBtn = e.target.closest?.('[data-history-edit]');
   if (historyEditBtn) {
     e.stopPropagation();
-    openHistoryDayActions(historyEditBtn.dataset.historyEdit);
+    openHistoryDayActions(historyEditBtn.dataset.historyEdit, historyEditBtn.dataset.historyIndex);
     return;
   }
 
@@ -4192,7 +4192,7 @@ function openHistoryDayActions(date, historyIndex='') {
   openAdminDialog({
     title: getHistoryDayLabel(date),
     body: `<div class="admin-dialog-actions">
-      <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-day-number-open" data-history-date="${safeDate}" data-history-index="${safeHistoryIndex}">Edit Day Number</button>
+      <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-day-number-open" data-history-date="${safeDate}" data-history-index="${safeHistoryIndex}">Change Day</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-wrap-open" data-history-date="${safeDate}">Edit Official Wrap</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-bet-players-open" data-history-date="${safeDate}">Add Player Bet</button>
       <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="history-delete-open" data-history-date="${safeDate}">Delete Day</button>
@@ -4221,7 +4221,7 @@ function openHistoryDayNumberDialog(date, historyIndex='') {
   }
   const maxDayNumber = Math.max(0, S.days.length - 1);
   openAdminDialog({
-    title: 'Edit Day Number',
+    title: 'Change Day Number',
     copy: `Current ${getHistoryDayLabel(date)}. Moving a day changes the stored history order.`,
     showClose: false,
     focusSelector: '#admin-history-day-number-input',
