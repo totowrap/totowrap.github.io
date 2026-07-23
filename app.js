@@ -1091,7 +1091,20 @@ function gameStartDateISO(day=S.today) {
   return resolveDayStartDateISO(day) || localDateISO();
 }
 function historyDateISO(day) {
-  return gameStartDateISO(day);
+  const candidates = day?.wrapTime
+    ? [
+        normalizeDateValue(day?.wrapDate),
+        normalizeDateValue(day?.estWrapDate),
+        normalizeDateValue(day?.approvedDate),
+        normalizeDateValue(day?.date)
+      ]
+    : [
+        normalizeDateValue(day?.estWrapDate),
+        normalizeDateValue(day?.wrapDate),
+        normalizeDateValue(day?.approvedDate),
+        normalizeDateValue(day?.date)
+      ];
+  return candidates.filter(Boolean)[0] || gameStartDateISO(day);
 }
 function compareHistoryRefs(a, b) {
   const aDate = historyDateISO(a.day);
@@ -5220,8 +5233,12 @@ function recalculateCompletedResultsForCurrentBoundaryRule() {
 function normalizeHistoryStartDates() {
   let changed = false;
   [...(S.days || []), S.today].filter(Boolean).forEach(day => {
-    const startedOn = resolveDayStartDateISO(day);
+    const startedOn = historyDateISO(day);
     if (!startedOn) return;
+    if (day.wrapTime && normalizeDateValue(day.wrapDate) && normalizeDateValue(day.estWrapDate) !== startedOn) {
+      day.estWrapDate = startedOn;
+      changed = true;
+    }
     if (normalizeDateValue(day.date) !== startedOn) {
       day.date = startedOn;
       changed = true;
