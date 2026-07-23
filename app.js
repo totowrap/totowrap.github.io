@@ -4180,7 +4180,7 @@ function getHistoryDayLabel(date) {
   return idx === -1 ? 'History Day' : displayDayLabel(idx + 1);
 }
 
-function openHistoryDayActions(date) {
+function openHistoryDayActions(date, historyIndex='') {
   if (!IS_ADMIN) return;
   const target = findHistoryEntryByDate(date);
   if (!target) {
@@ -4188,12 +4188,50 @@ function openHistoryDayActions(date) {
     return;
   }
   const safeDate = esc(date);
+  const safeHistoryIndex = esc(historyIndex);
   openAdminDialog({
     title: getHistoryDayLabel(date),
     body: `<div class="admin-dialog-actions">
+      <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-day-number-open" data-history-date="${safeDate}" data-history-index="${safeHistoryIndex}">Edit Day Number</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-wrap-open" data-history-date="${safeDate}">Edit Official Wrap</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-bet-players-open" data-history-date="${safeDate}">Add Player Bet</button>
       <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="history-delete-open" data-history-date="${safeDate}">Delete Day</button>
+    </div>`
+  });
+}
+
+function findHistoryDayNumberTarget(date, historyIndex='') {
+  const parsedIndex = Number.parseInt(String(historyIndex ?? '').trim(), 10);
+  if (Number.isInteger(parsedIndex) && parsedIndex >= 0 && parsedIndex < S.days.length) {
+    return { kind: 'history', idx: parsedIndex, day: S.days[parsedIndex] };
+  }
+  return findHistoryEntryByDate(date);
+}
+
+function openHistoryDayNumberDialog(date, historyIndex='') {
+  if (!IS_ADMIN) return;
+  const target = findHistoryDayNumberTarget(date, historyIndex);
+  if (!target) {
+    toast('History day not found', 'err');
+    return;
+  }
+  if (target.kind !== 'history') {
+    toast('Start next day before editing this day number', 'err');
+    return;
+  }
+  const maxDayNumber = Math.max(0, S.days.length - 1);
+  openAdminDialog({
+    title: 'Edit Day Number',
+    copy: `Current ${getHistoryDayLabel(date)}. Moving a day changes the stored history order.`,
+    showClose: false,
+    focusSelector: '#admin-history-day-number-input',
+    body: `<div class="admin-dialog-input-wrap">
+      <label class="inp-lbl" for="admin-history-day-number-input">Day Number</label>
+      <input class="admin-dialog-wrap-input" type="number" id="admin-history-day-number-input" value="${esc(target.idx)}" min="0" max="${esc(maxDayNumber)}" step="1" inputmode="numeric">
+    </div>
+    <div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-action="history-actions-open" data-history-date="${esc(date)}" data-history-index="${esc(historyIndex)}">Back</button>
+      <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="history-day-number-save" data-history-date="${esc(date)}" data-history-index="${esc(historyIndex)}">Confirm</button>
     </div>`
   });
 }
@@ -4336,6 +4374,35 @@ async function updateHistoryWrapTime(date, nextWrap, nextWrapDate) {
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Official wrap time updated', 'ok');
+  render();
+  return true;
+}
+
+async function updateHistoryDayNumber(date, nextDayNumber, historyIndex='') {
+  if (!IS_ADMIN) return false;
+  const target = findHistoryDayNumberTarget(date, historyIndex);
+  if (!target) {
+    toast('History day not found', 'err');
+    return false;
+  }
+  if (target.kind !== 'history') {
+    toast('Start next day before editing this day number', 'err');
+    return false;
+  }
+  const parsed = Number.parseInt(String(nextDayNumber || '').trim(), 10);
+  const maxDayNumber = S.days.length - 1;
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > maxDayNumber) {
+    toast(`Use a day number from 0 to ${maxDayNumber}`, 'err');
+    return false;
+  }
+  if (parsed === target.idx) return true;
+
+  const prevS = cloneState();
+  const [day] = S.days.splice(target.idx, 1);
+  S.days.splice(parsed, 0, day);
+  const saved = await saveS();
+  if (!saved) { restoreAfterFailedSave(prevS); return false; }
+  toast(`Moved to ${displayDayLabel(parsed + 1)}`, 'ok');
   render();
   return true;
 }
@@ -4835,9 +4902,27 @@ async function handleAdminDialogAction(btn) {
   if (!IS_ADMIN || !currentUser) return;
   const action = btn.dataset.adminDialogAction;
   const date = btn.dataset.historyDate;
+  const historyIndex = btn.dataset.historyIndex;
   if (action === 'standings-export-save') {
     closeAdminDialog();
     await downloadStandingsExport();
+    return;
+  }
+  if (action === 'history-actions-open') {
+    openHistoryDayActions(date, historyIndex);
+    return;
+  }
+  if (action === 'history-day-number-open') {
+    openHistoryDayNumberDialog(date, historyIndex);
+    return;
+  }
+  if (action === 'history-day-number-save') {
+    const updated = await updateHistoryDayNumber(
+      date,
+      document.getElementById('admin-history-day-number-input')?.value,
+      historyIndex
+    );
+    if (updated) closeAdminDialog();
     return;
   }
   if (action === 'history-wrap-open') {
@@ -5154,7 +5239,7 @@ function renderHistory() {
       : `<div class="card-lbl">${historyDetailsLabel}</div>`;
     const penaltyDetailsByPlayer = dayPenaltyDetailsMap(d);
     const historyDayTag = canManage
-      ? `<button class="hist-day-tag hist-day-edit" type="button" title="Edit ${dayLabel}" aria-label="Edit ${dayLabel}" data-history-edit="${historyDate}">${dayLabel}</button>`
+      ? `<button class="hist-day-tag hist-day-edit" type="button" title="Edit ${dayLabel}" aria-label="Edit ${dayLabel}" data-history-edit="${historyDate}" data-history-index="${historyIndex}">${dayLabel}</button>`
       : `<span class="hist-day-tag">${dayLabel}</span>`;
     const historyShareTag = (className, content) => canManage
       ? `<button class="${className} hist-share-trigger" style="font-weight:bold" type="button" data-history-share-result="${historyIndex}">${content}</button>`
