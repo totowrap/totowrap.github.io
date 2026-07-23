@@ -153,6 +153,22 @@
     }
     return day?.winner ? [day.winner] : [];
   };
+  const sameNameGroup = (left, right) =>
+    left.length === right.length && left.every((name, index) => name === right[index]);
+  const runningLeaderGroup = (scores, wins) => {
+    const sorted = [...scores.entries()].sort((a,b) =>
+      b[1]-a[1] ||
+      (wins.get(b[0]) || 0) - (wins.get(a[0]) || 0) ||
+      a[0].localeCompare(b[0])
+    );
+    const top = sorted[0];
+    if (!top || top[1] <= 0) return [];
+    const topScore = top[1];
+    const topWins = wins.get(top[0]) || 0;
+    return sorted
+      .filter(([name, score]) => score === topScore && (wins.get(name) || 0) === topWins)
+      .map(([name]) => name);
+  };
   const getCompletedDays = source => {
     const days = Array.isArray(source?.days) ? [...source.days] : [];
     if (source?.today?.wrapTime) {
@@ -217,7 +233,7 @@
     let furthestNoWinner = null;
     let furthestWinningDay = null;
     const leadChanges = [];
-    let previousLeader = null;
+    let previousLeader = [];
     const runningScores = new Map(players.map(name => [name, 0]));
     const runningWins = new Map(players.map(name => [name, 0]));
 
@@ -296,15 +312,11 @@
         }
       });
 
-      const leader = [...runningScores.entries()].sort((a,b) =>
-        b[1]-a[1] ||
-        (runningWins.get(b[0]) || 0) - (runningWins.get(a[0]) || 0) ||
-        a[0].localeCompare(b[0])
-      )[0]?.[0] || null;
-      if (previousLeader && leader && leader !== previousLeader) {
+      const leader = runningLeaderGroup(runningScores, runningWins);
+      if (previousLeader.length && leader.length && !sameNameGroup(leader, previousLeader)) {
         leadChanges.push({dayIndex,from:previousLeader,to:leader});
       }
-      if (leader) previousLeader = leader;
+      if (leader.length) previousLeader = leader;
     });
 
     const list = [...stats.values()].map(player => ({
@@ -496,13 +508,14 @@
   function leadChangeRows(changes) {
     if (!changes.length) return '<div class="final-recap-empty">The same player held first place throughout the project.</div>';
     const compactClass = changes.length > 4 ? ' is-compact' : '';
+    const leaderLabel = value => Array.isArray(value) ? nameList(value) : esc(value);
     return `<div class="final-recap-lead-grid${compactClass}">${changes.map(change => `
       <div class="final-recap-lead-change">
         <span>Day ${change.dayIndex}</span>
         <div class="final-recap-lead-names">
-          <div><small>Previous leader</small><b>${esc(change.from)}</b></div>
+          <div><small>Previous leader</small><b>${leaderLabel(change.from)}</b></div>
           <i>→</i>
-          <div><small>New leader</small><strong>${esc(change.to)}</strong></div>
+          <div><small>New leader</small><strong>${leaderLabel(change.to)}</strong></div>
         </div>
       </div>`).join('')}</div>`;
   }
