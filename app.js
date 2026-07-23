@@ -67,6 +67,7 @@ let _crazyDayPanelOpen = false;
 let _napuleDayPanelOpen = false;
 let _crownPanelOpen = false;
 let _shareResultInfo = null;
+let _pendingRestoreBackupState = null;
 const INACTIVITY_REFRESH_MS = 15 * 60 * 1000;
 const INACTIVITY_STORAGE_KEY = 'totowrap-inactive-at';
 const BOOT_TOTAL_MS = 4500;
@@ -890,6 +891,109 @@ async function exportProjectBackup() {
   } catch (e) {
     console.error('Backup export failed:', e);
     toast('Backup export failed', 'err');
+  }
+}
+
+function cleanRestoreBackupState(rawState) {
+  if (!rawState || typeof rawState !== 'object' || Array.isArray(rawState)) {
+    throw new Error('Backup must be a JSON object.');
+  }
+  if (!Array.isArray(rawState.playerRoster)) {
+    throw new Error('Backup is missing playerRoster[].');
+  }
+  if (!rawState.scores || typeof rawState.scores !== 'object' || Array.isArray(rawState.scores)) {
+    throw new Error('Backup is missing scores.');
+  }
+  if (!Array.isArray(rawState.days)) {
+    throw new Error('Backup is missing days[].');
+  }
+  if (rawState.today !== null && rawState.today !== undefined && (typeof rawState.today !== 'object' || Array.isArray(rawState.today))) {
+    throw new Error('Backup today must be an object or null.');
+  }
+
+  const state = normalizeState(JSON.parse(JSON.stringify(rawState)));
+  delete state._recoveryMeta;
+  if (stateHasDuplicateNames(state)) {
+    throw new Error('Backup contains duplicate names.');
+  }
+  return state;
+}
+
+function restoreBackupSummary(state) {
+  const playerCount = Array.isArray(state.playerRoster) ? state.playerRoster.length : 0;
+  const historyCount = Array.isArray(state.days) ? state.days.length : 0;
+  const today = state.today;
+  const todayText = today?.wrapTime
+    ? `wrapped today ${displayDate(today.date || today.approvedDate) || today.date || '--'}`
+    : (today ? `active today ${displayDate(today.date || today.approvedDate) || today.date || '--'}` : 'no active today');
+  return {
+    playerCount,
+    historyCount,
+    todayText,
+    currentVersion: Number(S._version) || 0,
+    backupVersion: Number(state._version) || 0
+  };
+}
+
+function openRestoreBackupDialog(state) {
+  const summary = restoreBackupSummary(state);
+  _pendingRestoreBackupState = state;
+  openAdminDialog({
+    title: 'Restore Backup',
+    copy: 'This will replace the current Firestore game data for everyone. Export a fresh backup first if you are not completely sure.',
+    showClose: false,
+    body: `<div class="admin-dialog-copy restore-backup-summary">
+      <div><strong>${summary.playerCount}</strong> players</div>
+      <div><strong>${summary.historyCount}</strong> history days</div>
+      <div>${esc(summary.todayText)}</div>
+      <div>Backup version ${summary.backupVersion} will become Firestore version ${summary.currentVersion + 1}</div>
+    </div>
+    <div class="admin-dialog-split">
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
+      <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="restore-backup-confirm">Restore Firestore</button>
+    </div>`
+  });
+}
+
+async function handleRestoreBackupUpload(file) {
+  if (!IS_ADMIN || !currentUser) {
+    toast('Admin only', 'err');
+    return;
+  }
+  if (!file) return;
+  try {
+    const rawState = JSON.parse(await file.text());
+    const state = cleanRestoreBackupState(rawState);
+    openRestoreBackupDialog(state);
+  } catch (e) {
+    console.error('Backup restore read failed:', e);
+    toast(e.message || 'Backup restore failed', 'err');
+  }
+}
+
+async function restoreProjectBackup() {
+  if (!IS_ADMIN || !currentUser || !_pendingRestoreBackupState) return false;
+  const restoreState = cleanRestoreBackupState(_pendingRestoreBackupState);
+  try {
+    await runTransaction(db, async transaction => {
+      const snap = await transaction.get(STATE_REF);
+      const remoteState = snap.exists() ? normalizeState(snap.data()) : normalizeState({});
+      const remoteVersion = Number(remoteState._version) || 0;
+      const nextState = normalizeState(JSON.parse(JSON.stringify(restoreState)));
+      nextState._version = remoteVersion + 1;
+      transaction.set(STATE_REF, nextState);
+      restoreState._version = nextState._version;
+    });
+    S = normalizeState(restoreState);
+    _pendingRestoreBackupState = null;
+    _stateReady = true;
+    toast('Firestore restored from backup', 'ok');
+    render();
+    return true;
+  } catch (e) {
+    console.error('Backup restore failed:', e);
+    toast(e.code === 'permission-denied' ? 'Admin account is not allowed to write' : 'Backup restore failed', 'err');
+    return false;
   }
 }
 
@@ -5039,6 +5143,11 @@ async function handleAdminDialogAction(btn) {
     await downloadStandingsExport();
     return;
   }
+  if (action === 'restore-backup-confirm') {
+    const restored = await restoreProjectBackup();
+    if (restored) closeAdminDialog();
+    return;
+  }
   if (action === 'history-wrap-open') {
     openHistoryWrapDialog(date);
     return;
@@ -5509,6 +5618,9 @@ ${pl.map((p, idx)=> {
 <div class="card"><div class="card-lbl">Offline Backup</div>
 <p class="mono dim mt8" style="margin-bottom:12px">Download the current Firestore game data as a JSON backup.</p>
 <button class="btn btn-s" id="export-backup-btn">Export Backup</button>
+<p class="mono dim mt12" style="margin-bottom:12px">Upload a backup JSON to replace the current Firestore game data after confirmation.</p>
+<label class="btn btn-d restore-backup-btn" for="restore-backup-input">Upload Backup To Restore</label>
+<input class="restore-backup-input" id="restore-backup-input" type="file" accept=".json,application/json">
 </div>
 <div class="card"><div class="card-lbl">Danger Zone</div>
 ${hasCurrentDay ? `
@@ -5769,6 +5881,10 @@ function bindMain() {
   });
   document.getElementById('player-version-btn')?.addEventListener('click', openPlayerVersion);
   document.getElementById('export-backup-btn')?.addEventListener('click', exportProjectBackup);
+  document.getElementById('restore-backup-input')?.addEventListener('change', e => {
+    handleRestoreBackupUpload(e.target.files?.[0]);
+    e.target.value = '';
+  });
   document.querySelectorAll('[data-final-recap-trigger]').forEach(btn => {
     btn.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('totowrap-open-final-recap'));
