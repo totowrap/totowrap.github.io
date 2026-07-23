@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TotoWrap Firestore Repair</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    body { min-height:100vh; padding:24px 16px; }
+    .repair-page { width:min(720px,100%); margin:0 auto; display:flex; flex-direction:column; gap:14px; }
+    .repair-title { color:var(--accent); font-family:'Alte Haas Grotesk',sans-serif; font-size:1.4rem; font-weight:bold; letter-spacing:.08em; text-transform:uppercase; }
+    .repair-card { border:1px solid rgba(var(--neutral-rgb),.2); border-radius:8px; padding:16px; background:rgba(38,55,89,.58); -webkit-backdrop-filter:blur(12px) saturate(130%); backdrop-filter:blur(12px) saturate(130%); }
+    .repair-copy { margin:0; color:var(--dim); font-size:.78rem; line-height:1.45; }
+    .repair-file { width:100%; margin-top:12px; color:var(--text); }
+    .repair-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .repair-btn { border:1px solid rgba(var(--yellow-rgb),.48); border-radius:8px; padding:12px 16px; background:rgba(var(--yellow-rgb),.16); color:var(--accent); font-family:'Alte Haas Grotesk',sans-serif; font-size:.78rem; font-weight:bold; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; }
+    .repair-btn.danger { border-color:rgba(var(--red-rgb),.5); background:rgba(var(--red-rgb),.15); color:var(--red); }
+    .repair-btn:disabled { opacity:.45; cursor:not-allowed; }
+    .repair-status { color:var(--dim); font-size:.72rem; line-height:1.45; white-space:pre-wrap; }
+    .repair-diff { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+    .repair-diff-row { border:1px solid rgba(var(--neutral-rgb),.16); border-radius:7px; padding:10px; color:var(--text); font-size:.68rem; line-height:1.35; }
+    .repair-diff-row strong { color:var(--accent); }
+    .repair-diff-row code { color:var(--dim); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  </style>
+</head>
+<body>
+  <main class="repair-page">
+    <h1 class="repair-title">Firestore Repair</h1>
+    <section class="repair-card">
+      <p class="repair-copy">Upload a known-good TotoWrap backup JSON. This page compares it with live Firestore and repairs only the completed history days that differ. It runs only while signed in as admin.</p>
+      <input class="repair-file" id="backup-file" type="file" accept="application/json,.json">
+    </section>
+    <section class="repair-card">
+      <div class="repair-actions">
+        <button class="repair-btn" id="compare-btn" type="button" disabled>Compare backup</button>
+        <button class="repair-btn danger" id="repair-btn" type="button" disabled>Repair differing days</button>
+      </div>
+      <div class="repair-status" id="status">Waiting for admin sign-in...</div>
+      <div class="repair-diff" id="diff"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import { getFirestore, doc, getDocFromServer, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDChGuB5CtWRD0u8j-GFzDOvqsGXdkDNFI",
+      authDomain: "totowrapp.firebaseapp.com",
+      databaseURL: "https://totowrapp-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "totowrapp",
+      storageBucket: "totowrapp.firebasestorage.app",
+      messagingSenderId: "310969783870",
+      appId: "1:310969783870:web:119f7f8608236096af53af"
+    };
+    const ADMIN_UIDS = new Set(["OlD6CM0vmUTmCEttNTqPvRdRmNd2"]);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const stateRef = doc(db, "totowrap", "state");
+
+    const statusEl = document.getElementById('status');
+    const diffEl = document.getElementById('diff');
+    const fileInput = document.getElementById('backup-file');
+    const compareBtn = document.getElementById('compare-btn');
+    const repairBtn = document.getElementById('repair-btn');
+
+    let currentUser = null;
+    let backupState = null;
+    let liveState = null;
+    let diffs = [];
+
+    function setStatus(text) { statusEl.textContent = text; }
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+    function winnersOf(day) {
+      return (day?.winners || []).map(w => w.name).filter(Boolean).join(', ') || day?.winner || '';
+    }
+    function daySig(day) {
+      return JSON.stringify({
+        date: day?.date || null,
+        approvedDate: day?.approvedDate || null,
+        estWrapDate: day?.estWrapDate || null,
+        wrapDate: day?.wrapDate || null,
+        wrapTime: day?.wrapTime || null,
+        noWinner: Boolean(day?.noWinner),
+        winner: day?.winner || null,
+        winners: (day?.winners || []).map(w => w.name).filter(Boolean).sort(),
+        points: Number(day?.points) || 0,
+        penalties: (day?.penalties || []).map(p => `${p.name}:${Number(p.points) || 0}:${p.reason || ''}`).sort()
+      });
+    }
+    async function readBackupFile() {
+      const file = fileInput.files?.[0];
+      if (!file) throw new Error('Choose a backup JSON file first.');
+      return JSON.parse(await file.text());
+    }
+    async function compareBackup() {
+      if (!currentUser || !ADMIN_UIDS.has(currentUser.uid)) throw new Error('You are not signed in as admin.');
+      backupState = await readBackupFile();
+      const snap = await getDocFromServer(stateRef);
+      if (!snap.exists()) throw new Error('Firestore state document does not exist.');
+      liveState = snap.data();
+      if ((backupState.days?.length || 0) !== (liveState.days?.length || 0)) {
+        throw new Error(`Backup has ${backupState.days?.length || 0} completed days, live Firestore has ${liveState.days?.length || 0}. Use a backup from the same project point.`);
+      }
+      diffs = [];
+      const maxDays = Math.max(liveState.days?.length || 0, backupState.days?.length || 0);
+      for (let index = 0; index < maxDays; index += 1) {
+        const liveDay = liveState.days?.[index];
+        const backupDay = backupState.days?.[index];
+        if (!liveDay || !backupDay) continue;
+        if (daySig(liveDay) !== daySig(backupDay)) diffs.push({ index, liveDay, backupDay });
+      }
+      renderDiffs();
+      repairBtn.disabled = diffs.length === 0;
+      setStatus(`Live version: ${liveState._version || 0}\nBackup version: ${backupState._version || 0}\nDiffering completed days: ${diffs.length}`);
+    }
+    function renderDiffs() {
+      diffEl.innerHTML = diffs.map(({ index, liveDay, backupDay }) => `
+        <div class="repair-diff-row">
+          <strong>History index ${index}</strong><br>
+          <code>Live:</code> ${esc(liveDay.date)} / wrap ${esc(liveDay.wrapTime)} / ${esc(liveDay.noWinner ? 'No Winner' : winnersOf(liveDay))} / ${esc(liveDay.points)} pts<br>
+          <code>Backup:</code> ${esc(backupDay.date)} / wrap ${esc(backupDay.wrapTime)} / ${esc(backupDay.noWinner ? 'No Winner' : winnersOf(backupDay))} / ${esc(backupDay.points)} pts
+        </div>
+      `).join('');
+    }
+    async function repairDifferingDays() {
+      if (!diffs.length) return;
+      const ok = confirm(`Repair ${diffs.length} completed history day(s) from the selected backup? This writes to Firestore.`);
+      if (!ok) return;
+      repairBtn.disabled = true;
+      await runTransaction(db, async transaction => {
+        const snap = await transaction.get(stateRef);
+        if (!snap.exists()) throw new Error('Firestore state document does not exist.');
+        const latest = snap.data();
+        const next = JSON.parse(JSON.stringify(latest));
+        diffs.forEach(({ index, backupDay }) => {
+          if (next.days?.[index]) next.days[index] = JSON.parse(JSON.stringify(backupDay));
+        });
+        if (backupState.scores) next.scores = JSON.parse(JSON.stringify(backupState.scores));
+        next._version = (Number(latest._version) || 0) + 1;
+        transaction.set(stateRef, next);
+      });
+      setStatus('Repair saved to Firestore. Reload the website and check history/standings.');
+    }
+
+    fileInput.addEventListener('change', () => {
+      compareBtn.disabled = !fileInput.files?.length || !currentUser || !ADMIN_UIDS.has(currentUser.uid);
+      repairBtn.disabled = true;
+      diffEl.innerHTML = '';
+    });
+    compareBtn.addEventListener('click', () => compareBackup().catch(error => setStatus(`Error: ${error.message}`)));
+    repairBtn.addEventListener('click', () => repairDifferingDays().catch(error => {
+      repairBtn.disabled = false;
+      setStatus(`Repair failed: ${error.message}`);
+    }));
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      const isAdmin = user && ADMIN_UIDS.has(user.uid);
+      compareBtn.disabled = !isAdmin || !fileInput.files?.length;
+      setStatus(isAdmin ? `Signed in as admin: ${user.email || user.uid}` : 'Not signed in as admin on this origin.');
+    });
+  </script>
+</body>
+</html>
