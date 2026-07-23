@@ -57,25 +57,34 @@
   padding-inline:0;
 }
 .final-recap-title {
-  width:min(720px,100%);
-  max-width:720px;
+  width:min(680px,92vw);
+  max-width:calc(100vw - 48px);
   box-sizing:border-box;
-  padding-inline:8px;
+  padding-inline:14px;
   color:var(--accent);
-  font-size:clamp(2.1rem,10vw,4.8rem);
+  font-size:clamp(1.9rem,9.2vw,4.55rem);
   font-weight:bold;
   line-height:.94;
   text-transform:uppercase;
   transform-origin:center;
 }
-.final-recap-title-left { display:inline-block; text-align:left; }
+.final-recap-title-left {
+  display:inline-block;
+  max-width:100%;
+  text-align:left;
+}
 .final-recap-title-line { display:block; white-space:nowrap; }
-.final-recap-title-nowrap { display:block; white-space:nowrap; }
+.final-recap-title-nowrap {
+  display:block;
+  max-width:100%;
+  white-space:nowrap;
+}
 .final-recap-opening-title {
   display:inline-flex;
   align-items:baseline;
   justify-content:center;
   gap:.22em;
+  max-width:100%;
   white-space:nowrap;
 }
 .final-recap-opening-title span {
@@ -921,7 +930,12 @@
 }
 @media (max-width:420px) {
   .final-recap-screen { padding-inline:18px; }
-  .final-recap-title { padding-inline:10px; font-size:clamp(1.9rem,9.2vw,4.8rem); }
+  .final-recap-title {
+    width:90vw;
+    max-width:calc(100vw - 32px);
+    padding-inline:12px;
+    font-size:clamp(1.65rem,8.4vw,4.2rem);
+  }
   .final-recap-stat-grid { gap:6px; }
   .final-recap-stat { min-height:82px; padding-inline:5px; }
   .final-recap-stat strong { font-size:1.18rem; }
