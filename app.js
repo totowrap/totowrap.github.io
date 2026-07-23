@@ -1084,14 +1084,11 @@ function normalizeDateValue(dateStr) {
   const d = dateFromISO(dateStr);
   return d ? localDateISO(d) : null;
 }
+function explicitGameStartDateISO(day=S.today) {
+  return normalizeDateValue(day?.approvedDate) || normalizeDateValue(day?.date) || null;
+}
 function resolveDayStartDateISO(day=S.today) {
-  const candidates = [
-    normalizeDateValue(day?.approvedDate),
-    normalizeDateValue(day?.date),
-    normalizeDateValue(day?.estWrapDate),
-    normalizeDateValue(day?.wrapDate)
-  ].filter(Boolean);
-  return candidates[0] || null;
+  return explicitGameStartDateISO(day);
 }
 function gameStartDateISO(day=S.today) {
   return resolveDayStartDateISO(day) || localDateISO();
@@ -4525,7 +4522,6 @@ async function updateHistoryDayNumber(date, nextDate, historyIndex='') {
 
   const prevS = cloneState();
   adjustCompletedDayScores(target.day, -1);
-  target.day.estWrapDate = normalizedDate;
   target.day.date = normalizedDate;
   target.day.approvedDate = normalizedDate;
   const result = calcWinner(target.day.guesses || [], target.day.wrapTime, target.day);
@@ -5229,7 +5225,7 @@ function recalculateCompletedResultsForCurrentBoundaryRule() {
   if (S.today?.wrapTime) completedDays.push(S.today);
 
   completedDays.forEach(day => {
-    if (!day?.wrapTime) return;
+    if (!day?.wrapTime || !explicitGameStartDateISO(day)) return;
     const previous = completedDayOutcome(day);
     const next = calcWinner(day.guesses || [], day.wrapTime, day);
     const nextOutcome = {
@@ -5253,21 +5249,7 @@ function recalculateCompletedResultsForCurrentBoundaryRule() {
 }
 
 function normalizeHistoryStartDates() {
-  let changed = false;
-  [...(S.days || []), S.today].filter(Boolean).forEach(day => {
-    const startedOn = historyDateISO(day);
-    if (!startedOn) return;
-    if (normalizeDateValue(day.date) !== startedOn) {
-      day.date = startedOn;
-      changed = true;
-    }
-    if (normalizeDateValue(day.approvedDate) !== startedOn) {
-      day.approvedDate = startedOn;
-      changed = true;
-    }
-  });
-  if (sortHistoryDaysByDate()) changed = true;
-  return changed;
+  return false;
 }
 
 async function maybeSavePendingStateMigrations() {
