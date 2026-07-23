@@ -615,6 +615,12 @@ document.addEventListener('click', e => {
     return;
   }
 
+  const recapOpenBtn = e.target.closest?.('[data-open-final-recap]');
+  if (recapOpenBtn) {
+    window.dispatchEvent(new CustomEvent('totowrap-open-final-recap'));
+    return;
+  }
+
   const shareResultBtn = e.target.closest?.('[data-share-result]');
   if (shareResultBtn) {
     openShareResult();
@@ -2860,11 +2866,55 @@ function renderSpecialDayIndicator(day=S.today) {
   return renderNapuleDayIndicator(day) || renderCrazyDayIndicator(day);
 }
 
+function getPostWrapPodiumGroups() {
+  const groups = new Map();
+  getStandingsEntries()
+    .filter(entry => typeof entry.rank === 'number' && entry.rank <= 3)
+    .forEach(entry => {
+      if (!groups.has(entry.rank)) groups.set(entry.rank, []);
+      groups.get(entry.rank).push(entry);
+    });
+  return [2, 1, 3].map(rank => {
+    const entries = groups.get(rank);
+    if (!entries?.length) return null;
+    const first = entries[0];
+    return {
+      rank,
+      entries,
+      score: first.score,
+      wins: first.wins
+    };
+  });
+}
+
+function renderPostWrapPodiumCard() {
+  const podiumGroups = getPostWrapPodiumGroups();
+  const hasPodium = podiumGroups.some(Boolean);
+  const places = podiumGroups.map(group => {
+    const rank = group?.rank || '';
+    const names = group
+      ? group.entries.map(entry => `<span>${esc(entry.player.name)}</span>`).join('')
+      : '<span>—</span>';
+    const meta = group
+      ? `${group.score} ${countWord(group.score, 'pt', 'pts')} · ${group.wins} ${countWord(group.wins, 'game', 'games')} won`
+      : '—';
+    return `<span class="postwrap-podium-place" data-place="${esc(rank)}">
+      <span class="postwrap-podium-rank">${esc(rank || '—')}</span>
+      <span class="postwrap-podium-name">${names}</span>
+      <span class="postwrap-podium-meta">${esc(meta)}</span>
+    </span>`;
+  }).join('');
+
+  return `<button class="card postwrap-podium-card" type="button" data-open-final-recap>
+    <span class="postwrap-podium-title">${hasPodium ? "Today's podium" : 'Project podium'}</span>
+    <span class="postwrap-podium">${places}</span>
+    <span class="postwrap-recap-prompt">Click here for your TotoWrap Recap</span>
+  </button>`;
+}
+
 function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
   const penaltiesByPlayer = dayPenaltyDetailsMap(t);
-  const winnerTag = canStartNextDay ? 'button type="button" data-share-result' : 'div';
-  const winnerCloseTag = canStartNextDay ? 'button' : 'div';
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p next-day-btn" id="new-day-btn">Start Next Day</button>' : '';
   const completedViewClass = canStartNextDay ? 'today-fixed-view today-completed-view has-next-day-action' : 'today-fixed-view today-completed-view';
   const fridayBanner = renderFridayWrapBanner(t);
@@ -2872,11 +2922,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
   if (t.noWinner) {
     return `
     <div class="${completedViewClass}">
-      <${winnerTag} class="winner-banner no-winner-banner">
-        <span class="winner-sub">Day Complete</span>
-        <span class="winner-name" style="font-size: 1.35rem; color: var(--red); white-space: nowrap;">That was a real mattanza!</span>
-	        <span class="winner-pts">Wrap at ${esc(t.wrapTime)} was outside all bets</span>
-      </${winnerCloseTag}>
+      ${renderPostWrapPodiumCard()}
       ${renderSpecialDayIndicator(t)}
       ${fridayBanner}
       <div class="card today-scroll-card"><div class="card-lbl">Results</div>
@@ -2904,14 +2950,9 @@ function renderCompletedToday(t, canStartNextDay=false) {
   }
 
   const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
-  const todayWinnerStr = formatSafeNames(todayWinnerNames);
   return `
   <div class="${completedViewClass}">
-  <${winnerTag} class="winner-banner">
-    <span class="winner-sub">Today's winner${todayWinnerNames.length > 1 ? 's' : ''}</span>
-    <span class="winner-name" style="font-size: 2.2rem;">${todayWinnerStr}</span>
-	    <span class="winner-pts">+${t.points} ${countWord(t.points, 'pt', 'pts')} · Wrap at ${esc(t.wrapTime)}</span>
-  </${winnerCloseTag}>
+  ${renderPostWrapPodiumCard()}
   ${renderSpecialDayIndicator(t)}
   ${fridayBanner}
   <div class="card today-scroll-card"><div class="card-lbl">Results</div>

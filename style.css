@@ -579,6 +579,24 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .winner-sub { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
 .winner-name { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-weight: bold; font-size: 2.8rem; color: var(--accent); letter-spacing: .04em; line-height: 1; }
 .winner-pts { display:block; font-family: 'Alte Haas Grotesk', sans-serif; font-size: .7rem; color: var(--dim); margin-top: 4px; }
+.postwrap-podium-card { display:block; width:100%; color:inherit; font:inherit; cursor:pointer; border-color:rgba(var(--yellow-rgb),.42); text-align:center; appearance:none; -webkit-appearance:none; }
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .postwrap-podium-card { background:linear-gradient(135deg,rgba(var(--yellow-rgb),.08),rgba(var(--green-rgb),.035)),linear-gradient(135deg,rgba(46,60,87,.56),rgba(46,60,87,.38)); -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); }
+}
+.postwrap-podium-title { display:block; color:var(--dim); font-family:'Alte Haas Grotesk',sans-serif; font-size:.58rem; font-weight:bold; letter-spacing:.14em; line-height:1; text-transform:uppercase; }
+.postwrap-podium { display:grid; grid-template-columns:1fr 1.08fr 1fr; align-items:end; gap:7px; margin:14px 0 11px; }
+.postwrap-podium-place { min-width:0; border:1px solid rgba(var(--yellow-rgb),.22); border-radius:8px; padding:9px 5px 8px; background:rgba(38,55,89,.34); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+.postwrap-podium-place[data-place="1"] { min-height:92px; border-color:rgba(var(--yellow-rgb),.62); background:linear-gradient(160deg,rgba(var(--yellow-rgb),.32),rgba(38,55,89,.54)); }
+.postwrap-podium-place[data-place="2"] { min-height:76px; border-color:rgba(205,214,222,.56); }
+.postwrap-podium-place[data-place="3"] { min-height:64px; border-color:rgba(184,121,85,.62); }
+.postwrap-podium-rank { display:block; font-family:'Alte Haas Grotesk',sans-serif; font-size:1rem; font-weight:bold; line-height:1; }
+[data-place="1"] .postwrap-podium-rank { color:#d6ad45; font-size:1.2rem; }
+[data-place="2"] .postwrap-podium-rank { color:#d8e0e8; }
+[data-place="3"] .postwrap-podium-rank { color:#b87955; }
+.postwrap-podium-name { display:block; margin-top:8px; color:var(--accent); font-family:'Alte Haas Grotesk',sans-serif; font-size:clamp(.72rem,3vw,.95rem); font-weight:bold; line-height:1.02; text-transform:uppercase; overflow-wrap:anywhere; }
+.postwrap-podium-name span { display:block; }
+.postwrap-podium-meta { display:block; margin-top:7px; color:var(--dim); font-family:'Alte Haas Grotesk',sans-serif; font-size:.5rem; font-weight:bold; letter-spacing:.08em; line-height:1.15; text-transform:uppercase; }
+.postwrap-recap-prompt { display:block; color:var(--accent); font-family:'Alte Haas Grotesk',sans-serif; font-size:.78rem; font-weight:900; letter-spacing:.08em; line-height:1.15; text-transform:uppercase; }
 .weekday-message-banner { flex:0 0 auto; margin:0 0 12px; border:1px solid rgba(var(--neutral-rgb), .22); border-radius:var(--radius); padding:10px 14px; background:linear-gradient(135deg, rgba(46,60,87,.54), rgba(46,60,87,.36)); color:var(--accent); font-family:'Alte Haas Grotesk', sans-serif; font-size:.68rem; line-height:1.28; letter-spacing:.06em; text-align:center; text-transform:uppercase; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .weekday-message-banner { -webkit-backdrop-filter:blur(14px) saturate(135%); backdrop-filter:blur(14px) saturate(135%); }
