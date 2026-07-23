@@ -4230,7 +4230,7 @@ function openHistoryDayNumberDialog(date, historyIndex='') {
       <input class="admin-dialog-wrap-input" type="number" id="admin-history-day-number-input" value="${esc(target.idx)}" min="0" max="${esc(maxDayNumber)}" step="1" inputmode="numeric">
     </div>
     <div class="admin-dialog-split">
-      <button class="admin-dialog-action undo" type="button" data-admin-dialog-action="history-actions-open" data-history-date="${esc(date)}" data-history-index="${esc(historyIndex)}">Back</button>
+      <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="history-day-number-save" data-history-date="${esc(date)}" data-history-index="${esc(historyIndex)}">Confirm</button>
     </div>`
   });
@@ -4908,25 +4908,12 @@ async function handleAdminDialogAction(btn) {
     await downloadStandingsExport();
     return;
   }
-  if (action === 'history-actions-open') {
-    openHistoryDayActions(date, historyIndex);
+  if (action === 'history-wrap-open') {
+    openHistoryWrapDialog(date);
     return;
   }
   if (action === 'history-day-number-open') {
     openHistoryDayNumberDialog(date, historyIndex);
-    return;
-  }
-  if (action === 'history-day-number-save') {
-    const updated = await updateHistoryDayNumber(
-      date,
-      document.getElementById('admin-history-day-number-input')?.value,
-      historyIndex
-    );
-    if (updated) closeAdminDialog();
-    return;
-  }
-  if (action === 'history-wrap-open') {
-    openHistoryWrapDialog(date);
     return;
   }
   if (action === 'history-bet-players-open') {
@@ -4946,6 +4933,15 @@ async function handleAdminDialogAction(btn) {
       date,
       document.getElementById('admin-history-wrap-input')?.value,
       document.getElementById('admin-history-wrap-date-input')?.value
+    );
+    if (updated) closeAdminDialog();
+    return;
+  }
+  if (action === 'history-day-number-save') {
+    const updated = await updateHistoryDayNumber(
+      date,
+      document.getElementById('admin-history-day-number-input')?.value,
+      historyIndex
     );
     if (updated) closeAdminDialog();
     return;
