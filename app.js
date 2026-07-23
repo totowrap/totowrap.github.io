@@ -1080,10 +1080,10 @@ function normalizeDateValue(dateStr) {
 }
 function resolveDayStartDateISO(day=S.today) {
   const candidates = [
-    normalizeDateValue(day?.estWrapDate),
-    normalizeDateValue(day?.wrapDate),
     normalizeDateValue(day?.approvedDate),
-    normalizeDateValue(day?.date)
+    normalizeDateValue(day?.date),
+    normalizeDateValue(day?.estWrapDate),
+    normalizeDateValue(day?.wrapDate)
   ].filter(Boolean);
   return candidates[0] || null;
 }
@@ -1091,20 +1091,7 @@ function gameStartDateISO(day=S.today) {
   return resolveDayStartDateISO(day) || localDateISO();
 }
 function historyDateISO(day) {
-  const candidates = day?.wrapTime
-    ? [
-        normalizeDateValue(day?.wrapDate),
-        normalizeDateValue(day?.estWrapDate),
-        normalizeDateValue(day?.approvedDate),
-        normalizeDateValue(day?.date)
-      ]
-    : [
-        normalizeDateValue(day?.estWrapDate),
-        normalizeDateValue(day?.wrapDate),
-        normalizeDateValue(day?.approvedDate),
-        normalizeDateValue(day?.date)
-      ];
-  return candidates.filter(Boolean)[0] || gameStartDateISO(day);
+  return gameStartDateISO(day);
 }
 function compareHistoryRefs(a, b) {
   const aDate = historyDateISO(a.day);
@@ -4460,10 +4447,6 @@ async function updateHistoryWrapTime(date, nextWrap, nextWrapDate) {
   adjustCompletedDayScores(target.day, -1);
   target.day.wrapTime = normalizedWrap;
   target.day.wrapDate = normalizedWrapDate;
-  target.day.estWrapDate = normalizedWrapDate;
-  const startedOn = normalizedWrapDate;
-  target.day.date = startedOn;
-  target.day.approvedDate = startedOn;
   const result = calcWinner(target.day.guesses || [], normalizedWrap, target.day);
   applyCompletedDayResult(target.day, result);
   adjustCompletedDayScores(target.day, 1);
@@ -4863,8 +4846,6 @@ async function saveEstimatedWrapTime() {
   const prevS = cloneState();
   S.today.estWrap = wrapTime;
   S.today.estWrapDate = wrapDate;
-  S.today.date = wrapDate;
-  S.today.approvedDate = wrapDate;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
   toast('Wrap time saved', 'ok');
@@ -5235,10 +5216,6 @@ function normalizeHistoryStartDates() {
   [...(S.days || []), S.today].filter(Boolean).forEach(day => {
     const startedOn = historyDateISO(day);
     if (!startedOn) return;
-    if (day.wrapTime && normalizeDateValue(day.wrapDate) && normalizeDateValue(day.estWrapDate) !== startedOn) {
-      day.estWrapDate = startedOn;
-      changed = true;
-    }
     if (normalizeDateValue(day.date) !== startedOn) {
       day.date = startedOn;
       changed = true;
