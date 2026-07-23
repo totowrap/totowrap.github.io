@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#263759">
+<meta name="color-scheme" content="dark">
+<title>TotoWrap Recovery Builder</title>
+<style>
+@font-face{font-family:Alte;src:url("../fonts/AlteHaasGroteskRegular.ttf")}
+@font-face{font-family:Alte;font-weight:700;src:url("../fonts/AlteHaasGroteskBold.ttf")}
+:root{
+  --bg:#263759;
+  --bg2:#2e4167;
+  --bg3:#344971;
+  --yellow:#f7bd25;
+  --green:#7ee36e;
+  --red:#c14d4d;
+  --neutral:#c9d7bd;
+  --line:rgba(247,189,37,.34);
+  --panel:rgba(47,66,104,.82);
+  --panel-strong:rgba(36,51,83,.94);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  background:radial-gradient(circle at 50% 18%, rgba(247,189,37,.12), transparent 32%), var(--bg);
+  color:var(--neutral);
+  font-family:Alte, Arial, sans-serif;
+  letter-spacing:.02em;
+}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.page{
+  width:min(1120px, calc(100% - 28px));
+  margin:0 auto;
+  padding:22px 0 44px;
+}
+.hero{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:18px;
+  align-items:center;
+  padding:14px 0 22px;
+  border-bottom:1px solid rgba(247,189,37,.24);
+}
+.logo{
+  width:96px;
+  height:auto;
+  filter:drop-shadow(0 6px 9px rgba(0,0,0,.22));
+}
+h1,h2,h3,p{margin:0}
+h1{
+  color:var(--yellow);
+  font-size:clamp(1.35rem,4vw,2.4rem);
+  line-height:1;
+  text-transform:uppercase;
+}
+.sub{
+  margin-top:7px;
+  color:var(--neutral);
+  font-size:.86rem;
+  line-height:1.35;
+}
+.badge{
+  border:1px solid rgba(126,227,110,.5);
+  color:var(--green);
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:.72rem;
+  font-weight:700;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
+  margin-top:18px;
+}
+@media (min-width:920px){
+  .grid.two{grid-template-columns:.9fr 1.1fr}
+}
+.card{
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:linear-gradient(145deg, rgba(52,73,113,.9), rgba(38,55,89,.86));
+  box-shadow:0 0 0 1px rgba(255,255,255,.04) inset;
+  padding:16px;
+}
+.card h2{
+  color:var(--yellow);
+  font-size:.92rem;
+  line-height:1;
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  margin-bottom:10px;
+}
+.instructions{
+  font-size:.82rem;
+  line-height:1.42;
+  color:var(--neutral);
+  margin-bottom:12px;
+}
+.file-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+input[type=file]{
+  width:100%;
+  border:1px solid rgba(201,215,189,.25);
+  border-radius:8px;
+  padding:10px;
+  color:var(--neutral);
+  background:rgba(23,34,58,.55);
+}
+.btn{
+  border:1px solid rgba(247,189,37,.36);
+  border-radius:8px;
+  min-height:38px;
+  padding:10px 14px;
+  background:rgba(247,189,37,.12);
+  color:var(--yellow);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}
+.btn.primary{
+  background:linear-gradient(180deg, rgba(247,189,37,.98), rgba(236,173,20,.94));
+  border-color:rgba(255,255,255,.35);
+  color:#182747;
+}
+.btn.green{
+  border-color:rgba(126,227,110,.48);
+  color:var(--green);
+  background:rgba(126,227,110,.12);
+}
+.btn.red{
+  border-color:rgba(193,77,77,.54);
+  color:#ff9a9a;
+  background:rgba(193,77,77,.12);
+}
+.btn.small{
+  min-height:30px;
+  padding:7px 9px;
+  font-size:.68rem;
+}
+.summary{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:8px;
+}
+@media (min-width:680px){
+  .summary{grid-template-columns:repeat(4, minmax(0,1fr))}
+}
+.metric{
+  border:1px solid rgba(201,215,189,.18);
+  border-radius:8px;
+  padding:10px;
+  background:rgba(23,34,58,.28);
+}
+.metric .label{
+  display:block;
+  font-size:.64rem;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}
+.metric .value{
+  display:block;
+  color:var(--yellow);
+  font-weight:700;
+  font-size:1.05rem;
+  margin-top:4px;
+}
+.form-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:11px;
+}
+@media (min-width:680px){
+  .form-grid{grid-template-columns:repeat(2, minmax(0,1fr))}
+  .span-2{grid-column:1 / -1}
+}
+label{
+  display:grid;
+  gap:5px;
+  color:var(--yellow);
+  font-size:.72rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.1em;
+}
+.field-note{
+  color:var(--neutral);
+  font-size:.68rem;
+  font-weight:400;
+  text-transform:none;
+  letter-spacing:.02em;
+}
+input,select,textarea{
+  width:100%;
+  color:var(--yellow);
+  background:rgba(23,34,58,.52);
+  border:1px solid rgba(201,215,189,.24);
+  border-radius:8px;
+  outline:none;
+  padding:10px;
+}
+textarea{
+  min-height:190px;
+  resize:vertical;
+  line-height:1.35;
+  white-space:pre;
+  overflow:auto;
+}
+.score-grid{
+  display:grid;
+  grid-template-columns:1fr 110px;
+  gap:8px 10px;
+  align-items:center;
+  margin-top:8px;
+}
+.score-grid span{
+  color:var(--neutral);
+  font-size:.78rem;
+}
+.score-grid input{
+  text-align:center;
+}
+.penalty-wrap{
+  position:relative;
+}
+.penalty-wrap::before{
+  content:"-";
+  position:absolute;
+  left:12px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--red);
+  font-weight:700;
+}
+.penalty-wrap input{
+  padding-left:26px;
+}
+.row-list{
+  display:grid;
+  gap:8px;
+  max-height:440px;
+  overflow:auto;
+  padding-right:2px;
+  scrollbar-width:none;
+}
+.row-list::-webkit-scrollbar,
+textarea::-webkit-scrollbar{display:none}
+.day-row{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:10px;
+  align-items:center;
+  border:1px solid rgba(201,215,189,.14);
+  border-radius:8px;
+  padding:9px 10px;
+  background:rgba(23,34,58,.28);
+}
+.day-row .day{
+  color:var(--yellow);
+  font-weight:700;
+  white-space:nowrap;
+}
+.day-row .main{
+  min-width:0;
+}
+.day-row .title{
+  color:var(--neutral);
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.day-row .meta{
+  margin-top:3px;
+  font-size:.68rem;
+  color:rgba(201,215,189,.82);
+}
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.preview{
+  min-height:80px;
+  border:1px solid rgba(201,215,189,.16);
+  border-radius:8px;
+  padding:12px;
+  background:rgba(23,34,58,.24);
+  white-space:pre-wrap;
+  line-height:1.42;
+}
+.preview strong{color:var(--yellow)}
+.ok{color:var(--green)}
+.err{color:#ff9a9a}
+.warn{color:#ffd880}
+.mode-note{
+  margin-top:8px;
+  color:rgba(201,215,189,.86);
+  font-size:.76rem;
+  line-height:1.35;
+}
+.hidden{display:none!important}
+.status-line{
+  margin-top:10px;
+  min-height:1.2em;
+  font-size:.78rem;
+}
+.mono{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="hero">
+    <img class="logo" src="../imgs/totowrap.png" alt="TotoWrap">
+    <div>
+      <h1>Recovery Builder</h1>
+      <p class="sub">Upload a clean backup, rebuild later days manually, and export a repaired JSON. This page works offline in your browser and does not touch Firestore.</p>
+    </div>
+    <div class="badge">Offline Only</div>
+  </header>
+
+  <section class="grid two">
+    <article class="card">
+      <h2>1. Upload Backup</h2>
+      <p class="instructions">Use the June 16 backup. If the backup has a wrapped today, it will be promoted into the completed history so Day 24 is preserved.</p>
+      <div class="file-row">
+        <input id="backup-file" type="file" accept=".json,application/json">
+        <button class="btn green" id="restore-work-btn" type="button">Restore Saved Work</button>
+        <button class="btn red" id="clear-work-btn" type="button">Clear Draft</button>
+      </div>
+      <p class="status-line" id="backup-status"></p>
+    </article>
+
+    <article class="card">
+      <h2>Recovery Summary</h2>
+      <div class="summary">
+        <div class="metric"><span class="label">Base Through</span><span class="value" id="metric-base">--</span></div>
+        <div class="metric"><span class="label">Manual Days</span><span class="value" id="metric-manual">0</span></div>
+        <div class="metric"><span class="label">Next Day</span><span class="value" id="metric-next">--</span></div>
+        <div class="metric"><span class="label">Players</span><span class="value" id="metric-players">--</span></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid two">
+    <article class="card">
+      <h2>2. Manual Day Setup</h2>
+      <p class="instructions">Fill one game day at a time. The game date is the date the day belongs to. Wrap date can be the next day if the wrap happened after midnight.</p>
+      <form id="day-form" class="form-grid" autocomplete="off">
+        <label>Game Date
+          <span class="field-note">Date shown in history for this day.</span>
+          <input id="game-date" type="text" placeholder="dd/mm/yyyy" inputmode="numeric">
+        </label>
+        <label>Stop Time
+          <span class="field-note">Luigi Stop / closing time.</span>
+          <input id="approved-at" type="text" placeholder="hh:mm:ss" inputmode="text">
+        </label>
+        <label>Estimated Wrap Time
+          <input id="est-wrap" type="text" placeholder="hh:mm" inputmode="text">
+        </label>
+        <label>Estimated Wrap Date
+          <input id="est-wrap-date" type="text" placeholder="dd/mm/yyyy" inputmode="numeric">
+        </label>
+        <label>Official Wrap Time
+          <span class="field-note">Leave empty only if this is the active current day.</span>
+          <input id="wrap-time" type="text" placeholder="hh:mm:ss" inputmode="text">
+        </label>
+        <label>Official Wrap Date
+          <span class="field-note">Leave empty to infer from game date and Stop time.</span>
+          <input id="wrap-date" type="text" placeholder="dd/mm/yyyy" inputmode="numeric">
+        </label>
+        <label class="span-2">Bets
+          <span class="field-note">One per line: Name - hh:mm. Missing roster players are added as no bet.</span>
+          <textarea id="bets-text" placeholder="Name - hh:mm&#10;Name - hh:mm"></textarea>
+        </label>
+        <label>Mode
+          <select id="day-mode">
+            <option value="regular">Regular Day</option>
+            <option value="crazy">Crazy Day</option>
+            <option value="napule">Napule Day</option>
+          </select>
+        </label>
+        <label>Crown Player
+          <span class="field-note">Optional. Leave empty for no crown.</span>
+          <input id="crown-player" type="text" placeholder="Player name">
+        </label>
+        <div class="span-2">
+          <div class="score-grid">
+            <span>Regular winner gets</span><input id="regular-points" type="number" step="1" value="1">
+            <span>Perfect wrap winner gets</span><input id="perfect-points" type="number" step="1" value="3">
+            <span>No bet loses</span><div class="penalty-wrap"><input id="no-bet-penalty" type="number" min="0" step="1" value="0"></div>
+            <span>Furthest bet loses</span><div class="penalty-wrap"><input id="furthest-penalty" type="number" min="0" step="1" value="0"></div>
+            <span>Close bets lose</span><div class="penalty-wrap"><input id="neighbor-penalty" type="number" min="0" step="1" value="0"></div>
+          </div>
+          <p class="mode-note" id="mode-note"></p>
+        </div>
+      </form>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn" id="preview-day-btn" type="button">Preview Result</button>
+        <button class="btn primary" id="save-day-btn" type="button">Add Completed Day</button>
+        <button class="btn green" id="save-active-btn" type="button">Set Active Today</button>
+        <button class="btn" id="reset-form-btn" type="button">Clear Form</button>
+      </div>
+      <div class="preview" id="day-preview" style="margin-top:12px">Upload a backup, then build Day 25 onward.</div>
+    </article>
+
+    <article class="card">
+      <h2>3. Rebuilt Days</h2>
+      <p class="instructions">Manual completed days are appended after the June backup. You can edit or remove each one before exporting.</p>
+      <div class="row-list" id="manual-days"></div>
+      <div class="preview" id="active-today-preview" style="margin-top:12px">No active today draft.</div>
+    </article>
+  </section>
+
+  <section class="grid two">
+    <article class="card">
+      <h2>Backup Contents</h2>
+      <p class="instructions">This is the clean baseline loaded from the backup. You can edit individual days before exporting.</p>
+      <div class="row-list" id="base-days"></div>
+    </article>
+
+    <article class="card">
+      <h2>4. Export Repaired JSON</h2>
+      <p class="instructions">Export only after every manual day has been reviewed. The exported file is still offline; it does not upload itself to Firestore.</p>
+      <div class="actions">
+        <button class="btn primary" id="download-json-btn" type="button">Download Repaired JSON</button>
+        <button class="btn green" id="download-draft-btn" type="button">Download Work Draft</button>
+      </div>
+      <div class="preview" id="export-preview" style="margin-top:12px">No backup loaded.</div>
+    </article>
+  </section>
+</main>
+<script src="recovery.js"></script>
+</body>
+</html>

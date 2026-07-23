@@ -243,6 +243,13 @@
           player.winStreak = 0;
         }
       });
+      (day.penalties || []).forEach(penalty => {
+        const name = penalty?.name;
+        const points = Number(penalty?.points) || 0;
+        if (!name || !points) return;
+        if (!runningScores.has(name)) runningScores.set(name, 0);
+        runningScores.set(name, (runningScores.get(name) || 0) + points);
+      });
 
       const dayGuesses = Array.isArray(day.guesses) ? day.guesses : [];
       stats.forEach(player => {
@@ -488,7 +495,8 @@
   }
   function leadChangeRows(changes) {
     if (!changes.length) return '<div class="final-recap-empty">The same player held first place throughout the project.</div>';
-    return `<div class="final-recap-lead-grid">${changes.map(change => `
+    const compactClass = changes.length > 4 ? ' is-compact' : '';
+    return `<div class="final-recap-lead-grid${compactClass}">${changes.map(change => `
       <div class="final-recap-lead-change">
         <span>Day ${change.dayIndex}</span>
         <div class="final-recap-lead-names">
