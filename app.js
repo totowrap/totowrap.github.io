@@ -4192,8 +4192,8 @@ function openHistoryDayActions(date, historyIndex='') {
   openAdminDialog({
     title: getHistoryDayLabel(date),
     body: `<div class="admin-dialog-actions">
-      <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-day-number-open" data-history-date="${safeDate}" data-history-index="${safeHistoryIndex}">Change Day</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-wrap-open" data-history-date="${safeDate}">Edit Official Wrap</button>
+      <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-day-number-open" data-history-date="${safeDate}" data-history-index="${safeHistoryIndex}">Change Day</button>
       <button class="admin-dialog-action edit" type="button" data-admin-dialog-action="history-bet-players-open" data-history-date="${safeDate}">Add Player Bet</button>
       <button class="admin-dialog-action delete" type="button" data-admin-dialog-action="history-delete-open" data-history-date="${safeDate}">Delete Day</button>
     </div>`
