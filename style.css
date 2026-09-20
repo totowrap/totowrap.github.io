@@ -2,13 +2,12 @@ html, body { background: var(--bg); height: 100%; overflow: hidden; }
 #boot-loader { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: var(--bg); opacity: 1; visibility: visible; transition: opacity 1.5s ease, visibility 1.5s ease; }
 #boot-loader.done { opacity: 0; visibility: hidden; pointer-events: none; }
 .boot-content { position: fixed; inset: 0; width: 100%; text-align: center; }
-.boot-logo-stage { position: absolute; top: var(--main-logo-center-y); left: 50%; width: 320px; height: 320px; transform: translate(-50%, -50%); transition: opacity 1.5s cubic-bezier(.45,0,.25,1); }
+.boot-logo-stage { position: absolute; top: var(--main-logo-center-y); left: 50%; width: min(320px, calc(100vw - 36px)); aspect-ratio: 1; transform: translate(-50%, -50%); transition: opacity 1.5s cubic-bezier(.45,0,.25,1); }
 .boot-logo-layer { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transition: opacity 1.5s cubic-bezier(.45,0,.25,1); pointer-events: none; }
 .boot-logo-layer.is-visible { opacity: 1; }
 .boot-logo-image { display: block; object-fit: contain; transform-origin: center; }
 .boot-logo-image.is-rotating { animation: boot-spin 3.5s linear infinite; }
-.boot-logo-regular { width: 320px; height: 320px; filter: brightness(95%) drop-shadow(0 14px 32px rgba(0,0,0,.32)); }
-.boot-logo-edoardo { width: auto; height: 243px; filter: drop-shadow(1px 0 0 var(--yellow)) drop-shadow(-1px 0 0 var(--yellow)) drop-shadow(0 1px 0 var(--yellow)) drop-shadow(0 -1px 0 var(--yellow)); }
+.boot-logo-regular { width: 100%; height: 100%; }
 .boot-phrase { position: absolute; top: calc(var(--main-logo-center-y) + 170px); left: 50%; display: grid; place-items: center; min-height: 2.8em; width: min(calc(100% - 36px), 360px); color: var(--text); font-family: 'Alte Haas Grotesk', sans-serif; font-size: 1.05rem; font-weight: bold; line-height: 1.32; text-align: center; text-transform: uppercase; white-space: pre-line; opacity: 0; transform: translateX(-50%); transition: opacity .65s ease; }
 .boot-phrase-text { display: block; max-width: 100%; }
 .boot-phrase-right { display: block; width: 100%; text-align: right; }
@@ -143,11 +142,12 @@ body::before {
   transform: translate(-50%, -50%);
   width: 320px;
   height: 320px;
-  background-image: url('imgs/tunacan.png');
+  background-image: url('imgs/gu3-logo-hires.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
   filter: brightness(95%);
+  opacity: .18;
   z-index: 0;
   pointer-events: none;
 }
@@ -191,111 +191,106 @@ body::before {
   transform-style: preserve-3d;
 }
 
+.logo-two-faces .logo-3d-inner {
+  animation: header-logo-turn 8s cubic-bezier(.45,0,.25,1) infinite;
+  animation-delay: var(--logo-delay, 0s);
+}
+
 .face {
   position: absolute;
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   object-fit: contain;
-  opacity: 0;
 }
 
-/* FIX FOR FACE 2, 3 & 4:
-   We allow backface visibility so they appear correctly when rotating through
-   the 180-degree mark. face-2 & face-4 (tuna) also get scaleX(-1) to mirror
-   correctly; face-3's animation overrides this transform, so it renders normally. */
-.face-2, .face-3, .face-4 {
+.logo-two-faces .face-project {
+  transform: rotateY(180deg);
+}
+
+@keyframes header-logo-turn {
+  0%, 35% { transform: rotateY(0deg); }
+  50%, 85% { transform: rotateY(180deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-two-faces .logo-3d-inner { animation-duration: 16s; }
+}
+
+/* The optional extra logo restores the original project / extra / game / extra sequence. */
+.logo-four-faces .face { opacity: 0; }
+.logo-four-faces .face-2,
+.logo-four-faces .face-3,
+.logo-four-faces .face-4 {
   backface-visibility: visible;
-  /* scaleX(-1) mirrors the image so it looks 'right' when viewed from the back */
+  -webkit-backface-visibility: visible;
   transform: scaleX(-1);
 }
 
-/* --- ANIMATION ASSIGNMENTS --- */
-.logo-step0 .face-1 {
-  animation:
-    f1-step0 12.5s linear forwards,
-    loop-standard 12s linear 12.5s infinite;
+.logo-four-faces.logo-step0 .face-1 {
+  animation: header-four-first 12.5s linear forwards, header-four-standard 12s linear 12.5s infinite;
   animation-delay: var(--logo-delay), calc(12.5s + var(--logo-delay));
 }
-
-.logo-step0 .face-2 {
-  animation:
-    f2-step0 12.5s linear forwards,
-    loop-mirrored 12s linear 12.5s infinite;
+.logo-four-faces.logo-step0 .face-2 {
+  animation: header-four-second 12.5s linear forwards, header-four-mirrored 12s linear 12.5s infinite;
   animation-delay: var(--logo-delay), calc(15.5s + var(--logo-delay));
 }
-
-.logo-step0 .face-3 {
-  animation:
-    f3-step0 12.5s linear forwards,
-    loop-standard 12s linear 12.5s infinite;
+.logo-four-faces.logo-step0 .face-3 {
+  animation: header-four-third 12.5s linear forwards, header-four-standard 12s linear 12.5s infinite;
   animation-delay: var(--logo-delay), calc(18.5s + var(--logo-delay));
 }
-
-.logo-step0 .face-4 {
-  animation:
-    f4-step0 12.5s linear forwards,
-    loop-mirrored 12s linear 12.5s infinite;
+.logo-four-faces.logo-step0 .face-4 {
+  animation: header-four-fourth 12.5s linear forwards, header-four-mirrored 12s linear 12.5s infinite;
   animation-delay: var(--logo-delay), calc(21.5s + var(--logo-delay));
 }
-
-.logo-loop .face-1 {
-  animation: loop-standard 12s linear infinite;
+.logo-four-faces.logo-loop .face-1 {
+  animation: header-four-standard 12s linear infinite;
   animation-delay: calc(var(--logo-delay) + 12.5s);
 }
-
-.logo-loop .face-2 {
-  animation: loop-mirrored 12s linear infinite;
+.logo-four-faces.logo-loop .face-2 {
+  animation: header-four-mirrored 12s linear infinite;
   animation-delay: calc(var(--logo-delay) + 15.5s);
 }
-
-.logo-loop .face-3 {
-  animation: loop-standard 12s linear infinite;
+.logo-four-faces.logo-loop .face-3 {
+  animation: header-four-standard 12s linear infinite;
   animation-delay: calc(var(--logo-delay) + 18.5s);
 }
-
-.logo-loop .face-4 {
-  animation: loop-mirrored 12s linear infinite;
+.logo-four-faces.logo-loop .face-4 {
+  animation: header-four-mirrored 12s linear infinite;
   animation-delay: calc(var(--logo-delay) + 21.5s);
 }
-
-/* --- STEP 0 KEYFRAMES --- */
-@keyframes f1-step0 {
+@keyframes header-four-first {
   0%, 16% { opacity: 1; transform: rotateY(0deg); }
-  28%     { opacity: 1; transform: rotateY(90deg); }
+  28% { opacity: 1; transform: rotateY(90deg); }
   28.1%, 100% { opacity: 0; }
 }
-
-@keyframes f2-step0 {
+@keyframes header-four-second {
   0%, 28% { opacity: 0; transform: rotateY(90deg) scaleX(-1); }
-  28.1%   { opacity: 1; transform: rotateY(90deg) scaleX(-1); }
-  52%     { opacity: 1; transform: rotateY(270deg) scaleX(-1); }
+  28.1% { opacity: 1; transform: rotateY(90deg) scaleX(-1); }
+  52% { opacity: 1; transform: rotateY(270deg) scaleX(-1); }
   52.1%, 100% { opacity: 0; }
 }
-
-@keyframes f3-step0 {
+@keyframes header-four-third {
   0%, 52% { opacity: 0; transform: rotateY(270deg); }
-  52.1%   { opacity: 1; transform: rotateY(270deg); }
-  76%     { opacity: 1; transform: rotateY(450deg); }
+  52.1% { opacity: 1; transform: rotateY(270deg); }
+  76% { opacity: 1; transform: rotateY(450deg); }
   76.1%, 100% { opacity: 0; }
 }
-
-@keyframes f4-step0 {
+@keyframes header-four-fourth {
   0%, 76% { opacity: 0; transform: rotateY(450deg) scaleX(-1); }
-  76.1%   { opacity: 1; transform: rotateY(450deg) scaleX(-1); }
-  100%    { opacity: 1; transform: rotateY(630deg) scaleX(-1); }
+  76.1% { opacity: 1; transform: rotateY(450deg) scaleX(-1); }
+  100% { opacity: 1; transform: rotateY(630deg) scaleX(-1); }
 }
-
-/* --- LOOP KEYFRAMES --- */
-@keyframes loop-standard {
-  0%    { opacity: 1; transform: rotateY(-90deg); }
-  25%   { opacity: 1; transform: rotateY(90deg); }
+@keyframes header-four-standard {
+  0% { opacity: 1; transform: rotateY(-90deg); }
+  25% { opacity: 1; transform: rotateY(90deg); }
   25.1%, 100% { opacity: 0; }
 }
-
-@keyframes loop-mirrored {
-  0%    { opacity: 1; transform: rotateY(90deg) scaleX(-1); }
-  25%   { opacity: 1; transform: rotateY(270deg) scaleX(-1); }
+@keyframes header-four-mirrored {
+  0% { opacity: 1; transform: rotateY(90deg) scaleX(-1); }
+  25% { opacity: 1; transform: rotateY(270deg) scaleX(-1); }
   25.1%, 100% { opacity: 0; }
 }
 
@@ -752,7 +747,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .closeness-lines { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
 .closeness-marker { position:absolute; z-index:2; width:28px; height:28px; padding:0; transform:translate(-50%,-50%); display:grid; place-items:center; border:0; background:transparent; cursor:pointer; text-decoration:none; }
 .closeness-dot { grid-area:1 / 1; width:6px; height:6px; border:1px solid rgba(38,55,89,.72); border-radius:999px; }
-.closeness-win-marker { grid-area:1 / 1; width:8px; height:8px; border-radius:999px; object-fit:cover; pointer-events:none; }
+.closeness-win-marker { width:8px; height:8px; border:1.5px solid var(--yellow); pointer-events:none; }
 .closeness-legend-item { width:100%; font:inherit; color:inherit; text-align:left; cursor:pointer; }
 .closeness-legend-item.on { border-color:rgba(var(--yellow-rgb), .24); background:rgba(var(--yellow-rgb), .06); }
 .accuracy-sort { display:flex; align-items:center; justify-content:flex-end; gap:0; margin:8px 18px 5px 0; }
@@ -783,7 +778,7 @@ input::placeholder, textarea::placeholder { color: var(--dim); }
 .result-share-close::before { content:"×"; position:absolute; left:50%; top:50%; transform:translate(-50%, -60%); color:var(--dim); font-family:'Alte Haas Grotesk', sans-serif; font-size:1.15rem; line-height:1; }
 .result-share-preview { display:flex; justify-content:center; margin-bottom:12px; }
 .result-share-card { position:relative; display:flex; flex-direction:column; justify-content:space-between; width:min(100%,400px); aspect-ratio:1; overflow:hidden; border:1px solid rgba(var(--yellow-rgb), .22); border-radius:8px; padding:22px; background:radial-gradient(circle at 50% 45%, rgba(var(--yellow-rgb), .08), transparent 31%), linear-gradient(145deg, rgba(61,78,111,.94), rgba(31,47,77,.98)); box-shadow:inset 0 1px 0 rgba(255,255,255,.1); }
-.result-share-card::before { content:""; position:absolute; inset:76px; opacity:.18; background:url('imgs/tunacan.png') center/contain no-repeat; pointer-events:none; }
+.result-share-card::before { content:""; position:absolute; inset:76px; opacity:.18; background:url('imgs/gu3-logo-hires.png') center/contain no-repeat; pointer-events:none; }
 .result-share-top, .result-share-main, .result-share-bottom { position:relative; z-index:1; }
 .result-share-top { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:12px; border-bottom:1px solid rgba(61,84,51,.62); }
 .result-share-brand { flex:0 0 auto; }

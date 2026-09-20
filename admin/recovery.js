@@ -392,7 +392,7 @@
     const winningSlice = slices.find(slice => wrapSec >= slice.start && wrapSec <= slice.end);
     if (!winningSlice) {
       return {
-        winner: "Nobody wins, everytuna's happy!",
+        winner: 'No winner',
         winners: [],
         points: 0,
         noWinner: true,
@@ -528,7 +528,7 @@
   }
 
   function buildDayFromForm({ completed }) {
-    if (!baseBackup) throw new Error('Upload the June 16 backup first.');
+    if (!baseBackup) throw new Error('Upload a backup first.');
 
     const gameDate = displayToISO(els.gameDate.value);
     if (!dateFromISO(gameDate)) throw new Error('Game date must be dd/mm/yyyy.');
@@ -654,7 +654,7 @@
     baseEditCount = 0;
     saveWork();
     renderAll();
-    setStatus(`Loaded backup. Baseline is Day ${baseDays.length - 1}.`, 'ok');
+    setStatus(baseDays.length ? `Loaded backup. Baseline is Day ${baseDays.length}.` : 'Loaded backup. Ready to build Day 1.', 'ok');
     prefillNextDate();
   }
 
@@ -681,7 +681,7 @@
   }
 
   function renderDayRow(day, index, { base = false } = {}) {
-    const displayIndex = index;
+    const displayIndex = index + 1;
     const missing = (day.guesses || []).filter(guess => !guess.time).length;
     const bets = (day.guesses || []).filter(guess => guess.time).length;
     const penalties = penaltySummary(day);
@@ -699,14 +699,14 @@
 
   function renderAll() {
     const rosterCount = getAllRosterNames().length || baseRoster.length || 0;
-    els.metricBase.textContent = baseDays.length ? `Day ${baseDays.length - 1}` : '--';
+    els.metricBase.textContent = baseDays.length ? `Day ${baseDays.length}` : '--';
     els.metricManual.textContent = String(manualDays.length);
-    els.metricNext.textContent = baseDays.length ? `Day ${baseDays.length + manualDays.length}` : '--';
+    els.metricNext.textContent = baseBackup ? `Day ${baseDays.length + manualDays.length + 1}` : '--';
     els.metricPlayers.textContent = rosterCount ? String(rosterCount) : '--';
 
     els.baseDays.innerHTML = baseDays.length
       ? baseDays.map((day, index) => renderDayRow(day, index, { base: true })).join('')
-      : '<p class="instructions">No backup loaded.</p>';
+      : `<p class="instructions">${baseBackup ? 'No completed days in this backup.' : 'No backup loaded.'}</p>`;
 
     els.manualDays.innerHTML = manualDays.length
       ? manualDays.map((day, offset) => renderDayRow(day, baseDays.length + offset)).join('')
@@ -799,7 +799,7 @@
       const completed = Boolean(normalizeHMS(els.wrapTime.value));
       const day = buildDayFromForm({ completed });
       const lines = [];
-      lines.push(`Day ${formDayIndex()} preview`);
+      lines.push(`Day ${formDayIndex() + 1} preview`);
       lines.push(`${displayDate(day.date)} · ${day.approvedAt} Stop · ${modeLabel(day)}`);
       lines.push(`${day.guesses.filter(g => g.time).length} bets · ${day.guesses.filter(g => !g.time).length} missing`);
       if (completed) {
@@ -881,7 +881,7 @@
     if (!day) return;
     editBaseIndex = index;
     editIndex = null;
-    fillFormFromDay(day, `Editing backup Day ${index}.`);
+    fillFormFromDay(day, `Editing backup Day ${index + 1}.`);
   }
 
   function editDay(index) {
@@ -889,7 +889,7 @@
     if (!day) return;
     editIndex = index;
     editBaseIndex = null;
-    fillFormFromDay(day, `Editing Day ${baseDays.length + index}.`);
+    fillFormFromDay(day, `Editing Day ${baseDays.length + index + 1}.`);
   }
 
   function deleteDay(index) {
@@ -933,7 +933,7 @@
         builtWith: 'admin/recovery.html',
         builtAt: new Date().toISOString(),
         baseBackupVersion: Number(baseBackup._version) || null,
-        baseCompletedThroughDay: baseDays.length - 1,
+        baseCompletedThroughDay: baseDays.length || null,
         editedBaseSaves: baseEditCount,
         manualCompletedDays: manualDays.length,
         note: 'Offline recovery draft. Review before writing to Firestore.'

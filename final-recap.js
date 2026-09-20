@@ -4,25 +4,6 @@
   let recap = null;
   let screenIndex = 0;
   let swipeStartX = null;
-  const fallbackCogImages = [
-    'cog/cog1.jpeg',
-    'cog/cog2.jpeg',
-    'cog/cog3.jpeg',
-    'cog/cog4.jpeg',
-    'cog/cog5.jpeg',
-    'cog/cog6.jpeg',
-    'cog/cog7.jpeg',
-    'cog/cog8.jpeg',
-    'cog/cog9.jpeg',
-    'cog/cog10.jpeg',
-    'cog/cog11.jpeg',
-    'cog/cog12.jpeg',
-    'cog/cog13.jpeg',
-    'cog/cog14.jpeg',
-    'cog/cog15.jpeg',
-    'cog/cog16.jpeg',
-    'cog/cog17.jpeg'
-  ];
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
@@ -183,36 +164,6 @@
     const match = text.match(/Day\s+(\d+)\s*\/\s*(\d+)/i);
     return Boolean(match && Number(match[1]) === Number(match[2]));
   };
-  const displayedProjectTotalDays = fallback => {
-    const text = document.querySelector('.hdr-day')?.textContent || '';
-    const match = text.match(/Day\s+\d+\s*\/\s*(\d+)/i);
-    return match ? Number(match[1]) : fallback;
-  };
-  const isCogImageName = name => /\.(?:avif|gif|jpe?g|png|webp)$/i.test(String(name || ''));
-  const fetchWithTimeout = (url, options={}, timeout=1800) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(),timeout);
-    return fetch(url,{...options,signal:controller.signal}).finally(() => clearTimeout(timer));
-  };
-  async function loadCogImages() {
-    try {
-      const api = await fetchWithTimeout('https://api.github.com/repos/totowrap/totowrap.github.io/contents/cog',{cache:'no-store'});
-      if (!api.ok) return fallbackCogImages;
-      const entries = await api.json();
-      if (!Array.isArray(entries)) return fallbackCogImages;
-      const images = entries
-        .filter(item => item?.type === 'file' && isCogImageName(item.name))
-        .sort((a,b) => String(a.name).localeCompare(String(b.name), undefined, { numeric:true, sensitivity:'base' }))
-        .map(item => item.download_url || `cog/${item.name}`);
-      return images.length ? images : fallbackCogImages;
-    } catch (_) {
-      return fallbackCogImages;
-    }
-  }
-  async function countCogImages() {
-    return (await loadCogImages()).length;
-  }
-
   function calculate(source) {
     const days = getCompletedDays(source);
     const players = (source.playerRoster || []).map(player => player.name).filter(Boolean);
@@ -384,7 +335,7 @@
       <div class="final-recap-furthest-row">
         <strong>${esc(item ? compactTime(item.gap) : '—')}</strong>
         <b>${esc(item?.name || '—')}</b>
-        <small>${esc(item ? `Day ${item.dayIndex} · ${formatDate(item.date)}` : 'No qualifying day')}</small>
+        <small>${esc(item ? `Day ${item.dayIndex + 1} · ${formatDate(item.date)}` : 'No qualifying day')}</small>
       </div>
     </div>`;
   }
@@ -425,7 +376,7 @@
   }
   function finalStandingsImageFrame(data) {
     if (data.finalStandingsImageSrc) {
-      return `<div class="final-recap-standings-image-frame" data-final-standings-image><img class="final-recap-standings-image" src="${esc(data.finalStandingsImageSrc)}" alt="Final TonnoWrap standings"></div>`;
+      return `<div class="final-recap-standings-image-frame" data-final-standings-image><img class="final-recap-standings-image" src="${esc(data.finalStandingsImageSrc)}" alt="Final Gu3 standings"></div>`;
     }
     return '<div class="final-recap-standings-image-frame" data-final-standings-image><span>Could not create final standings image.</span></div>';
   }
@@ -453,32 +404,11 @@
       <span>${esc(label)}</span>
       <strong>${esc(item ? `${compactTime(item.gap)} off` : '—')}</strong>
       <b>${esc(item?.name || '—')}</b>
-      <small>${esc(item ? `Day ${item.dayIndex} · ${formatDate(item.date)}` : 'No qualifying day')}</small>
+      <small>${esc(item ? `Day ${item.dayIndex + 1} · ${formatDate(item.date)}` : 'No qualifying day')}</small>
     </div>`;
     return `<div class="final-recap-showcase-card final-recap-furthest-card" data-tone="red">
       <span>Furthest bet from official wrap</span>
       <div>${row('Among winning days',winningDay)}${row('Among no-winner days',noWinner)}</div>
-    </div>`;
-  }
-  function reactionCard(label, file, tone) {
-    return `<div class="final-recap-reaction-card" data-tone="${tone}">
-      <span>${esc(label)}</span>
-      <div class="final-recap-reaction-media">
-        <video muted loop playsinline preload="auto" aria-label="${esc(label)}">
-          <source src="${esc(file)}?mobile-video=2" type="video/mp4">
-        </video>
-        <button class="final-recap-sound-toggle" type="button" aria-label="Turn sound on">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path class="final-recap-sound-speaker" d="M4 9v6h4l5 4V5L8 9H4Z"/>
-            <path class="final-recap-sound-wave" d="M16 9.5c1.3 1.4 1.3 3.6 0 5M18.5 7c2.7 2.8 2.7 7.2 0 10"/>
-            <path class="final-recap-sound-slash" d="m5 5 14 14"/>
-          </svg>
-        </button>
-        <div class="final-recap-reaction-placeholder">
-          <img src="imgs/tunacan.png" alt="">
-          <b>Reaction video pending</b>
-        </div>
-      </div>
     </div>`;
   }
   function formatDate(value) {
@@ -511,7 +441,7 @@
     const leaderLabel = value => Array.isArray(value) ? nameList(value) : esc(value);
     return `<div class="final-recap-lead-grid${compactClass}">${changes.map(change => `
       <div class="final-recap-lead-change">
-        <span>Day ${change.dayIndex}</span>
+        <span>Day ${change.dayIndex + 1}</span>
         <div class="final-recap-lead-names">
           <div><small>Previous leader</small><b>${leaderLabel(change.from)}</b></div>
           <i>→</i>
@@ -530,10 +460,9 @@
 
   function buildScreens(data) {
     const projectDays = data.days.length;
-    const projectMainDays = displayedProjectTotalDays(Math.max(0,projectDays - 1));
     const openingTitle = `<span class="final-recap-opening-title"><span style="--opening-title-index:0">The</span><span style="--opening-title-index:1">Final</span><span style="--opening-title-index:2">Wrap</span></span>`;
     const openingCopy = `On day one, everyone would have sold their mother to win just one day of this amazing game.<br>On this very last day, everyone is missing their mom and we have only one winner.<br><br>It was an incredible journey full of turns, plot twists and revelations.<br>The people who seemed bad actually were bad. Only the greatest made it to the top and only the very best won.<br><br>Before celebrating, I'd like you to take a look at this incredible, amazing, unhealthy, sick hell we created, so we can remember what to do and what not to do on our next adventure!`;
-    const projectDayTitle = `<span class="final-recap-title-left"><span class="final-recap-title-line">${projectMainDays} ${word(projectMainDays,'Shooting day','Shooting days')}</span><span class="final-recap-title-line">1 Preshoot day</span></span>`;
+    const projectDayTitle = `<span class="final-recap-title-left"><span class="final-recap-title-line">${projectDays} ${word(projectDays,'Shooting day','Shooting days')}</span></span>`;
     const players = data.list.length;
     const podiumByRank = new Map(groupedFinalLeaderboard(data).filter(group => group.rank <= 3).map(group => [group.rank,group]));
     const podiumOrder = [podiumByRank.get(2),podiumByRank.get(1),podiumByRank.get(3)];
@@ -566,8 +495,8 @@
         </div>`
       : '<div class="final-recap-empty">Nobody landed an exact bet.</div>';
     return [
-      screen('TonnoWrap final recap',openingTitle,openingCopy,'','final-recap-opening-screen'),
-      screen('The project in numbers',projectDayTitle,'',`<div class="final-recap-stat-grid">${stat(players,word(players,'Tuna played','Tunas played'))}${stat(data.totalBets,word(data.totalBets,'Bet placed','Bets placed'))}${stat(data.totalForgot,word(data.totalForgot,'Forgotten bet','Forgotten bets'))}</div>`),
+      screen('Gu3 final recap',openingTitle,openingCopy,'','final-recap-opening-screen'),
+      screen('The project in numbers',projectDayTitle,'',`<div class="final-recap-stat-grid">${stat(players,word(players,'Player played','Players played'))}${stat(data.totalBets,word(data.totalBets,'Bet placed','Bets placed'))}${stat(data.totalForgot,word(data.totalForgot,'Forgotten bet','Forgotten bets'))}</div>`),
       screen('Perfect timing',`<span class="final-recap-number">${data.exactDays}</span> exact ${word(data.exactDays,'bet','bets')}`,'',exactCards),
       screen('Nobody won',`<span class="final-recap-number">${data.noWinnerEntries.length}</span> no-winner ${word(data.noWinnerEntries.length,'day','days')}`,'Expected wrap compared with the official wrap.',noWinnerRows(data.noWinnerEntries)),
       screen('Accuracy award',accuracyTitle('Most accurate'),accuracyCopy,`${accuracyGraph(data.mostAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.mostAccurate?.avgGap),'Average distance')}${stat(data.mostAccurate?.bets || 0,word(data.mostAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.mostAccurate?.wins || 0,word(data.mostAccurate?.wins || 0,'Win','Wins'))}</div>`,'final-recap-accuracy-screen',accuracyName(data.mostAccurate,'is-green')),
@@ -582,25 +511,9 @@
         ${splitShowcaseAward('Most forgotten bets',data.mostForgot?.name || '—',data.mostForgot ? `${data.mostForgot.forgot} forgotten ${word(data.mostForgot.forgot,'bet','bets')}` : '—','red')}
         ${splitShowcaseAward('Longest winning streak',data.longestStreak.length ? data.longestStreak.map(item => item.name).join(', ') : '—',data.longestStreak.length ? `${data.longestStreak[0].longestWinStreak} consecutive ${word(data.longestStreak[0].longestWinStreak,'win','wins')}` : '—','gold')}
       </div>`),
-      screen('Caught on camera','Reaction replay','',`<div class="final-recap-reaction-grid">
-        ${reactionCard('Best reaction','media/best_reaction.mp4','green')}
-        ${reactionCard('Worst reaction','media/worst_reaction.mp4','red')}
-      </div>`),
-      screen('A very specific statistic','Enemies to lovers','',`<div class="final-recap-showcase-grid final-recap-single-showcase final-recap-cog-scene">
-        <div class="final-recap-cog-stack" aria-hidden="true">
-          ${(data.cogImages || []).map((src,index,images) => `<img src="${esc(src)}" alt="" style="--cog-index:${index};--cog-scale:${index === images.length - 1 ? '1.55' : '1'};--cog-rotate:${[-7,5,-4,8,-9,3,6,-5,10,-2,4,-8,7,-3][index % 14]}deg;--cog-x:${[-18,14,2,-9,20,-2,-15,10,5,-20,16,-4,12,-12][index % 14]}px;--cog-y:${[0,8,-3,12,5,16,2,11,-5,14,6,18,1,9][index % 14]}px;">`).join('')}
-        </div>
-        <div class="final-recap-specific-stat" data-cog-stat-card>
-          <span>Word of encouragement</span>
-          <div>
-            <strong>${data.coglioneCount}</strong>
-            <b>Times Marco called Edoardo “coglione”</b>
-          </div>
-        </div>
-      </div>`,'final-recap-cog-screen'),
       screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges)),
-      screen('Final standings','The podium','Third place. Second place. And the winning tuna.',podiumHtml),
-      screen('','Thank you!','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to swim together with you</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
+      screen('Final standings','The podium','Third place. Second place. And first place.',podiumHtml),
+      screen('','Thank you!','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to share this adventure with you</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
     ];
   }
 
@@ -726,8 +639,6 @@
         .final-recap-no-winner-day,
         .final-recap-lead-change,
         .final-recap-showcase-card,
-        .final-recap-reaction-card,
-        .final-recap-specific-stat,
         .final-recap-standings-image-frame,
         .final-recap-closing-copy,
         .final-recap-podium-place,
@@ -746,13 +657,6 @@
       screen.classList.add('is-active');
     });
     recap.querySelectorAll('.final-recap-dot').forEach((dot,index) => dot.classList.toggle('on',index === screenIndex));
-    recap.querySelectorAll('video').forEach(video => {
-      if (video.closest('.final-recap-screen') === screens[screenIndex] && video.readyState >= 2) video.play().catch(() => {});
-      else video.pause();
-    });
-  }
-  function currentScreen() {
-    return recap?.querySelectorAll('.final-recap-screen')?.[screenIndex] || null;
   }
   function isLastScreen() {
     const screens = recap?.querySelectorAll('.final-recap-screen');
@@ -761,30 +665,6 @@
   function advanceRecap() {
     if (isLastScreen()) return closeRecap();
     updateScreen(screenIndex + 1);
-  }
-  function shouldInterceptCogScreen() {
-    const screen = currentScreen();
-    return Boolean(screen?.classList.contains('final-recap-cog-screen') && !screen.classList.contains('cog-stack-complete'));
-  }
-  function playCogStack() {
-    const screen = currentScreen();
-    if (!screen) return;
-    const images = [...screen.querySelectorAll('.final-recap-cog-stack img')];
-    if (!images.length) {
-      screen.classList.add('cog-stack-complete');
-      return;
-    }
-    const nextImage = images.find(image => !image.classList.contains('is-dropped'));
-    if (!nextImage) {
-      screen.classList.add('cog-stack-complete');
-      return;
-    }
-    nextImage.classList.add('is-dropped');
-    const droppedCount = images.filter(image => image.classList.contains('is-dropped')).length;
-    setTimeout(() => {
-      if (currentScreen() !== screen) return;
-      if (droppedCount >= images.length) screen.classList.add('cog-stack-complete');
-    }, 1250);
   }
   function closeRecap() {
     if (!recap) return;
@@ -798,8 +678,6 @@
   async function openRecap() {
     if (!state || recap) return;
     const data = calculate(state);
-    data.cogImages = await loadCogImages();
-    data.coglioneCount = data.cogImages.length;
     data.finalStandingsImageSrc = await createFinalStandingsImageSrc(data);
     const screens = buildScreens(data);
     recap = document.createElement('div');
@@ -809,63 +687,6 @@
       <div class="final-recap-track">${screens.join('')}</div>
       <div class="final-recap-progress">${screens.map((_,index) => `<button class="final-recap-dot${index===0?' on':''}" type="button" data-recap-screen="${index}" aria-label="Open recap screen ${index+1}"></button>`).join('')}</div>`;
     document.body.appendChild(recap);
-    recap.querySelectorAll('.final-recap-reaction-media').forEach(media => {
-      const video = media.querySelector('video');
-      const soundToggle = media.querySelector('.final-recap-sound-toggle');
-      const markVideoReady = () => media.classList.add('has-video');
-      const playWhenVisible = () => {
-        const activeScreen = recap.querySelectorAll('.final-recap-screen')[screenIndex];
-        if (media.closest('.final-recap-screen') === activeScreen) {
-          video.play().then(markVideoReady).catch(() => {});
-        }
-      };
-      const updateSoundToggle = () => {
-        soundToggle.classList.toggle('is-muted',video.muted);
-        soundToggle.setAttribute('aria-label',video.muted ? 'Turn sound on' : 'Mute video');
-      };
-      const canToggleSound = () => {
-        const activeScreen = recap.querySelectorAll('.final-recap-screen')[screenIndex];
-        if (media.closest('.final-recap-screen') !== activeScreen) return false;
-        if (!media.classList.contains('has-video') || video.readyState < 2) return false;
-        const rect = video.getBoundingClientRect();
-        const style = window.getComputedStyle(video);
-        return rect.width > 0
-          && rect.height > 0
-          && rect.bottom > 0
-          && rect.top < window.innerHeight
-          && rect.right > 0
-          && rect.left < window.innerWidth
-          && style.visibility !== 'hidden'
-          && Number(style.opacity) > .5;
-      };
-      ['loadedmetadata','loadeddata','canplay'].forEach(eventName => video.addEventListener(eventName, () => {
-        markVideoReady();
-        playWhenVisible();
-      }));
-      video.addEventListener('error', () => media.classList.remove('has-video'));
-      media.addEventListener('click', event => {
-        if (!canToggleSound()) return;
-        event.stopPropagation();
-        video.muted = !video.muted;
-        if (!video.muted) {
-          recap.querySelectorAll('.final-recap-reaction-media').forEach(otherMedia => {
-            if (otherMedia === media) return;
-            const otherVideo = otherMedia.querySelector('video');
-            const otherToggle = otherMedia.querySelector('.final-recap-sound-toggle');
-            if (!otherVideo) return;
-            otherVideo.muted = true;
-            otherToggle?.classList.add('is-muted');
-            otherToggle?.setAttribute('aria-label','Turn sound on');
-          });
-        }
-        updateSoundToggle();
-        playWhenVisible();
-      });
-      updateSoundToggle();
-      video.muted = true;
-      video.defaultMuted = true;
-      video.load();
-    });
     document.documentElement.style.overflow = 'hidden';
     screenIndex = 0;
     updateScreen(0);
@@ -873,12 +694,9 @@
     recap.addEventListener('click', event => {
       const dot = event.target.closest('[data-recap-screen]');
       if (dot) {
-        const requestedScreen = Number(dot.dataset.recapScreen);
-        if (requestedScreen !== screenIndex && shouldInterceptCogScreen()) return playCogStack();
-        return updateScreen(requestedScreen);
+        return updateScreen(Number(dot.dataset.recapScreen));
       }
       if (event.target.closest('[data-recap-replay]')) return updateScreen(0);
-      if (shouldInterceptCogScreen()) return playCogStack();
       advanceRecap();
     });
     recap.addEventListener('touchstart', event => { swipeStartX = event.touches[0]?.clientX ?? null; }, {passive:true});
@@ -887,7 +705,6 @@
       const end = event.changedTouches[0]?.clientX ?? swipeStartX;
       const delta = end - swipeStartX;
       swipeStartX = null;
-      if (Math.abs(delta) > 45 && shouldInterceptCogScreen()) return playCogStack();
       if (delta < -45) return advanceRecap();
       if (delta > 45) updateScreen(screenIndex - 1);
     }, {passive:true});
@@ -903,7 +720,6 @@
   window.addEventListener('keydown', event => {
     if (!recap) return;
     if (event.key === 'ArrowRight') {
-      if (shouldInterceptCogScreen()) return playCogStack();
       advanceRecap();
     }
     if (event.key === 'ArrowLeft') updateScreen(screenIndex - 1);

@@ -333,7 +333,7 @@ textarea::-webkit-scrollbar{display:none}
   <section class="grid two">
     <article class="card">
       <h2>1. Upload Backup</h2>
-      <p class="instructions">Use the June 16 backup. If the backup has a wrapped today, it will be promoted into the completed history so Day 24 is preserved.</p>
+      <p class="instructions">Upload a Gu3 backup. Days start at Day 1. If the backup has a wrapped today, it will be included in the completed history.</p>
       <div class="file-row">
         <input id="backup-file" type="file" accept=".json,application/json">
         <button class="btn green" id="restore-work-btn" type="button">Restore Saved Work</button>
@@ -412,12 +412,12 @@ textarea::-webkit-scrollbar{display:none}
         <button class="btn green" id="save-active-btn" type="button">Set Active Today</button>
         <button class="btn" id="reset-form-btn" type="button">Clear Form</button>
       </div>
-      <div class="preview" id="day-preview" style="margin-top:12px">Upload a backup, then build Day 25 onward.</div>
+      <div class="preview" id="day-preview" style="margin-top:12px">Upload a backup, then edit an existing day or add the next day.</div>
     </article>
 
     <article class="card">
       <h2>3. Rebuilt Days</h2>
-      <p class="instructions">Manual completed days are appended after the June backup. You can edit or remove each one before exporting.</p>
+      <p class="instructions">Manual completed days are appended after the uploaded backup. You can edit or remove each one before exporting.</p>
       <div class="row-list" id="manual-days"></div>
       <div class="preview" id="active-today-preview" style="margin-top:12px">No active today draft.</div>
     </article>
@@ -441,6 +441,6 @@ textarea::-webkit-scrollbar{display:none}
     </article>
   </section>
 </main>
-<script src="recovery.js"></script>
+<script src="recovery.js?v=20260920-gu3-wording"></script>
 </body>
 </html>

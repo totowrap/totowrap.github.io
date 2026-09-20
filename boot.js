@@ -2,8 +2,6 @@
   const phrase = document.querySelector('[data-boot-phrase]');
   if (!phrase) return;
   const regularLogoLayer = document.querySelector('[data-boot-logo-layer="regular"]');
-  const edoardoLogoLayer = document.querySelector('[data-boot-logo-layer="edoardo"]');
-  const edoardoLogo = document.querySelector('[data-boot-edoardo-logo]');
   const bootContent = document.querySelector('.boot-content');
 
   if (phrase.dataset.bootPhraseReady === 'true') return;
@@ -14,30 +12,34 @@
   const PLAYER_NAMES_KEY = 'totowrap-boot-player-names';
   const CRAZY_DAY_KEY = 'totowrap-boot-crazy-day';
   const NAPULE_DAY_KEY = 'totowrap-boot-napule-day';
+  const PROJECT_CACHE_KEY = 'totowrap-cache-project';
+  const cacheReady = prepareProjectCache();
   const PHRASE_VISIBLE_MS = 5000;
   const PHRASE_FADE_MS = 650;
   const PHRASE_CLEAN_MS = 500;
   let phraseTimer = null;
-  let lastChoiceIndex = getLastPhraseIndex();
-  let isFirstPhrase = true;
   const nameTag = name => `<span class="boot-player-name">${escapeHTML(name)}</span>`;
   const leadWithNameTag = (lead, name) => `<span class="boot-player-name">${escapeHTML(lead)} ${escapeHTML(name)}</span>`;
   const phrases = [
     () => '99% of players stop playing before winning. Keep gambling!',
-    () => 'Che ti sei perso due Range Rover?',
-    () => 'Never bet the same time as Beatrice K. or you will make her cry!',
-    () => 'E anche oggi, purtroppo, Luigi ha perso al TotoWrap...',
+    () => {
+      const storedNames = getPlayerNames();
+      const name = storedNames[randomInt(storedNames.length)];
+      return name ? `Never bet the same time as ${nameTag(name)}. They might take it personally!` : '';
+    },
+    () => {
+      const storedNames = getPlayerNames();
+      const name = storedNames[randomInt(storedNames.length)];
+      return name ? `E anche oggi, purtroppo, ${nameTag(name)} ha perso al TotoWrap...` : '';
+    },
     () => 'TotoWrap is love, TotoWrap is life.',
     () => 'La ludopatia è un problema solo se perdi!',
     () => 'You miss 100% of the bets you don’t place.',
     () => 'Your strategy is so confusing that it fooled even you.',
-    () => '<span class="boot-phrase-right">"Se oggi non vinco, mi licenzio"\n- Marco Mattioli</span>',
+    () => '<span class="boot-phrase-right">"Se oggi non vinco, mi licenzio"</span>',
     () => '<span class="boot-phrase-right">"Questa <u>non</u> è una dittatura!"</span>',
     () => 'I love the smell of TotoWrap in the morning',
-    () => 'Facciamo un referendum?',
-    () => 'Viva la Edocrazia!',
-    () => 'Vita sprecata che sei...',
-    () => '<span class="boot-phrase-right">"Io vengo al lavoro solo per il TotoWrap"\n- Marco Mattioli</span>',
+    () => '<span class="boot-phrase-right">"Io vengo al lavoro solo per il TotoWrap"</span>',
     () => {
       const storedNames = getPlayerNames();
       const name = storedNames[randomInt(storedNames.length)];
@@ -64,6 +66,24 @@
       return name ? `${leadWithNameTag('Anche oggi', name)} ha fatto un bel buco nell’acqua.` : '';
     }
   ];
+  let lastChoiceIndex = getLastPhraseIndex();
+
+  function prepareProjectCache() {
+    try {
+      if (localStorage.getItem(PROJECT_CACHE_KEY) === 'gu3') return true;
+      // Clear the previous project's loading preferences once, without touching sign-in or recovery drafts.
+      [
+        LAST_PHRASE_KEY, PLAYER_NAMES_KEY, CRAZY_DAY_KEY, NAPULE_DAY_KEY,
+        'totowrap-inactive-at',
+        'gu3-last-boot-phrase', 'gu3-boot-player-names',
+        'gu3-boot-crazy-day', 'gu3-boot-napule-day'
+      ].forEach(key => localStorage.removeItem(key));
+      localStorage.setItem(PROJECT_CACHE_KEY, 'gu3');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   function escapeHTML(value) {
     return String(value).replace(/[&<>"']/g, ch => ({
@@ -76,6 +96,7 @@
   }
 
   function getPlayerNames() {
+    if (!cacheReady) return [];
     try {
       const names = JSON.parse(localStorage.getItem(PLAYER_NAMES_KEY) || '[]');
       return Array.isArray(names) ? names.map(name => String(name || '').trim()).filter(Boolean) : [];
@@ -85,6 +106,7 @@
   }
 
   function getLastPhraseIndex() {
+    if (!cacheReady) return -1;
     try {
       const raw = localStorage.getItem(LAST_PHRASE_KEY);
       if (raw === null) return -1;
@@ -99,6 +121,7 @@
   }
 
   function getCachedCrazyDay() {
+    if (!cacheReady) return null;
     try {
       const cached = JSON.parse(localStorage.getItem(CRAZY_DAY_KEY) || 'null');
       return cached && typeof cached === 'object' ? cached : null;
@@ -108,6 +131,7 @@
   }
 
   function getCachedNapuleDay() {
+    if (!cacheReady) return null;
     try {
       const cached = JSON.parse(localStorage.getItem(NAPULE_DAY_KEY) || 'null');
       return cached && typeof cached === 'object' ? cached : null;
@@ -117,6 +141,7 @@
   }
 
   function storePhraseIndex(index) {
+    if (!cacheReady) return;
     try {
       localStorage.setItem(LAST_PHRASE_KEY, String(index));
     } catch (_) {}
@@ -145,7 +170,6 @@
     if (!loaderIsActive() || !bootContent) return;
     stopPhraseRotation();
     regularLogoLayer?.classList.remove('is-visible');
-    edoardoLogoLayer?.classList.remove('is-visible');
     const napule = bootContent.querySelector('[data-boot-napule-day]');
     napule?.classList.remove('is-visible');
     bootContent.classList.remove('is-napule-day');
@@ -190,7 +214,6 @@
     if (!loaderIsActive() || !bootContent) return;
     stopPhraseRotation();
     regularLogoLayer?.classList.remove('is-visible');
-    edoardoLogoLayer?.classList.remove('is-visible');
     const crazy = bootContent.querySelector('[data-boot-crazy-day]');
     crazy?.classList.remove('is-visible');
     bootContent.classList.remove('is-crazy-day');
@@ -269,7 +292,6 @@
     bootContent.classList.remove('is-crazy-day');
     bootContent.classList.remove('is-napule-day');
     regularLogoLayer?.classList.add('is-visible');
-    edoardoLogoLayer?.classList.remove('is-visible');
     if (!phraseTimer) showNextPhrase();
   }
 
@@ -282,18 +304,6 @@
     return choices[randomInt(choices.length)] || available[0] || null;
   }
 
-  function phraseContainsEdoardo(text) {
-    return /(?:^|[^A-Za-zÀ-ÖØ-öø-ÿ])Edoardo(?:[^A-Za-zÀ-ÖØ-öø-ÿ]|$)/i.test(text);
-  }
-
-  function showLogoForPhrase(text, firstPhrase) {
-    if (!regularLogoLayer || !edoardoLogoLayer || !edoardoLogo) return;
-    const showEdoardo = phraseContainsEdoardo(text);
-    regularLogoLayer.classList.toggle('is-visible', !showEdoardo);
-    edoardoLogoLayer.classList.toggle('is-visible', showEdoardo);
-    edoardoLogo.classList.toggle('is-rotating', showEdoardo && !firstPhrase);
-  }
-
   function showNextPhrase() {
     if (!loaderIsActive()) return;
     const choice = choosePhrase();
@@ -301,8 +311,6 @@
 
     lastChoiceIndex = choice.index;
     storePhraseIndex(choice.index);
-    showLogoForPhrase(choice.text, isFirstPhrase);
-    isFirstPhrase = false;
     phrase.innerHTML = `<span class="boot-phrase-text">${choice.text}</span>`;
     phrase.classList.remove('is-loading', 'is-ready', 'is-exiting');
 

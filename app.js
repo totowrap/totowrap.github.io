@@ -37,7 +37,13 @@ let _lastRenderedLocalDate = localDateISO();
 let _toastTO = null;
 let currentUser = null;
 let authReady = false;
-const LOGO_STEP_SEC = 12.5;
+const HEADER_LOGOS = {
+  game: { src: 'imgs/totowrap.png', alt: 'TotoWrap' },
+  project: { src: 'imgs/gu3-logo-hires.png', alt: 'Gu3' },
+  // Set extra to { src: 'imgs/your-logo.png', alt: 'Your logo' } for the original four-face rotation.
+  extra: null
+};
+const HEADER_LOGO_INTRO_SEC = 12.5;
 const _logoStartedAt = performance.now();
 let _lastConfettiWinner = null;
 let _boardView = 'list';
@@ -162,7 +168,6 @@ function scrollDirectHistoryRowToTop(row) {
 
 function storeBootPlayerNames() {
   const names = [...new Set((S.playerRoster || []).map(player => String(player.name || '').trim()).filter(Boolean))];
-  if (!names.length) return;
   try {
     localStorage.setItem(BOOT_PLAYER_NAMES_STORAGE_KEY, JSON.stringify(names));
   } catch (_) {}
@@ -756,14 +761,17 @@ document.addEventListener('click', e => {
 // Helper function for the 3D Logo HTML
 function get3DLogoHTML() {
   const elapsed = (performance.now() - _logoStartedAt) / 1000;
-  const mode = elapsed < LOGO_STEP_SEC ? 'logo-step0' : 'logo-loop';
+  const fourFaces = Boolean(HEADER_LOGOS.extra?.src);
+  const mode = fourFaces
+    ? `logo-four-faces ${elapsed < HEADER_LOGO_INTRO_SEC ? 'logo-step0' : 'logo-loop'}`
+    : 'logo-two-faces';
+  const faces = fourFaces
+    ? [[HEADER_LOGOS.project, 'face-1'], [HEADER_LOGOS.extra, 'face-2'], [HEADER_LOGOS.game, 'face-3'], [HEADER_LOGOS.extra, 'face-4']]
+    : [[HEADER_LOGOS.game, 'face-totowrap'], [HEADER_LOGOS.project, 'face-project']];
   return `
   <div class="logo-3d-container ${mode}" style="--logo-delay:-${elapsed.toFixed(3)}s">
     <div class="logo-3d-inner">
-      <img src="imgs/tonnowrap.png" class="face face-1">
-      <img src="imgs/tuna.png"      class="face face-2">
-      <img src="imgs/totowrap.png"  class="face face-3">
-      <img src="imgs/tuna.png"      class="face face-4">
+      ${faces.map(([logo, faceClass]) => `<img src="${esc(logo.src)}" class="face ${faceClass}" alt="${esc(logo.alt || '')}">`).join('\n      ')}
     </div>
   </div>`;
 }
@@ -774,26 +782,6 @@ function formatNames(names) {
   if (names.length === 1) return names[0];
   if (names.length === 2) return names[0] + ' and ' + names[1];
   return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
-}
-
-function faceIconSrc(name) {
-  const fileBase = String(name || '').replace(/[.\s]/g, '');
-  return fileBase ? `faceicons/${encodeURIComponent(fileBase)}.png` : 'imgs/tunacan.png';
-}
-
-function latestWinnerName() {
-  const completed = [];
-  if (S.today?.wrapTime) completed.push(S.today);
-  completed.push(...(S.days || []).slice().reverse());
-  for (const day of completed) {
-    if (day?.noWinner) continue;
-    const winners = Array.isArray(day?.winners)
-      ? day.winners.map(w => typeof w === 'string' ? w : w?.name).filter(Boolean)
-      : [];
-    if (winners.length) return winners[0];
-    if (day?.winner) return day.winner;
-  }
-  return '';
 }
 
 function esc(value) {
@@ -835,8 +823,8 @@ function renderPreviousWinnerTag(day) {
   const validNames = names.filter(Boolean);
   if (!validNames.length) return '';
 
-  const plainLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatNames(validNames)} 🦈`;
-  const htmlLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatSafeNames(validNames)} 🦈`;
+  const plainLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatNames(validNames)}`;
+  const htmlLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatSafeNames(validNames)}`;
   const marqueeItems = Array.from({ length: 4 }, (_, idx) =>
     `<span class="prev-winner-item"${idx ? ' aria-hidden="true"' : ''}>${htmlLabel}</span>`
   ).join('');
@@ -882,7 +870,7 @@ async function exportProjectBackup() {
     const stamp = localDateISO().replace(/-/g, '');
     const link = document.createElement('a');
     link.href = url;
-    link.download = `totowrapdatabackup_${stamp}.json`;
+    link.download = `gu3databackup_${stamp}.json`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -997,11 +985,11 @@ async function restoreProjectBackup() {
   }
 }
 
-const DISPLAY_TOTAL_DAYS = 50;
+const DISPLAY_TOTAL_DAYS = 24;
 
 function displayDayNumber(internalDayNumber) {
   const n = Number(internalDayNumber);
-  return Number.isFinite(n) ? n - 1 : '—';
+  return Number.isFinite(n) ? n : '—';
 }
 
 function displayDayLabel(internalDayNumber) {
@@ -1685,7 +1673,7 @@ function parsePaste(text) {
 function formatConfirmedBetsClipboard(dayNumber, wrapTime, guesses, dayContext) {
   const rows = sortedGuesses(guesses.filter(g => g.time), dayContext)
     .map(g => `${g.name} - ${g.time}`);
-  return [`_TonnoWrap recap - ${displayDayLabel(dayNumber)}_`, '', `*Wrap ${wrapTime}*`, '', ...rows].join('\n');
+  return [`_Gu3 recap - ${displayDayLabel(dayNumber)}_`, '', `*Wrap ${wrapTime}*`, '', ...rows].join('\n');
 }
 
 async function copyTextToClipboard(text) {
@@ -2003,8 +1991,8 @@ function effectiveWinnersForSlice(slice, day=S.today, guesses=[], daySlices=null
   return names;
 }
 
-function playerLiveEmoji(name, baseEmoji, day=S.today, guesses=[]) {
-  return `${isCrownPlayerName(name, day, guesses) ? '👑 ' : ''}${baseEmoji}`;
+function playerCrownSuffix(name, day=S.today, guesses=[]) {
+  return isCrownPlayerName(name, day, guesses) ? ' 👑' : '';
 }
 
 function getCrazyDayConfig(day=S.today) {
@@ -2132,7 +2120,7 @@ function calcWinner(guesses, wrapHMSInput, day=S.today) {
   
   if (!winningSlice) {
     return {
-      winner: "Nobody wins, everytuna's happy!",
+      winner: 'No winner',
       winners: [],
       points: 0,
       noWinner: true,
@@ -2351,7 +2339,7 @@ function tickClock() {
     countdownEl.innerHTML = `
       <div>
         C'mon ${formatNames(styledWinners)}, it's not over until it's over!<br>
-        Just keep swimming little tuna, you have ${secToHMS(diff)} left!
+        Hang in there, you have ${secToHMS(diff)} left!
       </div>
     `;
     countdownEl.style.display = 'block';
@@ -2396,9 +2384,9 @@ function refreshStatusBadges() {
       }
       if (nameTextEl && nameEmojiEl) {
         nameTextEl.textContent = g.name;
-        nameEmojiEl.textContent = ` ${playerLiveEmoji(g.name, '🍣', S.today, S.today.guesses)}`;
+        nameEmojiEl.textContent = playerCrownSuffix(g.name, S.today, S.today.guesses);
       } else {
-        nameEl.textContent = `${g.name} ${playerLiveEmoji(g.name, '🍣', S.today, S.today.guesses)}`;
+        nameEl.textContent = `${g.name}${playerCrownSuffix(g.name, S.today, S.today.guesses)}`;
       }
     }
     else{
@@ -2407,9 +2395,9 @@ function refreshStatusBadges() {
       el.textContent='IN';
       if (nameTextEl && nameEmojiEl) {
         nameTextEl.textContent = g.name;
-        nameEmojiEl.textContent = ` ${playerLiveEmoji(g.name, '🐟', S.today, S.today.guesses)}`;
+        nameEmojiEl.textContent = playerCrownSuffix(g.name, S.today, S.today.guesses);
       } else {
-        nameEl.textContent = `${g.name} ${playerLiveEmoji(g.name, '🐟', S.today, S.today.guesses)}`;
+        nameEl.textContent = `${g.name}${playerCrownSuffix(g.name, S.today, S.today.guesses)}`;
       }
     }
   });
@@ -2685,7 +2673,7 @@ function renderAdminLoading() {
 function renderConnectionError() {
   return `
 <div class="hdr">
-  <div class="hdr-day">${IS_ADMIN ? 'Admin' : 'TotoWrap'}</div>
+  <div class="hdr-day">${IS_ADMIN ? 'Admin' : 'Gu3'}</div>
   ${get3DLogoHTML()}
   <div class="hdr-right">
     <span class="sync-dot off" title="Connection error"></span>
@@ -2791,7 +2779,6 @@ function renderDesktopProjectProgress() {
   const displayDay = Number(displayDayNumber(internalDay));
   const current = Number.isFinite(displayDay) ? Math.max(0, Math.min(DISPLAY_TOTAL_DAYS, displayDay)) : 0;
   const pct = DISPLAY_TOTAL_DAYS ? (current / DISPLAY_TOTAL_DAYS) * 100 : 0;
-  const winnerName = latestWinnerName();
   const topEntries = getStandingsEntries()
     .filter(entry => typeof entry.rank === 'number' && entry.rank <= 3);
   const topRows = topEntries.length
@@ -2817,7 +2804,7 @@ function renderDesktopProjectProgress() {
         </span>
       </span>
       <span class="desktop-project-progress-face desktop-project-progress-back">
-        <img src="${esc(faceIconSrc(winnerName))}" alt="" onerror="this.onerror=null;this.src='imgs/tunacan.png'">
+        <img src="${esc(HEADER_LOGOS.project.src)}" alt="${esc(HEADER_LOGOS.project.alt)}">
       </span>
     </span>
   </button>`;
@@ -2882,7 +2869,7 @@ function renderFridayWrapBanner(day) {
 
 function renderMondayWaitingBanner(day) {
   if (new Date().getDay() !== 1) return '';
-  return `<div class="weekday-message-banner">A full week of betting is waiting for you, but let's pretend to work so Colette doesn't get mad!</div>`;
+  return `<div class="weekday-message-banner">A full week of betting is waiting for you, but let's pretend we're here to work!</div>`;
 }
 
 function formatSignedPoints(value) {
@@ -3009,7 +2996,7 @@ function renderPostWrapPodiumCard() {
   return `<button class="card postwrap-podium-card" type="button" data-open-final-recap>
     <span class="postwrap-podium-title">${hasPodium ? "Today's podium" : 'Project podium'}</span>
     <span class="postwrap-podium">${places}</span>
-    <span class="postwrap-recap-prompt">Click here for your TotoWrap Recap</span>
+    <span class="postwrap-recap-prompt">Click here for your Gu3 Recap</span>
   </button>`;
 }
 
@@ -3035,13 +3022,13 @@ function renderCompletedToday(t, canStartNextDay=false) {
           return `
           <div class="row">
             <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
-              <span>${esc(g.name)} ${playerLiveEmoji(g.name, g.time ? '🍣' : '🎣', t, t.guesses)}</span>
+              <span>${esc(g.name)}${playerCrownSuffix(g.name, t, t.guesses)}</span>
               ${g.time ? st.pill : ''}
             </div>
             ${g.time ? `
 	              <div class="row-time">${esc(g.time)}</div>
 	              <div class="badge ${penaltyStatus ? penaltyStatus.cls : 'b-out'}">${penaltyStatus ? penaltyStatus.text : 'OUT'}</div>
-            ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This tuna forgot to bet today</div>`}
+            ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This player forgot to bet today</div>`}
           </div>`;
         }).join('')}
         </div>
@@ -3063,13 +3050,13 @@ function renderCompletedToday(t, canStartNextDay=false) {
       const isWinner = todayWinnerNames.includes(g.name);
       const penalty = penaltiesByPlayer.get(nameKey(g.name));
       const penaltyStatus = todayPenaltyStatus(penalty);
-      const displayEmoji = playerLiveEmoji(g.name, isWinner ? '🦈' : (!g.time ? '🎣' : '🍣'), t, t.guesses);
+      const crownSuffix = playerCrownSuffix(g.name, t, t.guesses);
       const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
 
       return `
       <div class="row${isWinner ? ' golden-winner-row' : ''}">
         <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
-	          <span><span${isWinner ? ' class="today-result-winner-name"' : ''}>${esc(g.name)}</span> ${displayEmoji}</span>
+	          <span><span${isWinner ? ' class="today-result-winner-name"' : ''}>${esc(g.name)}</span>${crownSuffix}</span>
           ${g.time ? st.pill : ''}
         </div>
         
@@ -3083,7 +3070,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
           <div class="badge ${isWinner ? 'b-win' : (penaltyStatus ? penaltyStatus.cls : 'b-out')}">
             ${isWinner ? 'WIN' : (penaltyStatus ? penaltyStatus.text : 'OUT')}
           </div>
-        ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This tuna forgot to bet today</div>`}
+        ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This player forgot to bet today</div>`}
       </div>`;
     }).join('')}
     </div>
@@ -3228,12 +3215,15 @@ async function renderShareResultBlob() {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, imageSize, imageSize);
 
-  const canImg = await loadShareImage('imgs/tunacan.png');
-  if (canImg) {
+  const projectLogo = await loadShareImage('imgs/gu3-logo-hires.png');
+  if (projectLogo) {
     ctx.save();
     ctx.globalAlpha = .14;
     const size = 620;
-    ctx.drawImage(canImg, (imageSize - size) / 2, 214, size, size);
+    const scale = Math.min(size / projectLogo.width, size / projectLogo.height);
+    const width = projectLogo.width * scale;
+    const height = projectLogo.height * scale;
+    ctx.drawImage(projectLogo, (imageSize - width) / 2, 214 + (size - height) / 2, width, height);
     ctx.restore();
   }
 
@@ -3357,7 +3347,7 @@ function openStandingsExportDialog() {
   if (!IS_ADMIN || !currentUser || _tab !== 'board' || _boardView !== 'list') return;
   openAdminDialog({
     title: 'Save Final Standings',
-    copy: 'Download a high-resolution transparent PNG using the approved TonnoWrap leaderboard layout.',
+    copy: 'Download a high-resolution transparent PNG of the Gu3 leaderboard.',
     showClose: false,
     body: `<div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
@@ -3375,7 +3365,7 @@ async function downloadStandingsExport() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `tonnowrap-final-standings-${localDateISO().replace(/-/g, '')}.png`;
+    link.download = `gu3-final-standings-${localDateISO().replace(/-/g, '')}.png`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -3395,7 +3385,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
   return sg.map(g => {
     const st = getPreviousStreak(g.name);
     const isOut = out.has(g.name);
-    const displayEmoji = playerLiveEmoji(g.name, !g.time ? '🎣' : (isOut ? '🍣' : '🐟'), t, t.guesses);
+    const crownSuffix = playerCrownSuffix(g.name, t, t.guesses);
     const playerIdx = t.guesses.indexOf(g);
     const playerId = playerDomId(playerIdx);
     const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
@@ -3406,7 +3396,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
     <div class="row${boundaryInfo ? ' row-with-boundary' : ''}${isOut ? ' territory-ended' : ''}">
       <div class="row-name row-name-stack${activeNames.has(g.name) ? ' territory-active' : ''}" data-today-accuracy-player="${esc(g.name)}">
         <div class="row-name-main">
-          <span id="name-span-${playerId}"><span class="today-live-name-text">${esc(g.name)}</span><span class="today-live-name-emoji"> ${displayEmoji}</span></span>
+          <span id="name-span-${playerId}"><span class="today-live-name-text">${esc(g.name)}</span><span class="today-live-name-emoji">${crownSuffix}</span></span>
           ${g.time ? st.pill : ''}
         </div>
         ${boundaryInfo ? `<div class="row-boundary">${boundaryInfo}</div>` : ''}
@@ -3423,8 +3413,8 @@ function renderActiveTodayRows(t, sg, out, slices) {
           ? `<button class="badge ${isOut ? 'b-out' : 'b-in'} current-bet-edit-action" id="st-${playerId}" type="button" data-current-bet-player="${esc(g.name)}" aria-label="Edit ${esc(g.name)} bet">${isOut ? 'OUT' : 'IN'}</button>`
           : `<div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">${isOut ? 'OUT' : 'IN'}</div>`}
       ` : IS_ADMIN && S.today && !S.today.wrapTime
-        ? `<button class="badge b-missing missing-bet-action" type="button" data-current-bet-player="${esc(g.name)}">This tuna forgot to bet today</button>`
-        : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+        ? `<button class="badge b-missing missing-bet-action" type="button" data-current-bet-player="${esc(g.name)}">This player forgot to bet today</button>`
+        : `<div class="badge b-missing">This player forgot to bet today</div>`}
     </div>`;
   }).join('');
 }
@@ -4018,7 +4008,7 @@ function renderBoardCloseness(pl) {
   const markerHtml = points.map(point => {
     const pos = pointPosition(point);
     const marker = point.won
-      ? '<img class="closeness-win-marker" src="imgs/tunacan.png" alt="" aria-hidden="true">'
+      ? `<span class="closeness-dot closeness-win-marker" style="background:${colorOf(point.name)};" aria-hidden="true"></span>`
       : `<span class="closeness-dot" style="background:${colorOf(point.name)};"></span>`;
     return `<a class="closeness-marker" href="#history-${encodeURIComponent(point.date)}" data-closeness-date="${esc(point.date)}" style="left:${pos.left.toFixed(2)}%; top:${pos.top.toFixed(2)}%;" title="${esc(point.name)} - ${esc(formatBoardExactCompactGap(point.gap))} off on ${esc(displayDayLabel(point.day + 1))}" aria-label="Open ${esc(displayDayLabel(point.day + 1))} in history">
       ${marker}
@@ -4173,7 +4163,7 @@ function renderBoard(view=_boardView) {
   </div>`;
 }).join('');
   return `<div class="card board-fixed-card board-standings-card">${toolbar}
-    <div class="standings-player-count">${pl.length} ${countWord(pl.length, 'TUNA PLAYING', 'TUNAS PLAYING')}</div>
+    <div class="standings-player-count">${pl.length} ${countWord(pl.length, 'PLAYER PLAYING', 'PLAYERS PLAYING')}</div>
     <div class="standings-scroll-list">${standingsRows}</div>
   </div>`;
 }
@@ -5299,7 +5289,7 @@ function adjustCompletedDayScores(day, direction) {
 function completedDayOutcome(day) {
   return {
     winner: day?.winner || '',
-    winners: Array.isArray(day?.winners) ? day.winners.map(w => w.name).filter(Boolean) : (day?.winner ? [day.winner] : []),
+    winners: Array.isArray(day?.winners) ? day.winners.map(w => w.name).filter(Boolean) : (!day?.noWinner && day?.winner ? [day.winner] : []),
     points: Number(day?.points) || 0,
     noWinner: Boolean(day?.noWinner),
     napuleRobbed: Array.isArray(day?.napuleRobbed) ? [...day.napuleRobbed].sort() : [],
@@ -5311,10 +5301,12 @@ function completedDayOutcome(day) {
 function outcomesMatch(a, b) {
   const aWinners = [...(a?.winners || [])].sort();
   const bWinners = [...(b?.winners || [])].sort();
+  // Display wording alone must not trigger a saved-results migration.
+  const bothNoWinner = Boolean(a?.noWinner) && Boolean(b?.noWinner);
   return Boolean(a?.noWinner) === Boolean(b?.noWinner)
     && Number(a?.points || 0) === Number(b?.points || 0)
     && Number(a?.napuleBasePoints || 0) === Number(b?.napuleBasePoints || 0)
-    && String(a?.winner || '') === String(b?.winner || '')
+    && (bothNoWinner || String(a?.winner || '') === String(b?.winner || ''))
     && aWinners.length === bWinners.length
     && aWinners.every((name, idx) => name === bWinners[idx])
     && (a?.napuleRobbed || []).length === (b?.napuleRobbed || []).length
@@ -5528,7 +5520,7 @@ function renderHistory() {
                 ` : penaltyPoints ? `
                   <div class="badge b-history-forgot">Forgot to bet</div>
                   <div class="badge b-penalty">${compactSignedPoints(penaltyPoints)}</div>
-                ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+                ` : `<div class="badge b-missing">This player forgot to bet today</div>`}
               </div>`;
             }).join('')}
           </div>
@@ -5584,7 +5576,7 @@ function renderHistory() {
             ` : penaltyPoints ? `
               <div class="badge b-history-forgot">Forgot to bet</div>
               <div class="badge b-penalty">${penaltyText}</div>
-            ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+            ` : `<div class="badge b-missing">This player forgot to bet today</div>`}
           </div>`;
         }).join('')}
       </div>
@@ -5719,7 +5711,7 @@ async function showPreview() {
           ${g.time ? `
             <input type="text" class="bet-time-input" id="bet-time-${g._previewIdx}" value="${esc(g.time)}" placeholder="hh:mm" inputmode="text" maxlength="5" aria-label="${esc(g.name)} bet time">
             <input type="text" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${esc(displayDate(g.date) || g.date)}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10" aria-label="${esc(g.name)} bet date">
-          ` : `<div class="badge b-missing">This tuna forgot to bet today</div>`}
+          ` : `<div class="badge b-missing">This player forgot to bet today</div>`}
         </div>`;
       }).join('')}
     </div>
