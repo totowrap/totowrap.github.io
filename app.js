@@ -5944,7 +5944,7 @@ function bindMain() {
   document.getElementById('reset-btn')?.addEventListener('click',async ()=>{
     if(confirm('Reset all data?')){
       const prevS = cloneState();
-      S={playerRoster:[],scores:{},days:[],today:null};
+      S={playerRoster:[],scores:{},days:[],today:null,_version:S._version};
       const saved = await saveS();
       if (!saved) { restoreAfterFailedSave(prevS); return; }
       render();
