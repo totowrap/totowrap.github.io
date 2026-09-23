@@ -294,7 +294,7 @@
     }, {});
     const closestWrong = closestWrongLeaders[0] || null;
     closestWrongLeaders = closestWrongLeaders.sort((a,b) => a.name.localeCompare(b.name) || a.dayIndex-b.dayIndex);
-    return {days,list,leaderboard,totalBets,totalForgot,noWinnerEntries,exactDays,closestWrong,closestWrongLeaders,furthestNoWinner,furthestWinningDay,leadChanges,mostAccurate,leastAccurate,mostReliable,mostForgot,exactPlayers,longestStreak,closeWrongBucketLeaders};
+    return {playerRoster:source.playerRoster || [],days,list,leaderboard,totalBets,totalForgot,noWinnerEntries,exactDays,closestWrong,closestWrongLeaders,furthestNoWinner,furthestWinningDay,leadChanges,mostAccurate,leastAccurate,mostReliable,mostForgot,exactPlayers,longestStreak,closeWrongBucketLeaders};
   }
 
   function stat(value, label) {
@@ -436,9 +436,9 @@
         </div>
       </div>`).join('')}</div>`;
   }
-  function leadChangeRows(changes, leaders) {
+  function leadChangeRows(changes, leaders, roster) {
     if (!changes.length) return leaders.length
-      ? `<div class="final-recap-empty">First place stayed with the same ${playerGroupTerm(leaders)} throughout the project.</div>`
+      ? `<div class="final-recap-empty">First place stayed with the same ${playerGroupTerm(leaders, roster)} throughout the project.</div>`
       : '<div class="final-recap-empty">No lead changes recorded.</div>';
     const compactClass = changes.length > 4 ? ' is-compact' : '';
     const leaderLabel = value => Array.isArray(value) ? nameList(value) : esc(value);
@@ -500,7 +500,7 @@
       : '<div class="final-recap-empty">Nobody landed an exact bet.</div>';
     return [
       screen('Gu3 final recap',openingTitle,openingCopy,'','final-recap-opening-screen'),
-      screen('The project in numbers',projectDayTitle,'',`<div class="final-recap-stat-grid">${stat(players,`${playerGroupTerm(data.list.map(player => player.name))} played`)}${stat(data.totalBets,word(data.totalBets,'Bet placed','Bets placed'))}${stat(data.totalForgot,word(data.totalForgot,'Forgotten bet','Forgotten bets'))}</div>`),
+      screen('The project in numbers',projectDayTitle,'',`<div class="final-recap-stat-grid">${stat(players,`${playerGroupTerm(data.list.map(player => player.name), data.playerRoster)} played`)}${stat(data.totalBets,word(data.totalBets,'Bet placed','Bets placed'))}${stat(data.totalForgot,word(data.totalForgot,'Forgotten bet','Forgotten bets'))}</div>`),
       screen('Perfect timing',`<span class="final-recap-number">${data.exactDays}</span> exact ${word(data.exactDays,'bet','bets')}`,'',exactCards),
       screen('Nobody won',`<span class="final-recap-number">${data.noWinnerEntries.length}</span> no-winner ${word(data.noWinnerEntries.length,'day','days')}`,'Expected wrap compared with the official wrap.',noWinnerRows(data.noWinnerEntries)),
       screen('Accuracy award',accuracyTitle('Most accurate'),accuracyCopy,`${accuracyGraph(data.mostAccurate)}<div class="final-recap-stat-grid">${stat(compactTime(data.mostAccurate?.avgGap),'Average distance')}${stat(data.mostAccurate?.bets || 0,word(data.mostAccurate?.bets || 0,'Bet measured','Bets measured'))}${stat(data.mostAccurate?.wins || 0,word(data.mostAccurate?.wins || 0,'Win','Wins'))}</div>`,'final-recap-accuracy-screen',accuracyName(data.mostAccurate,'is-green')),
@@ -515,8 +515,8 @@
         ${splitShowcaseAward('Most forgotten bets',data.mostForgot?.name || '—',data.mostForgot ? `${data.mostForgot.forgot} forgotten ${word(data.mostForgot.forgot,'bet','bets')}` : '—','red')}
         ${splitShowcaseAward('Longest winning streak',data.longestStreak.length ? data.longestStreak.map(item => item.name).join(', ') : '—',data.longestStreak.length ? `${data.longestStreak[0].longestWinStreak} consecutive ${word(data.longestStreak[0].longestWinStreak,'win','wins')}` : '—','gold')}
       </div>`),
-      screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges,firstPlaceNames)),
-      screen('Final standings','The podium',`Third place. Second place. And ${firstPlaceNames.length ? `the winning ${playerGroupTerm(firstPlaceNames)}` : 'first place'}.`,podiumHtml),
+      screen('The race for first','Leaderboard lead changes',`${data.leadChanges.length} ${word(data.leadChanges.length,'change','changes')} at the top of the standings.`,leadChangeRows(data.leadChanges,firstPlaceNames,data.playerRoster)),
+      screen('Final standings','The podium',`Third place. Second place. And ${firstPlaceNames.length ? `the winning ${playerGroupTerm(firstPlaceNames, data.playerRoster)}` : 'first place'}.`,podiumHtml),
       screen('','Thank you!','',`${finalStandingsImageFrame(data)}<p class="final-recap-closing-copy">It was an honor to share this adventure with you</p><button class="final-recap-replay" type="button" data-recap-replay>Rewatch recap again</button>`,'final-recap-shirt-screen')
     ];
   }

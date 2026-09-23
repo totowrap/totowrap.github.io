@@ -2,7 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebas
 import { getFirestore, doc, getDocFromServer, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
-const { singular: playerTerm, forNames: playerGroupTerm } = window.TotoWrapProjectWording;
+const playerTerm = name => window.TotoWrapProjectWording.singular(name, S.playerRoster);
+const playerGroupTerm = names => window.TotoWrapProjectWording.forNames(names, S.playerRoster);
 
 const firebaseConfig = {
   apiKey: "AIzaSyDChGuB5CtWRD0u8j-GFzDOvqsGXdkDNFI",
@@ -736,6 +737,17 @@ document.addEventListener('click', e => {
   if (historyEditBtn) {
     e.stopPropagation();
     openHistoryDayActions(historyEditBtn.dataset.historyEdit, historyEditBtn.dataset.historyIndex);
+    return;
+  }
+
+  const genderBtn = e.target.closest?.('[data-player-gender]');
+  if (genderBtn) {
+    if (!IS_ADMIN || !currentUser) return;
+    const group = genderBtn.closest('.player-gender');
+    group.dataset.gender = genderBtn.dataset.playerGender;
+    group.querySelectorAll('[data-player-gender]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button === genderBtn));
+    });
     return;
   }
 
@@ -3056,7 +3068,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
             ${g.time ? `
 	              <div class="row-time">${esc(g.time)}</div>
 	              <div class="badge ${penaltyStatus ? penaltyStatus.cls : 'b-out'}">${penaltyStatus ? penaltyStatus.text : 'OUT'}</div>
-            ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This ${playerTerm(g.name)} forgot to bet today</div>`}
+            ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This ${playerTerm(g.name)} forgot to bet</div>`}
           </div>`;
         }).join('')}
         </div>
@@ -3098,7 +3110,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
           <div class="badge ${isWinner ? 'b-win' : (penaltyStatus ? penaltyStatus.cls : 'b-out')}">
             ${isWinner ? 'WIN' : (penaltyStatus ? penaltyStatus.text : 'OUT')}
           </div>
-        ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This ${playerTerm(g.name)} forgot to bet today</div>`}
+        ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This ${playerTerm(g.name)} forgot to bet</div>`}
       </div>`;
     }).join('')}
     </div>
@@ -3441,8 +3453,8 @@ function renderActiveTodayRows(t, sg, out, slices) {
           ? `<button class="badge ${isOut ? 'b-out' : 'b-in'} current-bet-edit-action" id="st-${playerId}" type="button" data-current-bet-player="${esc(g.name)}" aria-label="Edit ${esc(g.name)} bet">${isOut ? 'OUT' : 'IN'}</button>`
           : `<div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">${isOut ? 'OUT' : 'IN'}</div>`}
       ` : IS_ADMIN && S.today && !S.today.wrapTime
-        ? `<button class="badge b-missing missing-bet-action" type="button" data-current-bet-player="${esc(g.name)}">This ${playerTerm(g.name)} forgot to bet today</button>`
-        : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet today</div>`}
+        ? `<button class="badge b-missing missing-bet-action" type="button" data-current-bet-player="${esc(g.name)}">This ${playerTerm(g.name)} forgot to bet</button>`
+        : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet</div>`}
     </div>`;
   }).join('');
 }
@@ -4804,6 +4816,7 @@ function openRosterPlayerDialog() {
       <label class="inp-lbl" for="admin-roster-player-input">Player Name</label>
       <input class="admin-dialog-wrap-input" type="text" id="admin-roster-player-input" placeholder="Name" maxlength="80">
     </div>
+    ${renderPlayerGenderControl('admin-roster-player-gender', '')}
     <div class="admin-dialog-split">
       <button class="admin-dialog-action undo" type="button" data-admin-dialog-close>Cancel</button>
       <button class="admin-dialog-action approve" type="button" data-admin-dialog-action="roster-player-save">Add</button>
@@ -4811,7 +4824,7 @@ function openRosterPlayerDialog() {
   });
 }
 
-async function addRosterPlayer(name) {
+async function addRosterPlayer(name, gender = '') {
   if (!IS_ADMIN) return false;
   const newName = String(name || '').trim();
   if (!newName) {
@@ -4824,7 +4837,7 @@ async function addRosterPlayer(name) {
   }
 
   const prevS = cloneState();
-  S.playerRoster.push({ name: newName });
+  S.playerRoster.push({ name: newName, gender: gender === 'f' || gender === 'm' ? gender : '' });
   S.scores[newName] = Number(S.scores[newName]) || 0;
   const saved = await saveS();
   if (!saved) { restoreAfterFailedSave(prevS); return false; }
@@ -5228,7 +5241,10 @@ async function handleAdminDialogAction(btn) {
     return;
   }
   if (action === 'roster-player-save') {
-    const saved = await addRosterPlayer(document.getElementById('admin-roster-player-input')?.value);
+    const saved = await addRosterPlayer(
+      document.getElementById('admin-roster-player-input')?.value,
+      document.getElementById('admin-roster-player-gender')?.dataset.gender
+    );
     if (saved) closeAdminDialog();
     return;
   }
@@ -5548,7 +5564,7 @@ function renderHistory() {
                 ` : penaltyPoints ? `
                   <div class="badge b-history-forgot">Forgot to bet</div>
                   <div class="badge b-penalty">${compactSignedPoints(penaltyPoints)}</div>
-                ` : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet today</div>`}
+                ` : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet</div>`}
               </div>`;
             }).join('')}
           </div>
@@ -5604,13 +5620,20 @@ function renderHistory() {
             ` : penaltyPoints ? `
               <div class="badge b-history-forgot">Forgot to bet</div>
               <div class="badge b-penalty">${penaltyText}</div>
-            ` : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet today</div>`}
+            ` : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet</div>`}
           </div>`;
         }).join('')}
       </div>
     </div>`;
   }).join('');
   return `<div class="tab-page-frame">${historyRows}</div>`;
+}
+
+function renderPlayerGenderControl(id, gender, name = 'Player') {
+  return `<div class="player-gender" id="${esc(id)}" data-gender="${esc(gender)}" role="group" aria-label="${esc(name)} gender">
+    <button type="button" data-player-gender="f" aria-pressed="${gender === 'f'}" aria-label="Female" title="Female">F</button>
+    <button type="button" data-player-gender="m" aria-pressed="${gender === 'm'}" aria-label="Male" title="Male">M</button>
+  </div>`;
 }
 
 function renderSettings() {
@@ -5623,6 +5646,7 @@ ${pl.map((p, idx)=> {
   <div class="settings-row">
     <input class="settings-name-input" type="text" value="${esc(p.name)}" id="name-${realIdx}" aria-label="Player name">
     <input class="settings-points-input" type="number" value="${S.scores[p.name]||0}" id="pts-${realIdx}" aria-label="Player points">
+    ${renderPlayerGenderControl(`gender-${realIdx}`, window.TotoWrapProjectWording.genderFor(p.name, S.playerRoster), p.name)}
     <div class="settings-actions">
       <button class="settings-delete" type="button" title="Delete player" aria-label="Delete player" data-delete-player="${realIdx}">×</button>
       <button class="settings-save" type="button" title="Save player" aria-label="Save player" data-save-player="${realIdx}">✓</button>
@@ -5739,7 +5763,7 @@ async function showPreview() {
           ${g.time ? `
             <input type="text" class="bet-time-input" id="bet-time-${g._previewIdx}" value="${esc(g.time)}" placeholder="hh:mm" inputmode="text" maxlength="5" aria-label="${esc(g.name)} bet time">
             <input type="text" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${esc(displayDate(g.date) || g.date)}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10" aria-label="${esc(g.name)} bet date">
-          ` : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet today</div>`}
+          ` : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet</div>`}
         </div>`;
       }).join('')}
     </div>
@@ -5821,6 +5845,9 @@ async function savePlayer(idx) {
   const newPoints = parseInt(ptsInput.value) || 0;
   if (!newName) { toast('Name cannot be empty', 'err'); return; }
   if (hasRosterDuplicateName(newName, idx)) { toast('Duplicate names', 'err'); return; }
+  const gender = document.getElementById(`gender-${idx}`)?.dataset.gender
+    ?? window.TotoWrapProjectWording.genderFor(oldName, S.playerRoster);
+  S.playerRoster[idx].gender = gender === 'f' || gender === 'm' ? gender : '';
   if (oldName !== newName) {
     S.playerRoster[idx].name = newName;
     S.scores[newName] = S.scores[oldName] || 0;
