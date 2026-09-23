@@ -823,8 +823,8 @@ function renderPreviousWinnerTag(day) {
   const validNames = names.filter(Boolean);
   if (!validNames.length) return '';
 
-  const plainLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatNames(validNames)}`;
-  const htmlLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatSafeNames(validNames)}`;
+  const plainLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatNames(validNames)} ${PLAYER_STATUS_EMOJI.win}`;
+  const htmlLabel = `LAST ${validNames.length > 1 ? 'WINNERS' : 'WINNER'}: ${formatSafeNames(validNames)} ${PLAYER_STATUS_EMOJI.win}`;
   const marqueeItems = Array.from({ length: 4 }, (_, idx) =>
     `<span class="prev-winner-item"${idx ? ' aria-hidden="true"' : ''}>${htmlLabel}</span>`
   ).join('');
@@ -1991,8 +1991,10 @@ function effectiveWinnersForSlice(slice, day=S.today, guesses=[], daySlices=null
   return names;
 }
 
-function playerCrownSuffix(name, day=S.today, guesses=[]) {
-  return isCrownPlayerName(name, day, guesses) ? ' 👑' : '';
+const PLAYER_STATUS_EMOJI = { in: '🧀', out: '🫕', missing: '🪤', win: '🧀' };
+
+function playerLiveEmoji(name, baseEmoji, day=S.today, guesses=[]) {
+  return `${isCrownPlayerName(name, day, guesses) ? '👑 ' : ''}${baseEmoji}`;
 }
 
 function getCrazyDayConfig(day=S.today) {
@@ -2384,9 +2386,9 @@ function refreshStatusBadges() {
       }
       if (nameTextEl && nameEmojiEl) {
         nameTextEl.textContent = g.name;
-        nameEmojiEl.textContent = playerCrownSuffix(g.name, S.today, S.today.guesses);
+        nameEmojiEl.textContent = ` ${playerLiveEmoji(g.name, PLAYER_STATUS_EMOJI.out, S.today, S.today.guesses)}`;
       } else {
-        nameEl.textContent = `${g.name}${playerCrownSuffix(g.name, S.today, S.today.guesses)}`;
+        nameEl.textContent = `${g.name} ${playerLiveEmoji(g.name, PLAYER_STATUS_EMOJI.out, S.today, S.today.guesses)}`;
       }
     }
     else{
@@ -2395,9 +2397,9 @@ function refreshStatusBadges() {
       el.textContent='IN';
       if (nameTextEl && nameEmojiEl) {
         nameTextEl.textContent = g.name;
-        nameEmojiEl.textContent = playerCrownSuffix(g.name, S.today, S.today.guesses);
+        nameEmojiEl.textContent = ` ${playerLiveEmoji(g.name, PLAYER_STATUS_EMOJI.in, S.today, S.today.guesses)}`;
       } else {
-        nameEl.textContent = `${g.name}${playerCrownSuffix(g.name, S.today, S.today.guesses)}`;
+        nameEl.textContent = `${g.name} ${playerLiveEmoji(g.name, PLAYER_STATUS_EMOJI.in, S.today, S.today.guesses)}`;
       }
     }
   });
@@ -3000,17 +3002,41 @@ function renderPostWrapPodiumCard() {
   </button>`;
 }
 
+function renderCompletedDayCard(day, canShare=false) {
+  if (day.wrapTime && displayDayNumber(getCurrentInternalDayNumber()) === DISPLAY_TOTAL_DAYS) {
+    return renderPostWrapPodiumCard();
+  }
+
+  const tag = canShare ? 'button type="button" data-share-result' : 'div';
+  const closeTag = canShare ? 'button' : 'div';
+  if (day.noWinner) {
+    return `<${tag} class="winner-banner no-winner-banner">
+      <span class="winner-sub">Day Complete</span>
+      <span class="winner-name" style="font-size:1.35rem;color:var(--red);">No winner today</span>
+      <span class="winner-pts">Wrap at ${esc(day.wrapTime)} was outside all bets</span>
+    </${closeTag}>`;
+  }
+
+  const names = day.winners ? day.winners.map(w => w.name) : [day.winner];
+  return `<${tag} class="winner-banner">
+    <span class="winner-sub">Today's winner${names.length > 1 ? 's' : ''}</span>
+    <span class="winner-name" style="font-size:2.2rem;">${formatSafeNames(names)}</span>
+    <span class="winner-pts">+${day.points} ${countWord(day.points, 'pt', 'pts')} · Wrap at ${esc(day.wrapTime)}</span>
+  </${closeTag}>`;
+}
+
 function renderCompletedToday(t, canStartNextDay=false) {
   const sg = sortedGuesses(t.guesses, t);
   const penaltiesByPlayer = dayPenaltyDetailsMap(t);
   const nextDayBtn = canStartNextDay ? '<button class="btn btn-p next-day-btn" id="new-day-btn">Start Next Day</button>' : '';
   const completedViewClass = canStartNextDay ? 'today-fixed-view today-completed-view has-next-day-action' : 'today-fixed-view today-completed-view';
   const fridayBanner = renderFridayWrapBanner(t);
+  const resultCard = renderCompletedDayCard(t, canStartNextDay);
 
   if (t.noWinner) {
     return `
     <div class="${completedViewClass}">
-      ${renderPostWrapPodiumCard()}
+      ${resultCard}
       ${renderSpecialDayIndicator(t)}
       ${fridayBanner}
       <div class="card today-scroll-card"><div class="card-lbl">Results</div>
@@ -3022,7 +3048,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
           return `
           <div class="row">
             <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
-              <span>${esc(g.name)}${playerCrownSuffix(g.name, t, t.guesses)}</span>
+              <span>${esc(g.name)} ${playerLiveEmoji(g.name, g.time ? PLAYER_STATUS_EMOJI.out : PLAYER_STATUS_EMOJI.missing, t, t.guesses)}</span>
               ${g.time ? st.pill : ''}
             </div>
             ${g.time ? `
@@ -3040,7 +3066,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
   const todayWinnerNames = t.winners ? t.winners.map(w => w.name) : [t.winner];
   return `
   <div class="${completedViewClass}">
-  ${renderPostWrapPodiumCard()}
+  ${resultCard}
   ${renderSpecialDayIndicator(t)}
   ${fridayBanner}
   <div class="card today-scroll-card"><div class="card-lbl">Results</div>
@@ -3050,13 +3076,13 @@ function renderCompletedToday(t, canStartNextDay=false) {
       const isWinner = todayWinnerNames.includes(g.name);
       const penalty = penaltiesByPlayer.get(nameKey(g.name));
       const penaltyStatus = todayPenaltyStatus(penalty);
-      const crownSuffix = playerCrownSuffix(g.name, t, t.guesses);
+      const displayEmoji = playerLiveEmoji(g.name, !g.time ? PLAYER_STATUS_EMOJI.missing : (isWinner ? PLAYER_STATUS_EMOJI.win : PLAYER_STATUS_EMOJI.out), t, t.guesses);
       const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
 
       return `
       <div class="row${isWinner ? ' golden-winner-row' : ''}">
         <div class="row-name" data-today-accuracy-player="${esc(g.name)}">
-	          <span><span${isWinner ? ' class="today-result-winner-name"' : ''}>${esc(g.name)}</span>${crownSuffix}</span>
+	          <span><span${isWinner ? ' class="today-result-winner-name"' : ''}>${esc(g.name)}</span> ${displayEmoji}</span>
           ${g.time ? st.pill : ''}
         </div>
         
@@ -3385,7 +3411,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
   return sg.map(g => {
     const st = getPreviousStreak(g.name);
     const isOut = out.has(g.name);
-    const crownSuffix = playerCrownSuffix(g.name, t, t.guesses);
+    const displayEmoji = playerLiveEmoji(g.name, !g.time ? PLAYER_STATUS_EMOJI.missing : (isOut ? PLAYER_STATUS_EMOJI.out : PLAYER_STATUS_EMOJI.in), t, t.guesses);
     const playerIdx = t.guesses.indexOf(g);
     const playerId = playerDomId(playerIdx);
     const prob = g.time ? getWinProbability(g.name, t.guesses, t) : null;
@@ -3396,7 +3422,7 @@ function renderActiveTodayRows(t, sg, out, slices) {
     <div class="row${boundaryInfo ? ' row-with-boundary' : ''}${isOut ? ' territory-ended' : ''}">
       <div class="row-name row-name-stack${activeNames.has(g.name) ? ' territory-active' : ''}" data-today-accuracy-player="${esc(g.name)}">
         <div class="row-name-main">
-          <span id="name-span-${playerId}"><span class="today-live-name-text">${esc(g.name)}</span><span class="today-live-name-emoji">${crownSuffix}</span></span>
+          <span id="name-span-${playerId}"><span class="today-live-name-text">${esc(g.name)}</span><span class="today-live-name-emoji"> ${displayEmoji}</span></span>
           ${g.time ? st.pill : ''}
         </div>
         ${boundaryInfo ? `<div class="row-boundary">${boundaryInfo}</div>` : ''}
