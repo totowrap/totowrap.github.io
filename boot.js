@@ -21,7 +21,7 @@
   const nameTag = name => `<span class="boot-player-name">${escapeHTML(name)}</span>`;
   const leadWithNameTag = (lead, name) => `<span class="boot-player-name">${escapeHTML(lead)} ${escapeHTML(name)}</span>`;
   const phrases = [
-    () => '99% of players stop playing before winning. Keep gambling!',
+    () => `99% of ${window.TotoWrapProjectWording.plural} stop playing before winning. Keep gambling!`,
     () => {
       const storedNames = getPlayerNames();
       const name = storedNames[randomInt(storedNames.length)];

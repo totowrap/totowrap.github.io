@@ -2,6 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebas
 import { getFirestore, doc, getDocFromServer, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
+const { singular: playerTerm, forNames: playerGroupTerm } = window.TotoWrapProjectWording;
+
 const firebaseConfig = {
   apiKey: "AIzaSyDChGuB5CtWRD0u8j-GFzDOvqsGXdkDNFI",
   authDomain: "totowrapp.firebaseapp.com",
@@ -2341,7 +2343,7 @@ function tickClock() {
     countdownEl.innerHTML = `
       <div>
         C'mon ${formatNames(styledWinners)}, it's not over until it's over!<br>
-        Hang in there, you have ${secToHMS(diff)} left!
+        Hang in there, ${playerGroupTerm(winnersToday)}, you have ${secToHMS(diff)} left!
       </div>
     `;
     countdownEl.style.display = 'block';
@@ -3054,7 +3056,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
             ${g.time ? `
 	              <div class="row-time">${esc(g.time)}</div>
 	              <div class="badge ${penaltyStatus ? penaltyStatus.cls : 'b-out'}">${penaltyStatus ? penaltyStatus.text : 'OUT'}</div>
-            ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This player forgot to bet today</div>`}
+            ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This ${playerTerm(g.name)} forgot to bet today</div>`}
           </div>`;
         }).join('')}
         </div>
@@ -3096,7 +3098,7 @@ function renderCompletedToday(t, canStartNextDay=false) {
           <div class="badge ${isWinner ? 'b-win' : (penaltyStatus ? penaltyStatus.cls : 'b-out')}">
             ${isWinner ? 'WIN' : (penaltyStatus ? penaltyStatus.text : 'OUT')}
           </div>
-        ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This player forgot to bet today</div>`}
+        ` : `<div class="badge b-missing${penalty?.reason === 'missed-bet' ? ' b-missing-penalty' : ''}">This ${playerTerm(g.name)} forgot to bet today</div>`}
       </div>`;
     }).join('')}
     </div>
@@ -3439,8 +3441,8 @@ function renderActiveTodayRows(t, sg, out, slices) {
           ? `<button class="badge ${isOut ? 'b-out' : 'b-in'} current-bet-edit-action" id="st-${playerId}" type="button" data-current-bet-player="${esc(g.name)}" aria-label="Edit ${esc(g.name)} bet">${isOut ? 'OUT' : 'IN'}</button>`
           : `<div class="badge ${isOut ? 'b-out' : 'b-in'}" id="st-${playerId}">${isOut ? 'OUT' : 'IN'}</div>`}
       ` : IS_ADMIN && S.today && !S.today.wrapTime
-        ? `<button class="badge b-missing missing-bet-action" type="button" data-current-bet-player="${esc(g.name)}">This player forgot to bet today</button>`
-        : `<div class="badge b-missing">This player forgot to bet today</div>`}
+        ? `<button class="badge b-missing missing-bet-action" type="button" data-current-bet-player="${esc(g.name)}">This ${playerTerm(g.name)} forgot to bet today</button>`
+        : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet today</div>`}
     </div>`;
   }).join('');
 }
@@ -4189,7 +4191,7 @@ function renderBoard(view=_boardView) {
   </div>`;
 }).join('');
   return `<div class="card board-fixed-card board-standings-card">${toolbar}
-    <div class="standings-player-count">${pl.length} ${countWord(pl.length, 'PLAYER PLAYING', 'PLAYERS PLAYING')}</div>
+    <div class="standings-player-count">${pl.length} ${playerGroupTerm(pl.map(p => p.name))} playing</div>
     <div class="standings-scroll-list">${standingsRows}</div>
   </div>`;
 }
@@ -5546,7 +5548,7 @@ function renderHistory() {
                 ` : penaltyPoints ? `
                   <div class="badge b-history-forgot">Forgot to bet</div>
                   <div class="badge b-penalty">${compactSignedPoints(penaltyPoints)}</div>
-                ` : `<div class="badge b-missing">This player forgot to bet today</div>`}
+                ` : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet today</div>`}
               </div>`;
             }).join('')}
           </div>
@@ -5602,7 +5604,7 @@ function renderHistory() {
             ` : penaltyPoints ? `
               <div class="badge b-history-forgot">Forgot to bet</div>
               <div class="badge b-penalty">${penaltyText}</div>
-            ` : `<div class="badge b-missing">This player forgot to bet today</div>`}
+            ` : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet today</div>`}
           </div>`;
         }).join('')}
       </div>
@@ -5737,13 +5739,13 @@ async function showPreview() {
           ${g.time ? `
             <input type="text" class="bet-time-input" id="bet-time-${g._previewIdx}" value="${esc(g.time)}" placeholder="hh:mm" inputmode="text" maxlength="5" aria-label="${esc(g.name)} bet time">
             <input type="text" class="bet-date-input" id="bet-date-${g._previewIdx}" value="${esc(displayDate(g.date) || g.date)}" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10" aria-label="${esc(g.name)} bet date">
-          ` : `<div class="badge b-missing">This player forgot to bet today</div>`}
+          ` : `<div class="badge b-missing">This ${playerTerm(g.name)} forgot to bet today</div>`}
         </div>`;
       }).join('')}
     </div>
     <p class="mono dim" style="font-size:.7rem;margin-top:10px">
-      ${parsed.length} players submitted · ${fullList.length - parsed.length} missing
-      ${newPlayers.length > 0 ? `<br><span style="color:var(--green)">+ ${newPlayers.length} new player(s) will be added to the roster</span>` : ''}
+      ${parsed.length} ${playerGroupTerm(parsed.map(g => g.name))} submitted · ${fullList.length - parsed.length} missing
+      ${newPlayers.length > 0 ? `<br><span style="color:var(--green)">+ ${newPlayers.length} new ${playerGroupTerm(newPlayers)} will be added to the roster</span>` : ''}
     </p>
   </div>
   <button class="btn btn-p" id="confirm-btn">✓ Looks Good — Start Day</button>
