@@ -999,7 +999,7 @@ async function restoreProjectBackup() {
   }
 }
 
-const DISPLAY_TOTAL_DAYS = 23;
+const DISPLAY_TOTAL_DAYS = 22;
 
 function displayDayNumber(internalDayNumber) {
   const n = Number(internalDayNumber);
